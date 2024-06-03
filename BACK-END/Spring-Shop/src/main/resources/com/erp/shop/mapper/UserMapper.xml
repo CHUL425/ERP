@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace="매퍼 인터페이스 경로" -->
+<mapper namespace="com.erp.shop.mapper.UserMapper">
+
+    <!-- Users 매핑-->
+    <resultMap type="Users" id="userMap">
+        <id property="userId" column="user_id" />
+        
+        <result property="userId"    column="user_id"   />
+        <result property="password"  column="password"  />
+        <result property="name"      column="name"      />
+        <result property="email"     column="email"     />
+        <result property="image"     column="image"     />
+        <result property="enabled"   column="enabled"   />
+        <result property="createdat" column="createdat" />
+        <result property="updatedat" column="updatedat" />
+        
+        <collection property="authList" resultMap="authMap"></collection>
+    </resultMap>
+        
+    <!-- UserAuth 매핑 -->
+    <resultMap type="UserAuth" id="authMap">
+        <result property="userId" column="user_id" />
+        <result property="auth"   column="auth"    />
+    </resultMap>
+
+    <!-- 회원 등록 -->
+    <insert id="insert">
+        INSERT INTO USER
+               ( USER_ID
+               , PASSWORD
+               , NAME
+               , EMAIL 
+               , IMAGE 
+               )
+        VALUES ( #{userId}, #{password}, #{name}, #{email}, #{image} )
+    </insert>
+
+    <!-- 회원 조회 - id -->
+    <select id="selectById" resultType="Users">
+        SELECT USER_ID
+             , PASSWORD
+             , NAME
+             , EMAIL
+             , ENABLED
+             , CREATEDAT
+             , UPDATEDAT
+          FROM USER
+         WHERE USER_ID = #{userId}
+    </select>
+    
+    <!-- 회원 조회 - name -->
+    <select id="select" resultType="Users">
+        SELECT USER_ID
+             , PASSWORD
+             , NAME
+             , EMAIL
+             , ENABLED
+             , CREATEDAT
+             , UPDATEDAT
+         WHERE USER_ID = #{userId}
+    </select>
+
+    <!-- 로그인 - id -->
+    <select id="login" resultMap="userMap">
+        SELECT A.USER_ID 
+             , A.PASSWORD 
+             , A.NAME 
+             , A.EMAIL 
+             , A.ENABLED 
+             , A.CREATEDAT 
+             , A.UPDATEDAT 
+             , B.AUTH 
+         FROM USER A LEFT OUTER JOIN USER_AUTH B ON A.USER_ID = B.USER_ID 
+        WHERE A.USER_ID = #{userId}
+    </select>
+
+    <!-- 회원 권한 등록 -->
+    <insert id="insertAuth">
+        INSERT INTO USER_AUTH( USER_ID, AUTH ) 
+        VALUES ( #{userId}, #{auth} )
+    </insert>
+
+    <!-- 회원 수정 -->
+    <update id="update">
+        UPDATE USER
+           SET USER_ID  = #{userId}
+             , PASSWORD = #{password}
+             , NAME     = #{name}
+             , EMAIL    = #{email}
+        WHERE USER_ID = #{userId}
+    </update>
+
+
+    <!-- 회원 수정 -->
+    <delete id="delete">
+        DELETE FROM USER
+        WHERE USER_ID = #{userId}
+    </delete>
+
+	
+
+</mapper>

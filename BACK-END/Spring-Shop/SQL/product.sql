@@ -1,0 +1,32 @@
+-- 상품 테이블
+DROP TABLE IF EXISTS `PRODUCT` CASCADE;
+
+CREATE TABLE PRODUCT (
+  `PRODUCT_ID`      VARCHAR(100) NOT NULL            COMMENT '상품ID',
+  `NAME`            VARCHAR(100) NOT NULL            COMMENT '상품명',
+  `UNIT_PRICE`      INT          NULL                COMMENT '가격(단가)',
+  `DESCRIPTION`     TEXT         NULL                COMMENT '설명',
+  `MANUFACTURER`    VARCHAR(100) NULL                COMMENT '제조업체',
+  `CATEGORY`        VARCHAR(100) NULL                COMMENT '카테고리',
+  `UNITS_IN_STOCK`  INT          NOT NULL DEFAULT 0  COMMENT '재고 수',
+  `CONDITION`       VARCHAR(100) NULL                COMMENT '상태',
+  `FILE`            TEXT         NULL                COMMENT '파일경로',
+  `QUANTITY`        INT          NOT NULL DEFAULT 0  COMMENT '장바구니 개수', 
+  CONSTRAINT PRODUCT_PK PRIMARY KEY (PRODUCT_ID)
+) COMMENT '상품';
+
+INSERT INTO PRODUCT
+(PRODUCT_ID, NAME, UNIT_PRICE, DESCRIPTION, MANUFACTURER, CATEGORY, UNITS_IN_STOCK, `CONDITION`, FILE)
+VALUES('P100001', '자바 프로그래밍', 50000, '안녕하세요 자바프로그래밍 강의입니다.', '알로하클래스', '강의', 100, 'NEW', '/static/img/JAVA.jpg');
+
+INSERT INTO PRODUCT
+(PRODUCT_ID, NAME, UNIT_PRICE, DESCRIPTION, MANUFACTURER, CATEGORY, UNITS_IN_STOCK, `CONDITION`, FILE)
+VALUES('P100002', '오라클 데이터베이스', 20000, '오라클 데이터베이스 입니다.', '알로하클래스', '강의', 100, 'NEW', '/static/img/DB.jpg');
+
+INSERT INTO PRODUCT
+(PRODUCT_ID, NAME, UNIT_PRICE, DESCRIPTION, MANUFACTURER, CATEGORY, UNITS_IN_STOCK, `CONDITION`, FILE)
+VALUES('P100003', 'HTML CSS JAVASCRIPT', 15000, '웹 기초 강의입니다.', '알로하클래스', '강의', 100, 'NEW', '/static/img/WEB.jpg');
+
+INSERT INTO PRODUCT
+(PRODUCT_ID, NAME, UNIT_PRICE, DESCRIPTION, MANUFACTURER, CATEGORY, UNITS_IN_STOCK, `CONDITION`, FILE)
+VALUES('P100004', 'JSP', 80000, 'JSP 강의입니다.', '알로하클래스', '강의', 100, 'NEW', '/static/img/JSP.jpg');

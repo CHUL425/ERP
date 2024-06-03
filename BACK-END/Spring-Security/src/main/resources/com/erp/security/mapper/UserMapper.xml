@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace="매퍼 인터페이스 경로" -->
+<mapper namespace="com.erp.security.mapper.UserMapper">
+
+    <!-- Users 매핑-->
+    <resultMap type="Users" id="userMap">
+        <id property="userNo" column="user_no" />
+        
+        <result property="userNo" column="user_no" />
+        <result property="userId" column="user_id" />
+        <result property="userPw" column="user_pw" />
+        <result property="name" column="name" />
+        <result property="email" column="email" />
+        <result property="enabled" column="enabled" />
+        <result property="regDate" column="reg_date" />
+        <result property="updDate" column="upd_date" />
+        
+        <collection property="authList" resultMap="authMap"></collection>
+    </resultMap>
+        
+    <!-- UserAuth 매핑 -->
+    <resultMap type="UserAuth" id="authMap">
+        <result property="userId" column="user_id" />
+        <result property="auth" column="auth" />
+    </resultMap>
+
+    <!-- 회원 등록 -->
+    <insert id="insert">
+        INSERT INTO USER
+               ( USER_ID
+               , USER_PW
+               , NAME
+               , EMAIL 
+               )
+        VALUES ( #{userId}
+               , #{userPw}
+               , #{name} 
+               ,#{email} 
+               )
+    </insert>
+
+    <!-- 회원 권한 등록 -->
+    <insert id="insertAuth">
+        INSERT INTO USER_AUTH
+               ( USER_ID
+               , AUTH 
+               ) 
+        VALUES ( #{userId}
+               , #{auth} 
+               )
+    </insert>
+    
+    <!-- 회원 조회 -->
+    <select id="select" resultType="Users">
+        SELECT *
+          FROM USER
+         WHERE USER_NO = #{userNo}
+    </select>
+
+    <!-- 회원 조회 - id -->
+    <select id="login" resultMap="userMap">
+        SELECT U.USER_NO
+             , U.USER_ID
+             , USER_PW
+             , NAME
+             , EMAIL
+             , ENABLED
+             , REG_DATE
+             , UPD_DATE
+             , AUTH
+          FROM USER U LEFT OUTER JOIN USER_AUTH AUTH 
+                      ON U.USER_ID = AUTH.USER_ID
+         WHERE U.USER_ID = #{userId}
+    </select>
+</mapper>

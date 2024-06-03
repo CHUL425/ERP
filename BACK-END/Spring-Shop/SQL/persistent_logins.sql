@@ -1,0 +1,7 @@
+-- persistent_logins : 자동 로그인 테이블
+CREATE TABLE PERSISTENT_LOGINS (
+  `USERNAME`  VARCHAR(64) NOT NULL   ,
+  `SERIES`    VARCHAR(64) PRIMARY KEY,
+  `TOKEN`     VARCHAR(64) NOT NULL   ,
+  `LAST_USED` TIMESTAMP   NOT NULL
+)COMMENT='자동 로그인 테이블';
