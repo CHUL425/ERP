@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rent_mapper11">
+
+	<select id="selectListRentRqs" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" resultType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO">
+		/* RQRR1000U0.selectListRentRqs : 렌탈신청목록조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+	      SELECT 
+	             ROW_NUMBER() OVER(ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC) AS RNUM     
+	           , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+	           , T1.RCT_NO
+	           , T1.UNIF_RQS_TCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM
+	           , T1.UNIF_RQS_PCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM
+	           , T1.UNIF_RQS_DL_PCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM
+	           , T1.RQS_ORZ_CD
+	           , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+	           , T1.RQS_EPNO
+	           , T2.EP_NM AS RQS_EP_NM
+	           ,    CASE WHEN TRIM(T2.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(T2.HNDP_BZPR_TLNO) || ') ' END
+	           || CASE WHEN TRIM(T2.HNDP_MTNO)      IS NOT NULL THEN TRIM(T2.HNDP_MTNO)                     END
+	           || CASE WHEN TRIM(T2.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(T2.HNDP_ITNO)              END
+	           AS RQS_EP_HNDP_TLNO			         
+	           , T1.RQS_TTL_NM
+	           , ( SELECT CASE WHEN COUNT(RCT_NO) > 1 THEN MAX(RENT_CNTC_NO) || '외'
+                               ELSE MAX(RENT_CNTC_NO)
+                               END AS RENT_CNTC_NO
+		             FROM GA01N102 SA
+		            WHERE 1=1
+		              AND SA.RCT_NO = T1.RCT_NO
+		          ) AS RENT_CNTC_NO
+	           , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+	           , T1.HOPE_DT
+	           , T1.RQS_DT
+	           , T1.APRV_WRRPT_MT_NO
+	           , T1.RQS_SCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM      
+	        FROM GA01N101 T1 -- 임대신청
+	           , CB01N310 T2 -- 직원
+	       WHERE 1=1
+	         AND T2.EPNO (+)= T1.RQS_EPNO
+	         AND T1.RCT_NO      LIKE '%' || TRIM( NVL(#{rctNo},' ') )     || '%' /* 신청번호 */			   
+	         AND T1.UNIF_RQS_TCD     LIKE '%' || TRIM( NVL(#{unifRqsTcd},' ') )    || '%' /* 신청구분코드(분류 신규/이전) */
+	         AND T1.UNIF_RQS_DL_PCD  LIKE '%' || TRIM( NVL(#{unifRqsDlPcd},' ') )  || '%' /* 신청상세유형코드(징수기외/복합기) */
+	         AND T1.RQS_ORZ_CD  LIKE '%' || TRIM( NVL(#{rqsOrzCd},' ') )  || '%' /* 신청조직코드 */
+	         AND T1.RQS_EPNO    LIKE '%' || TRIM( NVL(#{rqsEpno},' ') )   || '%' /* 신청사번 */
+	         
+	         /* 컬럼변경으로 인한 수정 2023.08.30 */
+	         AND NVL(T1.RQS_TTL_NM,' ')  LIKE '%' || TRIM( NVL(#{rqsTtlNm},' ') )    || '%' /* 신청제목명  */
+
+			<if test='rqsScd != null and rqsScd != ""'>
+				/* 신청상태 */
+				AND T1.RQS_SCD IN
+				<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+					#{itm}
+				</foreach>
+			</if>
+
+	         AND T2.EP_NM       LIKE '%' || TRIM( NVL(#{rqsEpNm},' ') )   || '%' /* 신청자명 */                  
+	         AND T1.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+	         AND T1.UNIF_RQS_PCD     = '03'  /* 신청유형코드 01:공사 02:구매 03:렌탈 04:명함 05:인감 06:인장 09:문서 */
+	       ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC
+						       
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>       
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+		
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>	
+
+	<select id="selecRentRqsScdInfo" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" resultType="Map">
+		/* RQRR1000U0.selecRentRqsScdInfo : 렌탈신청상태정보조회 */
+		SELECT MAX(RQS_SCD_00) AS "rqsScd00"
+		     , MAX(RQS_SCD_05) AS "rqsScd05"
+		     , MAX(RQS_SCD_10) AS "rqsScd10"
+		     , MAX(RQS_SCD_15) AS "rqsScd15"
+		     , MAX(RQS_SCD_30) AS "rqsScd30"
+		     , MAX(RQS_SCD_35) AS "rqsScd35"
+		     , MAX(RQS_SCD_99) AS "rqsScd99"
+		  FROM (     
+		    SELECT 
+		           CASE WHEN T1.RQS_SCD = '00' THEN COUNT(1) 
+		                ELSE 0
+		             END RQS_SCD_00
+		         , CASE WHEN T1.RQS_SCD = '05' THEN COUNT(1) 
+		                ELSE 0
+		            END RQS_SCD_05
+		         , CASE WHEN T1.RQS_SCD = '10' THEN COUNT(1) 
+		                ELSE 0
+		            END RQS_SCD_10
+		         , CASE WHEN T1.RQS_SCD = '15' THEN COUNT(1) 
+		                ELSE 0
+		            END RQS_SCD_15
+		         , CASE WHEN T1.RQS_SCD = '30' THEN COUNT(1) 
+		                ELSE 0
+		            END RQS_SCD_30
+		         , CASE WHEN T1.RQS_SCD = '35' THEN COUNT(1) 
+		                ELSE 0
+		            END RQS_SCD_35
+		         , CASE WHEN T1.RQS_SCD = '99' THEN COUNT(1) 
+		                ELSE 0
+		            END RQS_SCD_99
+		      FROM GA01N101 T1 -- 신청관리
+		         , CB01N310 T2 -- 직원
+		     WHERE 1=1
+			   AND T2.EPNO (+)= T1.RQS_EPNO
+               AND T1.RCT_NO      LIKE '%' || TRIM( #{rctNo} )     || '%' /* 신청번호 */			   
+			   AND T1.UNIF_RQS_TCD     LIKE '%' || TRIM( NVL(#{unifRqsTcd},' ') )    || '%' /* 신청구분코드(분류 신규/이전) */
+	           AND T1.UNIF_RQS_DL_PCD  LIKE '%' || TRIM( NVL(#{unifRqsDlPcd},' ') )  || '%' /* 신청상세유형코드(징수기외/복합기) */
+			   AND T1.RQS_ORZ_CD  LIKE '%' || TRIM( #{rqsOrzCd} )  || '%' /* 신청조직코드 */
+			   AND T1.RQS_EPNO    LIKE '%' || TRIM( #{rqsEpno} )   || '%' /* 신청사번 */
+			   AND NVL(T1.RQS_TTL_NM,' ')  LIKE '%' || TRIM( #{rqsTtlNm} )    || '%' /* 신청명 */
+			   AND T1.RQS_SCD     LIKE '%' || TRIM( #{rqsScd} )    || '%' /* 신청상태 */
+			   AND T2.EP_NM       LIKE '%' || TRIM( #{rqsEpNm} )   || '%' /* 신청자명 */                  
+			   AND T1.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+ 	           AND T1.UNIF_RQS_PCD     = '03'  /* 신청유형코드 01:공사 02:구매 03:렌탈 04:명함 05:인감 */
+		     GROUP BY T1.RQS_SCD
+		) 
+
+	</select>	
+	
+	<select id="selectGA01N101_1" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" resultType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO">
+		SELECT T1.RCT_NO
+             , T1.UNIF_RQS_TCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM
+		     , T1.UNIF_RQS_PCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM
+		     , T1.UNIF_RQS_DL_PCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM
+		     , T1.RQS_ORZ_CD
+             , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+		     , T1.RQS_EPNO   
+		     , T2.EP_NM AS RQS_EP_NM
+			 ,    CASE WHEN TRIM(T2.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(T2.HNDP_BZPR_TLNO) || ') ' END
+	       			|| CASE WHEN TRIM(T2.HNDP_MTNO)      IS NOT NULL THEN TRIM(T2.HNDP_MTNO)                     END
+	       			|| CASE WHEN TRIM(T2.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(T2.HNDP_ITNO)              END
+	          		AS RQS_EP_HNDP_TLNO		
+		     , T1.RQS_TTL_NM       
+		     --, T1.IST_PLC_NM       
+		     , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+		     , T1.HOPE_DT          
+		     , T1.RQS_DT           
+		     , T1.CMPN_DT
+		     , T1.APRV_WRRPT_MT_NO
+		     , T1.APRV_WRRPT_ORZ_CD    
+		     , T1.RQS_SCD          
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM    
+		     , T1.OPTR_ID          
+		     , T1.OPRT_CHNL_CD     
+		     , T1.OPRT_ORZ_CD      
+		     , T1.OPRT_IP_ADR      
+		     , T1.OPRT_DTTM   
+		  FROM GA01N101 T1 -- 신청관리
+             , CB01N310 T2 -- 직원
+		 WHERE T1.RCT_NO   = #{rctNo        }
+		   AND T2.EPNO (+)= T1.RQS_EPNO     	 	
+	</select>
+	
+	<select id="selectGA01N101" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N101VO">
+		SELECT T1.RCT_NO
+             , T1.UNIF_RQS_TCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM
+		     --, T1.RQS_EQMT_TCD 
+		     , T1.UNIF_RQS_PCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM
+		     , T1.UNIF_RQS_DL_PCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM
+		     , T1.RQS_ORZ_CD
+             , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+		     , T1.RQS_EPNO   
+		     , T2.EP_NM AS RQS_EP_NM
+			 ,    CASE WHEN TRIM(T2.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(T2.HNDP_BZPR_TLNO) || ') ' END
+	       			|| CASE WHEN TRIM(T2.HNDP_MTNO)      IS NOT NULL THEN TRIM(T2.HNDP_MTNO)                     END
+	       			|| CASE WHEN TRIM(T2.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(T2.HNDP_ITNO)              END
+	          		AS RQS_EP_HNDP_TLNO		
+		     , T1.RQS_TTL_NM       
+		     --, T1.IST_PLC_NM       
+		     , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+		     , T1.HOPE_DT          
+		     , T1.RQS_DT           
+		     , T1.CMPN_DT
+		     , T1.APRV_WRRPT_MT_NO    
+		     , T1.RQS_SCD          
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM    
+		     , T1.OPTR_ID          
+		     , T1.OPRT_CHNL_CD     
+		     , T1.OPRT_ORZ_CD      
+		     , T1.OPRT_IP_ADR      
+		     , T1.OPRT_DTTM   
+		  FROM GA01N101 T1 -- 신청관리
+             , CB01N310 T2 -- 직원
+		 WHERE T1.RCT_NO   = #{rctNo        }
+		   AND T2.EPNO (+)= T1.RQS_EPNO     	
+	</select>	
+
+	<select id="selectGA01N004_1" parameterType="com.miraeasset.biz.common.meta.vo.GA01N102VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N102VO">
+		SELECT RCT_NO
+		     , RCT_DL_NO
+		     , EQMT_TCD      	
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RENT_EQMT_TCD' AND CMN_CD_VL = T1.EQMT_TCD AND ROWNUM = 1 ) AS EQMT_TCD_NM    
+		     , RENT_CNTC_NO  
+		     , GDS_NM
+		     , IST_PLC_NM 
+		     , RQS_RQM_PTCR_CN 
+		     , OPTR_ID       
+		     , OPRT_CHNL_CD  
+		     , OPRT_ORZ_CD   
+		     , OPRT_IP_ADR   
+		     , OPRT_DTTM     
+		  FROM GA01N102 T1 -- 임대신청상세     
+		 WHERE RCT_NO         = #{rctNo  }
+		   AND RCT_DL_NO      = #{rctDlNo}	
+	</select>
+	
+
+	<delete id="deleteGA01N003" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" >
+		/* RENT11V0.deleteGA01N003 : 렌탈신청 삭제 ( 임시저장 상태일경우만 삭제가능 ) */	
+		DELETE GA01N101 -- 신청관리
+		 WHERE RCT_NO = #{rctNo       }     /*접수번호        */
+		   AND RQS_SCD IN ( '00' )          /*신청상태 00:임시저장 01:승인대기 02:승인중 03:승인완료 04:완료 05:철회/반려 06:취소 */ 
+	</delete>	
+		
+	<delete id="deleteGA01N004WithRctNo" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" >
+		/* RENT11V0.deleteGA01N004WithRctNo : 렌탈신청상세 삭제*/	
+		DELETE GA01N102 -- 임대장비신청
+		 WHERE RCT_NO    = #{rctNo       }     /*접수번호        */
+	</delete>	
+	
+	<delete id="deleteGA01N004WithRctNo_1" parameterType="com.miraeasset.biz.common.meta.vo.GA01N102VO" >
+		/* RENT11V0.deleteGA01N004WithRctNo_1 : 렌탈신청상세 삭제*/	
+		DELETE GA01N102 -- 임대장비신청
+		 WHERE RCT_NO    = #{rctNo       }     /*접수번호        */
+	</delete>				
+	
+	<update id="updateRqsScd" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" >
+		UPDATE GA01N101 -- 신청관리
+		   SET RQS_SCD          = #{rqsScd       }
+		<if test='cmpnDt != null'>      		   
+		     , CMPN_DT          = #{cmpnDt       }
+		</if>		   
+		     , OPTR_ID          = #{optrId       }
+		     , OPRT_CHNL_CD     = #{oprtChnlCd   }
+		     , OPRT_ORZ_CD      = #{oprtOrzCd    }
+		     , OPRT_IP_ADR      = #{oprtIpAdr    }
+		     , OPRT_DTTM        = SYSDATE      
+		 WHERE RCT_NO           = #{rctNo        }
+	</update>
+	
+	<select id="selectListRentRqsDtl" parameterType="com.miraeasset.biz.common.meta.vo.GA01N102Vf01InVO" resultType="com.miraeasset.biz.common.meta.vo.GA01N102Vf01OutVO">
+		/* RQRR1000U0.selectListRentRqsDtl : 렌탈신청상세목록조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT 
+			       ROW_NUMBER() OVER(ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC, T2.RCT_DL_NO) AS RNUM     
+			     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+			     , T1.RCT_NO
+                 , T1.UNIF_RQS_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM
+			     --, T1.RQS_EQMT_TCD
+			     , T1.UNIF_RQS_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM
+			     , T1.UNIF_RQS_DL_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM
+			     , T1.RQS_ORZ_CD
+			     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+			     , T1.RQS_EPNO
+			     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.RQS_EPNO AND ROWNUM = 1 ) AS RQS_EP_NM    
+			     , T1.RQS_TTL_NM
+			     , T2.IST_PLC_NM
+			     , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+			     , T1.HOPE_DT
+			     , T1.RQS_DT
+			     , T1.CMPN_DT
+			     , T1.APRV_WRRPT_MT_NO
+			     , T1.RQS_SCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM    
+			     , T2.RCT_DL_NO
+			     , T2.EQMT_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RENT_EQMT_TCD' AND CMN_CD_VL = T2.EQMT_TCD AND ROWNUM = 1 ) AS EQMT_TCD_NM    
+			     , T2.RENT_CNTC_NO
+			     , T2.GDS_NM
+			     , T2.RQS_RQM_PTCR_CN 
+			  FROM GA01N101 T1 -- 신청관리
+			     , GA01N102 T2 -- 임대장비신청
+			 WHERE T2.RCT_NO      = T1.RCT_NO
+			   AND NVL(T1.RCT_NO    ,' ')  LIKE '%' || TRIM( NVL( #{rctNo}     ,' ') )   || '%' /* 신청번호 */
+			   AND NVL(T1.UNIF_RQS_TCD   ,' ')  LIKE '%' || TRIM( NVL( #{unifRqsTcd}    ,' ') )   || '%' /* 신청구분코드 */
+			   AND NVL(T1.UNIF_RQS_PCD   ,' ')  LIKE '%' || TRIM( NVL( #{unifRqsPcd}    ,' ') )   || '%' /* 신청유형코드 */
+			   AND NVL(T1.RQS_ORZ_CD,' ')  LIKE '%' || TRIM( NVL( #{rqsOrzCd}  ,' ') )   || '%' /* 신청조직코드 */
+			   AND NVL(T1.RQS_EPNO  ,' ')  LIKE '%' || TRIM( NVL( #{rqsEpno}   ,' ') )   || '%' /* 신청사번 */
+			   AND NVL(T1.RQS_TTL_NM,' ')  LIKE '%' || TRIM( NVL( #{rqsTtlNm}  ,' ') )   || '%' /* 신청제목 */
+			   AND NVL(T1.RQS_SCD   ,' ')  LIKE '%' || TRIM( NVL( #{rqsScd}    ,' ') )   || '%' /* 신청상태 */
+ 	           AND T1.UNIF_RQS_PCD     = '03'  /* 신청유형코드 01:공사 02:구매 03:렌탈 04:명함 05:인감 */
+			 ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC, T2.RCT_DL_NO
+					       
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>       
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+		
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+	
+	
+	<select id="selectListRentRqsDtl_1" parameterType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO" resultType="com.miraeasset.biz.rq.rr.vo.RQRR1000U0VO">
+		/* RQRR1000U0.selectListRentRqsDtl : 렌탈신청상세목록조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT 
+			       ROW_NUMBER() OVER(ORDER BY T1.RCT_NO, T2.RCT_DL_NO) AS RNUM     
+			     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+			     , T1.RCT_NO
+                 , T1.UNIF_RQS_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM
+			     --, T1.RQS_EQMT_TCD
+			     , T1.UNIF_RQS_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM
+			     , T1.UNIF_RQS_DL_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM
+			     , T1.RQS_ORZ_CD
+			     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+			     , T1.RQS_EPNO
+			     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.RQS_EPNO AND ROWNUM = 1 ) AS RQS_EP_NM    
+			     , T1.RQS_TTL_NM
+			     , T2.IST_PLC_NM
+			     , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+			     , T1.HOPE_DT
+			     , T1.RQS_DT
+			     , T1.CMPN_DT
+			     , T1.APRV_WRRPT_MT_NO
+			     , T1.RQS_SCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM    
+			     , T2.RCT_DL_NO
+			     , T2.EQMT_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RENT_EQMT_TCD' AND CMN_CD_VL = T2.EQMT_TCD AND ROWNUM = 1 ) AS EQMT_TCD_NM    
+			     , T2.RENT_CNTC_NO
+			     , T2.GDS_NM
+			     , T2.RQS_RQM_PTCR_CN 
+			  FROM GA01N101 T1 -- 신청관리
+			     , GA01N102 T2 -- 임대장비신청
+			 WHERE T2.RCT_NO      = T1.RCT_NO
+			   AND T1.RCT_NO      LIKE '%' || TRIM( #{rctNo} )    || '%' /* 신청번호 */
+			   AND T1.UNIF_RQS_PCD     LIKE '%' || TRIM( #{unifRqsPcd} )    || '%' /* 신청분류코드 */
+			   AND T1.RQS_ORZ_CD  LIKE '%' || TRIM( #{rqsOrzCd} )    || '%' /* 신청조직코드 */
+			   AND T1.RQS_EPNO    LIKE '%' || TRIM( #{rqsEpno} )    || '%' /* 신청사번 */
+			   AND NVL(T1.RQS_TTL_NM, ' ')  LIKE '%' || TRIM( #{rqsTtlNm} )    || '%' /* 신청제목 */
+			   AND T1.RQS_SCD     LIKE '%' || TRIM( #{rqsScd} )    || '%' /* 신청상태 */
+ 	           AND T1.UNIF_RQS_PCD     = '03'  /* 신청유형코드 01:공사 02:구매 03:렌탈 04:명함 05:인감 06:인장 09:문서 */
+			 ORDER BY T1.RCT_NO, T2.RCT_DL_NO 
+					       
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>       
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+		
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>	
+	
+	<insert id="insertGA01N003" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" >
+		INSERT INTO GA01N101 -- 신청관리
+		( RCT_NO             /*접수번호        */
+        , UNIF_RQS_TCD            /*신청구분코드   */
+		, UNIF_RQS_PCD            /*신청유형코드    */
+		, UNIF_RQS_DL_PCD         /*신청상세유형코드 */
+		, RQS_ORZ_CD         /*신청조직코드    */
+		, RQS_EPNO           /*신청사원번호    */
+		, RQS_TTL_NM         /*신청제목명      */
+		, UNIF_RQS_RSN_CN    /*신청사유내용    */
+		, HOPE_DT            /*희망일자        */
+		, RQS_DT             /*신청일자        */
+		, CMPN_DT            /*완료일자       */
+		, APRV_WRRPT_MT_NO   /*결재상신관리번호    */
+		, RQS_SCD            /*신청상태코드    */
+		, OPTR_ID            /*조작자ID        */
+		, OPRT_CHNL_CD       /*조작채널코드    */
+		, OPRT_ORZ_CD        /*조작조직코드    */
+		, OPRT_IP_ADR        /*조작IP주소      */
+		, OPRT_DTTM          /*조작일시        */
+		) 
+		VALUES
+		( #{rctNo       }     /*접수번호        */
+		, #{unifRqsTcd      }     /*신청구분코드    */
+		, #{unifRqsPcd      }     /*신청유형코드    */
+		, #{unifRqsDlPcd    }     /*신청상세유형코드 */
+		, #{rqsOrzCd    }     /*신청조직코드    */
+		, #{rqsEpno     }     /*신청사원번호    */
+		, #{rqsTtlNm    }     /*신청제목명      */
+		, #{rqsRsnCn    }     /*신청사유내용    */
+		, #{hopeDt      }     /*희망일자        */
+		, #{rqsDt       }     /*신청일자        */
+		, #{cmpnDt      }     /*완료일자        */
+		, #{aprvWrrptMtNo }   /*결재상신관리번호    */
+		, #{rqsScd      }     /*신청상태코드    */
+		, #{optrId      }     /*조작자ID        */
+		, #{oprtChnlCd  }     /*조작채널코드    */
+		, #{oprtOrzCd   }     /*조작조직코드    */
+		, #{oprtIpAdr   }     /*조작IP주소      */
+		, SYSDATE             /*조작일시        */
+		)	
+	</insert>
+		
+	<insert id="insertGA01N004" parameterType="com.miraeasset.biz.common.meta.vo.GA01N102VO" >
+		INSERT INTO GA01N102 -- 임대장비신청
+		( RCT_NO          /*접수번호      */ 
+		, RCT_DL_NO       /*접수상세번호  */
+		, EQMT_TCD        /*장비구분코드  */
+		, RENT_CNTC_NO    /*임대계약번호  */
+		, GDS_NM          /*제품명        */
+		, IST_PLC_NM      /*설치장소명 */
+		, RQS_RQM_PTCR_CN /*신청요청사항내용 */
+		, OPTR_ID         /*조작자ID      */
+		, OPRT_CHNL_CD    /*조작채널코드  */
+		, OPRT_ORZ_CD     /*조작조직코드  */
+		, OPRT_IP_ADR     /*조작IP주소    */
+		, OPRT_DTTM       /*조작일시      */
+		)
+		VALUES
+		( #{rctNo      }  /*접수번호      */   
+		, #{rctDlNo    }  /*접수상세번호  */
+		, #{eqmtTcd    }  /*장비구분코드  */
+		, #{rentCntcNo }  /*임대계약번호  */
+		, #{gdsNm      }  /*제품명        */
+		, #{istPlcNm   }  /*신청요청사항내용 */   
+		, #{rqsRqmPtcrCn}  /*신청요청사항내용*/
+		, #{optrId     }  /*조작자ID      */
+		, #{oprtChnlCd }  /*조작채널코드  */
+		, #{oprtOrzCd  }  /*조작조직코드  */
+		, #{oprtIpAdr  }  /*조작IP주소    */
+		, SYSDATE         /*조작일시      */
+		)    
+	</insert>	
+		
+	<update id="updateGA01N003" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" >
+		UPDATE GA01N101 -- 신청관리
+		   SET UNIF_RQS_TCD          = #{unifRqsTcd       }
+		     , UNIF_RQS_PCD          = #{unifRqsPcd       }
+		     , UNIF_RQS_DL_PCD       = #{unifRqsDlPcd     }
+		     , RQS_ORZ_CD       = #{rqsOrzCd     }
+		     , RQS_EPNO         = #{rqsEpno      }
+		     , RQS_TTL_NM       = #{rqsTtlNm     }
+		     , UNIF_RQS_RSN_CN  = #{rqsRsnCn     }
+		     , HOPE_DT          = #{hopeDt       }
+		     , RQS_DT           = TO_CHAR(SYSDATE, 'YYYYMMDD')
+		     , CMPN_DT          = #{cmpnDt       }
+		     , APRV_WRRPT_MT_NO = #{aprvWrrptMtNo }
+		     , RQS_SCD          = #{rqsScd       }
+		     , OPTR_ID          = #{optrId       }
+		     , OPRT_CHNL_CD     = #{oprtChnlCd   }
+		     , OPRT_ORZ_CD      = #{oprtOrzCd    }
+		     , OPRT_IP_ADR      = #{oprtIpAdr    }
+		     , OPRT_DTTM        = SYSDATE      
+		 WHERE RCT_NO           = #{rctNo        }
+	</update>
+	
+	<select id="insertGA01N102ReApplyByRctNo" parameterType="Map">
+		/* RQRR1000U0.insertGA01N102ReApplyByRctNo : 렌탈신청 반려 건 자동 재신청 */
+		BEGIN
+
+			INSERT INTO GA01N101
+			(
+				RCT_NO, RQS_SCD, RQS_DT, UNIF_RQS_PCD, UNIF_RQS_DL_PCD, UNIF_RQS_TCD, RQS_ORZ_CD, RQS_EPNO, RQS_TTL_NM, UNIF_RQS_RSN_CN, HOPE_DT, CMPN_DT, APRV_WRRPT_MT_NO, APRV_WRRPT_ORZ_CD,
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				#{rctNo} AS RCT_NO
+			,	'00' AS RQS_SCD
+			,	TO_CHAR(SYSDATE,'YYYYMMDD') AS RQS_DT
+			,	UNIF_RQS_PCD
+			,	UNIF_RQS_DL_PCD
+			,	UNIF_RQS_TCD
+			,	RQS_ORZ_CD
+			,	RQS_EPNO
+			,	RQS_TTL_NM
+			,	UNIF_RQS_RSN_CN
+			,	NULL AS HOPE_DT
+			,	NULL AS CMPN_DT
+			,	NULL AS APRV_WRRPT_MT_NO
+			,	NULL AS APRV_WRRPT_ORZ_CD
+
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N101
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+
+
+			INSERT INTO GA01N102
+			(
+				RCT_NO, RCT_DL_NO, EQMT_TCD, RENT_CNTC_NO, GDS_NM, IST_PLC_NM, RQS_RQM_PTCR_CN, 
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				#{rctNo} AS RCT_NO
+            ,   RCT_DL_NO    
+			,	EQMT_TCD
+			,	RENT_CNTC_NO
+            ,   GDS_NM 
+			,   IST_PLC_NM
+            ,   RQS_RQM_PTCR_CN
+            
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N102
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+
+		END
+		;
+	</select>
+					
+</mapper>

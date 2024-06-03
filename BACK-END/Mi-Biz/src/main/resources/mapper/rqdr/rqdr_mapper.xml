@@ -1,0 +1,1120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rqdr_mapper">
+
+
+	<insert id="insertGA01N601" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+		<selectKey keyProperty="docRqsSqncNo" resultType="java.lang.Long" order="BEFORE">
+			SELECT NVL(MAX(DOC_RQS_SQNC_NO),0) + 1 FROM GA01N601
+		</selectKey>
+
+		/* RQDR1000U0.insertGA01N601 : 등록 */
+		INSERT INTO GA01N601
+			( DOC_RQS_SQNC_NO	/* 	문서신청시퀀스번호	 */
+			, RCT_NO			/* 	접수번호	 */
+			, DOC_RQS_SCD		/* 	문서신청상태코드	 */
+			, RQS_ADR			/* 	신청주소	 */
+			, DL_LOC_DESC		/* 	상세위치설명	 */
+			, ETC_CN			/* 	기타내용	 */
+			, RQS_DOC_NM		/* 	신청문서명	 */
+			, MADE_DT			/* 	작성일자	 */
+			, CS_NM				/* 	고객명	 */
+			, ACNO_ECP_VL		/* 	계좌번호암호화값	 */
+			, EMP_EMAL_ADR_ECP_VL	/* 	직원이메일주소암호화값	 */
+			, NTE_CN			/* 	비고내용	 */
+
+			, OPTR_ID            /* 조작자ID */
+			, OPRT_CHNL_CD       /* 조작채널코드 */
+			, OPRT_ORZ_CD        /* 조작조직코드 */
+			, OPRT_IP_ADR        /* 조작IP주소 */
+			, OPRT_DTTM          /* 조작일시 */
+		)
+		VALUES
+			( #{docRqsSqncNo}
+			, #{rctNo}
+			, NULL
+			, #{rqsAdr}
+			, #{dlLocDesc}
+			, #{etcCn}
+			, #{rqsDocNm}
+			, #{madeDt}
+			, #{csNm}
+			, #{acnoEcpVl}
+			, #{empEmalAdrEcpVl}
+			, #{nteCn}
+
+			, #{optrId      }     /* 조작자ID */
+			, #{oprtChnlCd  }     /* 조작채널코드 */
+			, #{oprtOrzCd   }     /* 조작조직코드 */
+			, #{oprtIpAdr   }     /* 조작IP주소 */
+			, SYSDATE             /* 조작일시 */
+		)
+	</insert>
+
+
+	<update id="updateGA01N601" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" >
+		/* RQDR1000U0.updateGA01N601 : 수정 */
+
+		UPDATE GA01N601
+		SET	  DOC_RQS_SCD = NULL
+			, RQS_ADR = #{rqsAdr}
+			, DL_LOC_DESC = #{dlLocDesc}
+			, ETC_CN = #{etcCn}
+			, RQS_DOC_NM = #{rqsDocNm}
+			, MADE_DT = #{madeDt}
+			, CS_NM = #{csNm}
+			, ACNO_ECP_VL = #{acnoEcpVl}
+			, EMP_EMAL_ADR_ECP_VL = #{empEmalAdrEcpVl}
+			, NTE_CN = #{nteCn}
+
+			, OPTR_ID          = #{optrId       }
+			, OPRT_CHNL_CD     = #{oprtChnlCd   }
+			, OPRT_ORZ_CD      = #{oprtOrzCd    }
+			, OPRT_IP_ADR      = #{oprtIpAdr    }
+			, OPRT_DTTM        = SYSDATE
+		WHERE RCT_NO = #{rctNo}
+	</update>
+
+
+	<select id="selectGA01N601" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+		/* RQDR1000U0.selectGA01N601 : 문서 신청 상세 조회 */
+		SELECT *
+		FROM GA01N601
+		WHERE RCT_NO = #{rctNo}
+	</select>
+
+
+	<select id="selectGA01N101" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" resultType="com.miraeasset.biz.rq.cr.vo.RQCR1000U01VO">
+		/* RQDR1000U0.selectGA01N101 : 통합 신청 상세 조회 */
+		SELECT *
+		FROM GA01N101
+		WHERE RCT_NO = #{rctNo}
+	</select>
+
+
+	<insert id="insertGA01N602" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602VO">
+		<selectKey keyProperty="docBoxSqncNo" resultType="java.lang.Long" order="BEFORE">
+			SELECT NVL(MAX(DOC_BOX_SQNC_NO),0) + 1 FROM GA01N602
+		</selectKey>
+
+		/* RQDR1000U0.insertGA01N602 : 등록 */
+		INSERT INTO GA01N602
+			( DOC_BOX_SQNC_NO  /* 문서박스시퀀스번호 */
+			, DOC_BOX_NM  /* 문서박스명 */
+			, PRDT_ORZ_CD  /* 생산조직코드 */
+			, MT_ORZ_CD  /* 관리조직코드 */
+			, BOX_DOC_CN  /* 박스문서내용 */
+			, CSTD_PLC_CN  /* 보관장소내용 */
+			, DVCE_NO  /* 디바이스번호 */
+			, BCD_NO  /* 바코드번호 */
+			, DOC_BOX_SCD  /* 문서박스상태코드 */
+			, PRDT_STRT_DT  /* 보관시작일자 */
+			, PRDT_END_DT  /* 보관종료일자 */
+			, DSUS_YR  /* 폐기년도 */
+			, MVOUT_DT  /* 이관일자 */
+			, LN_DT  /* 대출일자 */
+			, WTDW_DT  /* 회수일자 */
+			, DSUS_DT  /* 폐기일자 */
+			, CORP_NM  /* 법인명 */
+			, NTE_CN  /* 비고내용 */
+			, PRSV_YR_VL 	/* 보전년도값 */
+
+			, OPTR_ID            /* 조작자ID */
+			, OPRT_CHNL_CD       /* 조작채널코드 */
+			, OPRT_ORZ_CD        /* 조작조직코드 */
+			, OPRT_IP_ADR        /* 조작IP주소 */
+			, OPRT_DTTM          /* 조작일시 */
+		)
+		VALUES
+			( #{docBoxSqncNo}
+			, #{docBoxNm}
+			, #{prdtOrzCd}
+			, #{mtOrzCd}
+			, #{boxDocCn}
+			, #{cstdPlcCn}
+			, #{dvceNo}
+			, #{bcdNo}
+			, #{docBoxScd}
+			, #{prdtStrtDt}
+			, #{prdtEndDt}
+			, #{dsusYr}
+			, #{mvoutDt}
+			, #{lnDt}
+			, #{wtdwDt}
+			, #{dsusDt}
+			, #{corpNm}
+			, #{nteCn}
+			, #{prsvYrVl}
+
+			, #{optrId      }
+			, #{oprtChnlCd  }
+			, #{oprtOrzCd   }
+			, #{oprtIpAdr   }
+			, SYSDATE
+		)
+	</insert>
+
+
+	<update id="updateGA01N602byList" parameterType="java.util.List" flushCache="true">
+		/* RQDR1000U0.updateGA01N602byList : GA01N602 그리드 내용 수정 */
+		<foreach collection="list" item="item" index="index" separator=" ; " open="DECLARE BEGIN " close="; END;" >
+			UPDATE GA01N602
+			SET
+				CSTD_PLC_CN = #{item.cstdPlcCn}
+			,	DVCE_NO = #{item.dvceNo}
+			,	BCD_NO = #{item.bcdNo}
+			WHERE
+				DOC_BOX_SQNC_NO = #{item.docBoxSqncNo}
+		</foreach>
+	</update>
+
+	<update id="updateGA01N602BoxScdByRctNo" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+		/* RQDR1000U0.updateGA01N602BoxScdByRctNo : GA01N602 DOC_BOX_SCD 갱신 */
+		MERGE INTO GA01N602 n602
+		USING
+			(
+				SELECT
+					c.DOC_RQS_SQNC_NO
+				,	d.DOC_BOX_SQNC_NO
+				,	d.DOC_BOX_SCD
+
+				,	u.USER_DEF_VL1
+				,	NVL(u.USER_DEF_VL2, d.DOC_BOX_SCD) AS USER_DEF_VL2
+				,	(CASE WHEN a.UNIF_RQS_TCD IN ('090101','090401','090502') THEN '99' ELSE d.DOC_BOX_SCD END) AS USER_DEF_VL30
+				FROM
+					GA01N101 a
+					INNER JOIN GA01N601 b ON (a.RCT_NO = #{rctNo} AND a.RCT_NO = b.RCT_NO)
+					INNER JOIN GA01N603 c ON (b.DOC_RQS_SQNC_NO = c.DOC_RQS_SQNC_NO)
+					INNER JOIN GA01N602 d ON (c.DOC_BOX_SQNC_NO = d.DOC_BOX_SQNC_NO)
+					INNER JOIN GA09C302 u ON (u.CD_KND_NO = 'UNIF_RQS_TCD' AND a.UNIF_RQS_TCD = u.CMN_CD_VL)
+			) z
+			ON (n602.DOC_BOX_SQNC_NO = z.DOC_BOX_SQNC_NO)
+		WHEN MATCHED THEN
+		UPDATE SET
+		<choose>
+			<when test=' rqsScd != null and rqsScd == "99" '>
+				n602.DOC_BOX_SCD = z.USER_DEF_VL1
+
+				<if test=' unifRqsDlPcd == "0901" or unifRqsTcd == "090401" ' >
+					, n602.WTDW_DT = #{cmpnDt}
+				</if>
+				<if test=' unifRqsTcd == "090202" ' >
+					, n602.LN_DT = #{cmpnDt}
+					, n602.WTDW_DT = TO_CHAR(ADD_MONTHS(TO_DATE(#{cmpnDt},'YYYYMMDD'), 1), 'YYYYMMDD')
+				</if>
+				<if test=' unifRqsTcd == "090402" or unifRqsTcd == "090501" or unifRqsTcd == "090502" ' >
+					, n602.DSUS_DT = #{cmpnDt}
+				</if>
+
+			</when>
+			<when test=' rqsScd != null and rqsScd == "35" '>
+				n602.DOC_BOX_SCD = z.USER_DEF_VL2
+
+				<if test=' unifRqsTcd == "090101" or unifRqsTcd == "090401" ' >
+					, n602.WTDW_DT = NULL
+				</if>
+				<if test=' unifRqsTcd == "090202" ' >
+					, n602.LN_DT = NULL
+					, n602.WTDW_DT = NULL
+				</if>
+				<if test=' unifRqsTcd == "090403" ' >
+					, n602.WTDW_DT = TO_CHAR(ADD_MONTHS(TO_DATE(n602.WTDW_DT,'YYYYMMDD'), -1), 'YYYYMMDD')
+				</if>
+				<if test=' unifRqsTcd == "090402" or unifRqsTcd == "090501" or unifRqsTcd == "090502" ' >
+					, n602.DSUS_DT = NULL
+				</if>
+			</when>
+			<otherwise>
+				n602.DOC_BOX_SCD = z.USER_DEF_VL30
+			</otherwise>
+		</choose>
+
+	</update>
+
+	<update id="updateGA01N602BcdByBoxNo" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602VO">
+		/* RQDR1000U0.updateGA01N602BcdByBoxNo : GA01N602 Box BCD_NO 갱신 */
+		UPDATE GA01N602
+		SET
+			CSTD_PLC_CN = #{cstdPlcCn}
+		,	DVCE_NO = #{dvceNo}
+		,	BCD_NO = #{bcdNo}
+		<if test='docBoxScd != null and docBoxScd != ""' >
+		,	DOC_BOX_SCD = #{docBoxScd}
+		,	MVOUT_DT = #{cmpnDt}
+		</if>
+		WHERE
+			DOC_BOX_SQNC_NO = #{docBoxSqncNo}
+	</update>
+
+
+	<insert id="insertGA01N603" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+		/* RQDR1000U0.insertGA01N603 : 등록 */
+		INSERT INTO GA01N603
+		(
+			  DOC_RQS_SQNC_NO  	/* 문서신청시퀀스번호 */
+			, DOC_BOX_SQNC_NO  	/* 문서박스시퀀스번호 */
+			, MT_SMAR_CN  		/* 관리요약내용 */
+
+			, OPTR_ID            /* 조작자ID */
+			, OPRT_CHNL_CD       /* 조작채널코드 */
+			, OPRT_ORZ_CD        /* 조작조직코드 */
+			, OPRT_IP_ADR        /* 조작IP주소 */
+			, OPRT_DTTM          /* 조작일시 */
+		)
+		VALUES
+		(
+			  #{docRqsSqncNo}
+			, #{docBoxSqncNo}
+			, #{mtSmarCn}
+
+			, #{optrId      }
+			, #{oprtChnlCd  }
+			, #{oprtOrzCd   }
+			, #{oprtIpAdr   }
+			, SYSDATE
+		)
+	</insert>
+
+	<insert id="insertGA01N603byGA01N602" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+		/* RQDR1000U0.insertGA01N603byGA01N602 : 기존 박스 입력 */
+		INSERT INTO GA01N603
+		(
+			  DOC_RQS_SQNC_NO  	/* 문서신청시퀀스번호 */
+			, DOC_BOX_SQNC_NO  	/* 문서박스시퀀스번호 */
+			, MT_SMAR_CN  		/* 관리요약내용 */
+
+			, OPTR_ID            /* 조작자ID */
+			, OPRT_CHNL_CD       /* 조작채널코드 */
+			, OPRT_ORZ_CD        /* 조작조직코드 */
+			, OPRT_IP_ADR        /* 조작IP주소 */
+			, OPRT_DTTM          /* 조작일시 */
+		)
+		SELECT
+			#{docRqsSqncNo}
+		,	DOC_BOX_SQNC_NO
+		,	#{mtSmarCn}
+
+		,	#{optrId      }
+		,	#{oprtChnlCd  }
+		,	#{oprtOrzCd   }
+		,	#{oprtIpAdr   }
+		,	SYSDATE
+		FROM
+			GA01N602
+		WHERE
+			DOC_BOX_SQNC_NO IN
+			<foreach collection="arrDocBoxSqncNo" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+			</foreach>
+	</insert>
+
+	<delete id="deleteGA01N603n602" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" >
+		/* RQDR1000U0.deleteGA01N603n602 : 문서신청 엑셀 업로드 - 박스정보 변경 시 리셋 */
+		BEGIN
+
+			DELETE FROM GA01N602
+			WHERE DOC_BOX_SQNC_NO IN (
+				SELECT DOC_BOX_SQNC_NO FROM GA01N603 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			)
+			;
+
+			DELETE FROM GA01N603 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			;
+
+		END
+		;
+	</delete>
+
+
+	<delete id="deleteGA01N603n604" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" >
+		/* RQDR1000U0.deleteGA01N603n604 : 문서신청 박스정보 변경 시 박스 매핑 정보 리셋 */
+		BEGIN
+
+			DELETE FROM GA01N603 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			;
+
+			DELETE FROM GA01N604 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			;
+
+		END
+		;
+	</delete>
+
+
+	<delete id="deleteGA01N601" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" >
+		/* RQDR1000U0.deleteGA01N601 : 문서신청 - 모든 정보 삭제, GA01N602 는 임시 데이터만 삭제 */
+		BEGIN
+
+			DELETE FROM GA01N602
+			WHERE DOC_BOX_SQNC_NO IN (
+					SELECT DOC_BOX_SQNC_NO FROM GA01N603 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+				)
+				AND
+				DOC_BOX_SCD = '00'
+			;
+
+			DELETE FROM GA01N604 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			;
+
+			DELETE FROM GA01N603 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			;
+
+			DELETE FROM GA01N601 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			;
+
+			DELETE FROM GA01N101 WHERE RCT_NO = #{rctNo}
+			;
+
+		END
+		;
+	</delete>
+
+
+
+	<insert id="insertGA01N601ReApplyByRctNo" parameterType="Map">
+		/* RQDR1000U0.insertGA01N601ReApplyByRctNo : 문서신청 반려 건 자동 재신청 */
+		BEGIN
+
+			INSERT INTO GA01N101
+			(
+				RCT_NO, RQS_SCD, RQS_DT, UNIF_RQS_PCD, UNIF_RQS_DL_PCD, UNIF_RQS_TCD, RQS_ORZ_CD, RQS_EPNO, RQS_TTL_NM, UNIF_RQS_RSN_CN, HOPE_DT, CMPN_DT, APRV_WRRPT_MT_NO, APRV_WRRPT_ORZ_CD,
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				#{rctNo} AS RCT_NO
+			,	'00' AS RQS_SCD
+			,	TO_CHAR(SYSDATE,'YYYYMMDD') AS RQS_DT
+			,	UNIF_RQS_PCD
+			,	UNIF_RQS_DL_PCD
+			,	UNIF_RQS_TCD
+			,	RQS_ORZ_CD
+			,	RQS_EPNO
+			,	RQS_TTL_NM
+			,	UNIF_RQS_RSN_CN
+			,	NULL AS HOPE_DT
+			,	NULL AS CMPN_DT
+			,	NULL AS APRV_WRRPT_MT_NO
+			,	NULL AS APRV_WRRPT_ORZ_CD
+
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N101
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+
+
+			INSERT INTO GA01N601
+			(
+				DOC_RQS_SQNC_NO, RCT_NO, DOC_RQS_SCD, RQS_ADR, DL_LOC_DESC, ETC_CN, RQS_DOC_NM, MADE_DT, CS_NM, ACNO_ECP_VL, EMP_EMAL_ADR_ECP_VL, NTE_CN,
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				(SELECT NVL(MAX(DOC_RQS_SQNC_NO),0) + 1 FROM GA01N601) AS DOC_RQS_SQNC_NO
+			,	#{rctNo} AS RCT_NO
+			,	DOC_RQS_SCD
+			,	RQS_ADR
+			,	DL_LOC_DESC
+			,	ETC_CN
+			,	RQS_DOC_NM
+			,	MADE_DT
+			,	CS_NM
+			,	ACNO_ECP_VL
+			,	EMP_EMAL_ADR_ECP_VL
+			,	NTE_CN
+
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N601
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+
+		END
+		;
+	</insert>
+
+
+	<insert id="insertGA01N604byGA01N603" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+		/* RQDR1000U0.insertGA01N604byGA01N603 : 603 데이터 기준 604 박스 입력 */
+		INSERT INTO GA01N604
+		(
+			  DOC_RQS_SQNC_NO
+			, DOC_BOX_SQNC_NO
+			, DOC_BOX_NM
+			, PRDT_ORZ_CD
+			, MT_ORZ_CD
+			, BOX_DOC_CN
+			, CSTD_PLC_CN
+			, DVCE_NO
+			, BCD_NO
+			, DOC_BOX_SCD
+			, PRDT_STRT_DT
+			, PRDT_END_DT
+			, DSUS_YR
+			, MVOUT_DT
+			, LN_DT
+			, WTDW_DT
+			, DSUS_DT
+			, CORP_NM
+			, NTE_CN
+
+			, PRSV_YR_VL
+		)
+		SELECT
+			  a.DOC_RQS_SQNC_NO
+			, b.DOC_BOX_SQNC_NO
+			, b.DOC_BOX_NM
+			, b.PRDT_ORZ_CD
+			, b.MT_ORZ_CD
+			, b.BOX_DOC_CN
+			, b.CSTD_PLC_CN
+			, b.DVCE_NO
+			, b.BCD_NO
+			, b.DOC_BOX_SCD
+			, b.PRDT_STRT_DT
+			, b.PRDT_END_DT
+			, b.DSUS_YR
+			, b.MVOUT_DT
+			, b.LN_DT
+			, b.WTDW_DT
+			, b.DSUS_DT
+			, b.CORP_NM
+			, b.NTE_CN
+
+			, b.PRSV_YR_VL
+		FROM
+			GA01N603 a
+			INNER JOIN GA01N602 b ON (a.DOC_RQS_SQNC_NO = #{docRqsSqncNo} AND a.DOC_BOX_SQNC_NO = b.DOC_BOX_SQNC_NO)
+
+	</insert>
+
+	<update id="updateGA01N604byGA01N602" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO">
+	<![CDATA[
+
+		MERGE INTO GA01N602 n602
+		USING GA01N604 n604
+			ON (n604.DOC_RQS_SQNC_NO = #{docRqsSqncNo} AND n604.DOC_BOX_SQNC_NO = n602.DOC_BOX_SQNC_NO)
+		WHEN MATCHED THEN
+			UPDATE
+			SET
+				n602.DOC_BOX_NM	=	n604.DOC_BOX_NM
+			,	n602.PRDT_ORZ_CD	=	n604.PRDT_ORZ_CD
+			,	n602.MT_ORZ_CD	=	n604.MT_ORZ_CD
+			-- ,	n602.BOX_DOC_CN	=	n604.BOX_DOC_CN
+			,	n602.CSTD_PLC_CN	=	n604.CSTD_PLC_CN
+			,	n602.DVCE_NO	=	n604.DVCE_NO
+			,	n602.BCD_NO	=	n604.BCD_NO
+			,	n602.DOC_BOX_SCD	=	n604.DOC_BOX_SCD
+			,	n602.PRDT_STRT_DT	=	n604.PRDT_STRT_DT
+			,	n602.PRDT_END_DT	=	n604.PRDT_END_DT
+			,	n602.DSUS_YR	=	n604.DSUS_YR
+			,	n602.MVOUT_DT	=	n604.MVOUT_DT
+			,	n602.LN_DT	=	n604.LN_DT
+			,	n602.WTDW_DT	=	n604.WTDW_DT
+			,	n602.DSUS_DT	=	n604.DSUS_DT
+			,	n602.CORP_NM	=	n604.CORP_NM
+			,	n602.NTE_CN 	=	n604.NTE_CN
+
+			,	n602.PRSV_YR_VL = n604.PRSV_YR_VL
+
+			,	n602.OPTR_ID       = #{optrId}
+			,	n602.OPRT_CHNL_CD  = #{oprtChnlCd}
+			,	n602.OPRT_ORZ_CD   = #{oprtOrzCd}
+			,	n602.OPRT_IP_ADR   = #{oprtIpAdr}
+			,	n602.OPRT_DTTM     = SYSDATE
+
+	]]>
+	</update>
+
+
+	<update id="updateGA01N604" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602ModVO" >
+
+		/* RQDR1000U0.updateGA01N604 : 박스정보정정 (090301), 연장신청 (090403), 폐기정정 (090402) */
+		UPDATE GA01N604
+		SET
+			  OPTR_ID          = #{optrId       }
+			, OPRT_CHNL_CD     = #{oprtChnlCd   }
+			, OPRT_ORZ_CD      = #{oprtOrzCd    }
+			, OPRT_IP_ADR      = #{oprtIpAdr    }
+			, OPRT_DTTM        = SYSDATE
+
+			<if test='prdtStrtDt != null and prdtStrtDt != ""' >
+			, PRDT_STRT_DT = #{prdtStrtDt}
+			</if>
+			<if test='prdtEndDt != null and prdtEndDt != ""' >
+			, PRDT_END_DT = #{prdtEndDt}
+			</if>
+			<if test='dsusYr != null and dsusYr != ""' >
+			, DSUS_YR = #{dsusYr}
+			</if>
+			<if test='prsvYrVl != null and prsvYrVl != ""' >
+			, PRSV_YR_VL = #{prsvYrVl}
+			</if>
+			<if test='mtOrzCd != null and mtOrzCd != ""' >
+			, MT_ORZ_CD = #{mtOrzCd}
+			</if>
+			<if test='wtdwDt != null and wtdwDt != ""' >
+			, WTDW_DT = TO_CHAR(ADD_MONTHS(TO_DATE(WTDW_DT,'YYYYMMDD'), 1), 'YYYYMMDD')
+			</if>
+		WHERE
+			DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+			AND
+			DOC_BOX_SQNC_NO = #{docBoxSqncNo}
+
+	</update>
+
+
+
+	<sql id="selectGA01N601AndN101_Where">
+		<choose>
+			<when test=' unifRqsPcd != null and unifRqsPcd != "" '>
+				a.UNIF_RQS_PCD = #{unifRqsPcd}
+			</when>
+			<otherwise>
+				a.UNIF_RQS_PCD = '09'
+			</otherwise>
+		</choose>
+
+		<if test=' rctNo != null and rctNo != "" ' >
+			AND a.RCT_NO = #{rctNo}
+		</if>
+		<if test=' rqsDtSt != null and rqsDtSt != "" ' >
+			AND a.RQS_DT BETWEEN  #{rqsDtSt} AND #{rqsDtEd}
+		</if>
+
+		<if test='unifRqsDlPcd != null and unifRqsDlPcd != ""' >
+			AND a.UNIF_RQS_DL_PCD = #{unifRqsDlPcd}
+		</if>
+		<if test='unifRqsTcd != null and unifRqsTcd != ""' >
+			AND a.UNIF_RQS_TCD = #{unifRqsTcd}
+		</if>
+
+		<if test='rqsOrzCd != null and rqsOrzCd != ""' >
+			AND a.RQS_ORZ_CD = #{rqsOrzCd}
+		</if>
+		<if test='rqsEpno != null and rqsEpno != ""' >
+			AND a.RQS_EPNO = #{rqsEpno}
+		</if>
+		<if test='rqsTtlNm != null and rqsTtlNm != ""' >
+			AND a.RQS_TTL_NM LIKE '%' || TRIM(#{rqsTtlNm}) || '%'
+		</if>
+		<if test='rqsScd != null and rqsScd != ""'>
+			AND a.RQS_SCD IN
+			<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+			</foreach>
+		</if>
+	</sql>
+
+	<select id="selectGA01N601AndN101_Cnt" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601SchVO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N601SchVO">
+		SELECT
+			COUNT(*) AS TOT_CNT
+		FROM
+			GA01N101 a
+		WHERE
+			<include refid="selectGA01N601AndN101_Where" />
+	</select>
+
+	<select id="selectGA01N601AndN101_RqsStat" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601SchVO" resultType="Map">
+
+		WITH CTE_TB AS
+		(
+			SELECT
+				  CASE WHEN a.RQS_SCD = '00' THEN COUNT(1) ELSE 0 END RQS_SCD_00
+				, CASE WHEN a.RQS_SCD = '05' THEN COUNT(1) ELSE 0 END RQS_SCD_05
+				, CASE WHEN a.RQS_SCD = '10' THEN COUNT(1) ELSE 0 END RQS_SCD_10
+				, CASE WHEN a.RQS_SCD = '15' THEN COUNT(1) ELSE 0 END RQS_SCD_15
+				, CASE WHEN a.RQS_SCD = '30' THEN COUNT(1) ELSE 0 END RQS_SCD_30
+				, CASE WHEN a.RQS_SCD = '35' THEN COUNT(1) ELSE 0 END RQS_SCD_35
+				, CASE WHEN a.RQS_SCD = '99' THEN COUNT(1) ELSE 0 END RQS_SCD_99
+			FROM
+				GA01N101 a
+			WHERE
+
+				<include refid="selectGA01N601AndN101_Where" />
+
+			GROUP BY
+				a.RQS_SCD
+		)
+		SELECT MAX(RQS_SCD_00) AS "rqsScd00"
+			 , MAX(RQS_SCD_05) AS "rqsScd05"
+			 , MAX(RQS_SCD_10) AS "rqsScd10"
+			 , MAX(RQS_SCD_15) AS "rqsScd15"
+			 , MAX(RQS_SCD_30) AS "rqsScd30"
+			 , MAX(RQS_SCD_35) AS "rqsScd35"
+			 , MAX(RQS_SCD_99) AS "rqsScd99"
+		FROM
+			CTE_TB
+
+	</select>
+
+	<select id="selectGA01N601AndN101" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601SchVO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N601SchVO">
+
+		WITH CTE_TB AS
+		(
+			SELECT
+				a.*
+			FROM
+				GA01N101 a
+			WHERE
+				<include refid="selectGA01N601AndN101_Where" />
+
+	<![CDATA[
+			ORDER BY
+				a.RQS_DT DESC, a.RCT_NO DESC
+			OFFSET
+    			( #{pageNum} - 1 ) * #{pageSize}  ROW FETCH NEXT #{pageSize} ROWS ONLY
+		)
+		SELECT
+			b.DOC_RQS_SQNC_NO
+		,	a.RCT_NO
+		,	a.UNIF_RQS_DL_PCD
+		,	d.CMN_CD_VL_DEF_CN AS UNIF_RQS_DL_PCD_NM
+		,	a.UNIF_RQS_TCD
+		,	e.CMN_CD_VL_DEF_CN AS UNIF_RQS_TCD_NM
+		,	a.RQS_TTL_NM
+		,	(SELECT COUNT(*) FROM GA01N603 cnt WHERE cnt.DOC_RQS_SQNC_NO = b.DOC_RQS_SQNC_NO) AS BOX_CNT
+		,	a.RQS_ORZ_CD
+		,	orz.ORZ_NM AS RQS_ORZ_CD_NM
+		,	a.RQS_EPNO
+		,	ep.EP_NM AS RQS_EPNO_NM
+		,	a.RQS_DT
+		,	a.RQS_SCD
+
+		,	b.ACNO_ECP_VL
+		,	b.EMP_EMAL_ADR_ECP_VL
+		,	b.RQS_ADR
+		,	b.DL_LOC_DESC
+		,	b.ETC_CN
+		,	b.RQS_DOC_NM
+		,	b.CS_NM
+		,	b.NTE_CN
+		,	a.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+		,	a.HOPE_DT
+		,	a.CMPN_DT
+		,	b.MADE_DT
+		,	a.APRV_WRRPT_MT_NO
+
+		,	f.CMN_CD_VL_DEF_CN AS RQS_SCD_NM
+		,	#{totCnt} AS TOT_CNT
+
+		,	CASE WHEN TRIM(ep.HNDP_BZPR_TLNO) IS NOT NULL THEN TRIM(ep.HNDP_BZPR_TLNO) || '-' END
+			|| CASE WHEN TRIM(ep.HNDP_MTNO) IS NOT NULL THEN TRIM(ep.HNDP_MTNO)                     END
+			|| CASE WHEN TRIM(ep.HNDP_ITNO) IS NOT NULL THEN '-' || TRIM(ep.HNDP_ITNO)              END
+				AS RQS_HNDP_TLNO
+		FROM
+			CTE_TB a
+			INNER JOIN GA01N601 b ON (a.RCT_NO = b.RCT_NO)
+			INNER JOIN GA09C302 d ON (d.CD_KND_NO = 'UNIF_RQS_DL_PCD' AND d.CMN_CD_VL = a.UNIF_RQS_DL_PCD)
+			INNER JOIN GA09C302 e ON (e.CD_KND_NO = 'UNIF_RQS_TCD' AND e.CMN_CD_VL = a.UNIF_RQS_TCD)
+			INNER JOIN GA09C302 f ON (f.CD_KND_NO = 'RQS_SCD' AND f.CMN_CD_VL = a.RQS_SCD)
+			INNER JOIN CB01N210 orz ON (orz.ORZ_CD = a.RQS_ORZ_CD)
+			INNER JOIN CB01N310 ep ON (ep.EPNO = a.RQS_EPNO)
+		ORDER BY
+			a.RQS_DT DESC, a.RCT_NO DESC
+
+	]]>
+
+	</select>
+
+
+
+
+	<sql id="selectGA01N602Sch_Where">
+
+		<choose>
+			<when test=' docBoxSqncNo > 0 '>
+				a.DOC_BOX_SQNC_NO = #{docBoxSqncNo}
+			</when>
+			<when test=' docRqsSqncNo > 0 '>
+				a.DOC_BOX_SQNC_NO IN (
+					SELECT DOC_BOX_SQNC_NO FROM GA01N603 WHERE DOC_RQS_SQNC_NO = #{docRqsSqncNo}
+				)
+			</when>
+			<when test=' rctNo != null and rctNo != "" '>
+				a.DOC_BOX_SQNC_NO IN (
+					SELECT DOC_BOX_SQNC_NO FROM GA01N603 WHERE DOC_RQS_SQNC_NO = (
+						SELECT MAX(DOC_RQS_SQNC_NO) FROM GA01N601 WHERE RCT_NO = #{rctNo}
+					)
+				)
+			</when>
+			<when test=' selTyp == "DSUS_DT" '>
+				a.DSUS_DT BETWEEN #{selDtSt} AND #{selDtEd}
+			</when>
+			<when test=' selTyp == "MVOUT_DT" '>
+				a.MVOUT_DT BETWEEN #{selDtSt} AND #{selDtEd}
+			</when>
+			<when test=' selTyp == "LN_DT" '>
+				a.LN_DT BETWEEN #{selDtSt} AND #{selDtEd}
+			</when>
+			<when test=' selTyp == "DSUS_YR" '>
+				a.DSUS_YR BETWEEN SUBSTR(#{selDtSt},1,4) AND SUBSTR(#{selDtEd},1,4)
+			</when>
+			<when test=' selTyp == "DSUS_YR_0" '>
+				a.DSUS_YR = '0'
+			</when>
+			<when test='strArrDocBoxSqncNo != null and strArrDocBoxSqncNo != "" '>
+				a.DOC_BOX_SQNC_NO IN
+				<foreach collection="arrDocBoxSqncNo" item="itm" index="index" open="(" close=")" separator=",">
+					#{itm}
+				</foreach>
+			</when>
+			<otherwise>
+				1 = 1
+			</otherwise>
+		</choose>
+
+		<if test='docRqsCd != null and docRqsCd != ""'>
+			<if test=' docRqsCd == "10" '>
+				AND b.BOX_SQNC > 0
+			</if>
+			<if test=' docRqsCd == "20" '>
+				AND b.BOX_SQNC IS NULL
+			</if>
+		</if>
+
+		<if test='prdtOrzCd != null and prdtOrzCd != ""'>
+			AND
+			(
+				a.PRDT_ORZ_CD = #{prdtOrzCd} OR a.MT_ORZ_CD = #{mtOrzCd}
+			)
+		</if>
+		<if test='mtOrzCd != null and mtOrzCd != ""'>
+			AND
+			(
+				a.PRDT_ORZ_CD = #{prdtOrzCd} OR a.MT_ORZ_CD = #{mtOrzCd}
+			)
+		</if>
+		<if test='docBoxNm != null and docBoxNm != ""'>
+			AND a.DOC_BOX_NM LIKE '%' || TRIM(#{docBoxNm}) || '%'
+		</if>
+		<if test='boxDocCn != null and boxDocCn != ""'>
+			AND a.BOX_DOC_CN LIKE '%' || TRIM(#{boxDocCn}) || '%'
+		</if>
+		<if test='docBoxScd != null and docBoxScd != ""'>
+			AND a.DOC_BOX_SCD IN
+			<foreach collection="arrDocBoxScd" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+			</foreach>
+		</if>
+		<if test='notDocBoxScd != null and notDocBoxScd != ""'>
+			AND a.DOC_BOX_SCD NOT IN
+			<foreach collection="arrNotDocBoxScd" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+			</foreach>
+		</if>
+
+	</sql>
+
+	<select id="selectGA01N602Sch_Cnt" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO">
+		SELECT <choose><when test=' selTyp == "MVOUT_DT" or selTyp == "DSUS_YR_0" or selTyp == "DSUS_YR" '> </when><otherwise>/*+ INDEX(a PK_GA01N602) */</otherwise></choose>
+			COUNT(*) AS TOT_CNT
+		FROM
+			GA01N602 a
+			LEFT OUTER JOIN
+			(
+				SELECT
+					z.DOC_BOX_SQNC_NO AS BOX_SQNC
+				FROM
+					GA01N101 x
+					INNER JOIN GA01N601 y ON (x.UNIF_RQS_PCD = '09' AND x.RQS_SCD BETWEEN '05' AND '15' AND x.RCT_NO = y.RCT_NO)
+					INNER JOIN GA01N603 z ON (y.DOC_RQS_SQNC_NO = z.DOC_RQS_SQNC_NO)
+			) b ON (a.DOC_BOX_SQNC_NO = b.BOX_SQNC)
+		WHERE
+			<include refid="selectGA01N602Sch_Where" />
+	</select>
+
+
+	<select id="selectGA01N602Sch_RqsStat" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO" resultType="Map">
+
+		WITH CTE_TB AS
+		(
+			SELECT <choose><when test=' selTyp == "MVOUT_DT" or selTyp == "DSUS_YR_0" or selTyp == "DSUS_YR" '> </when><otherwise>/*+ INDEX(a PK_GA01N602) */</otherwise></choose>
+				  CASE WHEN a.DOC_BOX_SCD = '00' THEN COUNT(1) ELSE 0 END DOC_BOX_SCD_00
+				, CASE WHEN a.DOC_BOX_SCD = '10' THEN COUNT(1) ELSE 0 END DOC_BOX_SCD_10
+				, CASE WHEN a.DOC_BOX_SCD = '20' THEN COUNT(1) ELSE 0 END DOC_BOX_SCD_20
+				, CASE WHEN a.DOC_BOX_SCD = '90' THEN COUNT(1) ELSE 0 END DOC_BOX_SCD_90
+				, CASE WHEN a.DOC_BOX_SCD = '99' THEN COUNT(1) ELSE 0 END DOC_BOX_SCD_99
+			FROM
+				GA01N602 a
+				LEFT OUTER JOIN
+				(
+					SELECT
+						z.DOC_BOX_SQNC_NO AS BOX_SQNC
+					FROM
+						GA01N101 x
+						INNER JOIN GA01N601 y ON (x.UNIF_RQS_PCD = '09' AND x.RQS_SCD BETWEEN '05' AND '15' AND x.RCT_NO = y.RCT_NO)
+						INNER JOIN GA01N603 z ON (y.DOC_RQS_SQNC_NO = z.DOC_RQS_SQNC_NO)
+				) b ON (a.DOC_BOX_SQNC_NO = b.BOX_SQNC)
+			WHERE
+
+				<include refid="selectGA01N602Sch_Where" />
+
+			GROUP BY
+				a.DOC_BOX_SCD
+		)
+		SELECT MAX(DOC_BOX_SCD_00) AS "docBoxScd00"
+			 , MAX(DOC_BOX_SCD_10) AS "docBoxScd10"
+			 , MAX(DOC_BOX_SCD_20) AS "docBoxScd20"
+			 , MAX(DOC_BOX_SCD_90) AS "docBoxScd90"
+			 , MAX(DOC_BOX_SCD_99) AS "docBoxScd99"
+		FROM
+			CTE_TB
+
+	</select>
+
+
+	<select id="selectGA01N602Sch" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO">
+		WITH CTE_TB AS
+		(
+			SELECT <choose><when test=' selTyp == "MVOUT_DT" or selTyp == "DSUS_YR_0" or selTyp == "DSUS_YR" '> </when><otherwise>/*+ INDEX(a PK_GA01N602) */</otherwise></choose>
+				a.DOC_BOX_SQNC_NO,
+				a.DOC_BOX_NM,
+				a.PRDT_ORZ_CD,
+				a.MT_ORZ_CD,
+				a.BOX_DOC_CN,
+				a.CSTD_PLC_CN,
+				a.DVCE_NO,
+				a.BCD_NO,
+				a.DOC_BOX_SCD,
+				a.PRDT_STRT_DT,
+				a.PRDT_END_DT,
+				(CASE WHEN a.DSUS_YR = '0' THEN '영구' ELSE a.DSUS_YR END) AS DSUS_YR,
+				(CASE WHEN a.PRSV_YR_VL = 0 THEN '영구' ELSE TO_CHAR(a.PRSV_YR_VL) END) AS PRSV_YR_VL,
+				a.MVOUT_DT,
+				a.LN_DT,
+				a.WTDW_DT,
+				a.CORP_NM,
+				a.NTE_CN,
+				a.DSUS_DT
+			FROM
+				GA01N602 a
+				LEFT OUTER JOIN
+				(
+					SELECT
+						z.DOC_BOX_SQNC_NO AS BOX_SQNC
+					FROM
+						GA01N101 x
+						INNER JOIN GA01N601 y ON (x.UNIF_RQS_PCD = '09' AND x.RQS_SCD BETWEEN '05' AND '15' AND x.RCT_NO = y.RCT_NO)
+						INNER JOIN GA01N603 z ON (y.DOC_RQS_SQNC_NO = z.DOC_RQS_SQNC_NO)
+				) b ON (a.DOC_BOX_SQNC_NO = b.BOX_SQNC)
+			WHERE
+
+				<include refid="selectGA01N602Sch_Where" />
+
+	<![CDATA[
+			ORDER BY
+				a.DOC_BOX_SQNC_NO DESC
+			OFFSET
+				( #{pageNum} - 1 ) * #{pageSize}  ROW FETCH NEXT #{pageSize} ROWS ONLY
+		)
+		SELECT
+			orzp.ORZ_NM AS PRDT_ORZ_CD_NM
+		,	orzm.ORZ_NM AS MT_ORZ_CD_NM
+		,	a.*
+		,	#{totCnt} AS TOT_CNT
+		FROM
+			CTE_TB a
+			INNER JOIN GA09C302 b ON (b.CD_KND_NO = 'DOC_BOX_SCD' AND b.CMN_CD_VL = a.DOC_BOX_SCD)
+			LEFT OUTER JOIN CB01N210 orzp ON (orzp.ORZ_CD = a.PRDT_ORZ_CD)
+			LEFT OUTER JOIN CB01N210 orzm ON (orzm.ORZ_CD = a.MT_ORZ_CD)
+		ORDER BY
+			a.DOC_BOX_SQNC_NO DESC
+	]]>
+	</select>
+
+
+	<select id="selectGA01N604SchByRctNo" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N602SchVO">
+		WITH CTE_TB AS
+		(
+			SELECT
+				a.DOC_BOX_SQNC_NO,
+				a.DOC_BOX_NM,
+				a.PRDT_ORZ_CD,
+				a.MT_ORZ_CD,
+				a.BOX_DOC_CN,
+				a.CSTD_PLC_CN,
+				a.DVCE_NO,
+				a.BCD_NO,
+				a.DOC_BOX_SCD,
+				a.PRDT_STRT_DT,
+				a.PRDT_END_DT,
+				(CASE WHEN a.DSUS_YR = '0' THEN '영구' ELSE a.DSUS_YR END) AS DSUS_YR,
+				(CASE WHEN a.PRSV_YR_VL = 0 THEN '영구' ELSE TO_CHAR(a.PRSV_YR_VL) END) AS PRSV_YR_VL,
+				a.MVOUT_DT,
+				a.LN_DT,
+				a.WTDW_DT,
+				a.CORP_NM,
+				a.NTE_CN,
+				a.DSUS_DT
+			FROM
+				GA01N604 a
+			WHERE
+				a.DOC_RQS_SQNC_NO = ( SELECT MAX(DOC_RQS_SQNC_NO) FROM GA01N601 WHERE RCT_NO = #{rctNo} )
+			ORDER BY
+				a.DOC_BOX_SQNC_NO DESC
+			OFFSET
+				( #{pageNum} - 1 ) * #{pageSize}  ROW FETCH NEXT #{pageSize} ROWS ONLY
+		)
+		SELECT
+			orzp.ORZ_NM AS PRDT_ORZ_CD_NM
+		,	orzm.ORZ_NM AS MT_ORZ_CD_NM
+		,	a.*
+		FROM
+			CTE_TB a
+			INNER JOIN GA09C302 b ON (b.CD_KND_NO = 'DOC_BOX_SCD' AND b.CMN_CD_VL = a.DOC_BOX_SCD)
+			LEFT OUTER JOIN CB01N210 orzp ON (orzp.ORZ_CD = a.PRDT_ORZ_CD)
+			LEFT OUTER JOIN CB01N210 orzm ON (orzm.ORZ_CD = a.MT_ORZ_CD)
+		ORDER BY
+			a.DOC_BOX_SQNC_NO DESC
+	</select>
+
+
+	<select id="selectGA01N602byRctNo" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602VO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N602VO">
+	<![CDATA[
+		SELECT
+			c.*
+		FROM
+			GA01N601 a
+			INNER JOIN GA01N603 b ON (a.RCT_NO = #{rctNo} AND a.DOC_RQS_SQNC_NO = b.DOC_RQS_SQNC_NO)
+			INNER JOIN GA01N602 c ON (b.DOC_BOX_SQNC_NO = c.DOC_BOX_SQNC_NO)
+	]]>
+	</select>
+
+
+	<select id="selectGA01N602byRctNoToExcel" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N602VO" resultType="com.miraeasset.biz.rq.dr.vo.GA01N602VO">
+
+		SELECT
+			c.DOC_BOX_SQNC_NO,
+			c.DOC_BOX_NM,
+			c.PRDT_ORZ_CD,
+			c.MT_ORZ_CD,
+			c.BOX_DOC_CN,
+			c.CSTD_PLC_CN,
+			c.DVCE_NO,
+			c.BCD_NO,
+			c.DOC_BOX_SCD,
+			c.PRDT_STRT_DT,
+			c.PRDT_END_DT,
+			c.DSUS_YR,
+			c.PRSV_YR_VL,
+			c.MVOUT_DT,
+			c.LN_DT,
+			c.WTDW_DT,
+			c.CORP_NM,
+			c.NTE_CN,
+			c.DSUS_DT
+		FROM
+			GA01N601 a
+			INNER JOIN GA01N603 b ON (a.RCT_NO = #{rctNo} AND a.DOC_RQS_SQNC_NO = b.DOC_RQS_SQNC_NO)
+		<choose>
+			<when test=' unifRqsTcd != null and unifRqsTcd == "090301" '>
+				INNER JOIN GA01N604 c ON (b.DOC_BOX_SQNC_NO = c.DOC_BOX_SQNC_NO)
+			</when>
+			<otherwise>
+				INNER JOIN GA01N602 c ON (b.DOC_BOX_SQNC_NO = c.DOC_BOX_SQNC_NO)
+			</otherwise>
+		</choose>
+
+
+	</select>
+
+
+	<select id="selectCB01N310byMenuId" parameterType="Map" resultType="Map">
+		/* RQDR1000U0.selectCB01N310byMenuId : 메일 전송 참조 정보 조회 */
+	<![CDATA[
+		WITH CTE_TB AS
+		(
+			SELECT
+				a.EP_NM
+			,	NVL(c1Sdt.CD_STD_NM, c1Pst.CD_STD_NM) AS STD_NM
+			,	CASE WHEN TRIM(a.RTN)  IS NOT NULL THEN TRIM(a.RTN) || '-' END
+				|| CASE WHEN TRIM(a.MTNO) IS NOT NULL THEN TRIM(a.MTNO)                END
+				|| CASE WHEN TRIM(a.ITNO) IS NOT NULL THEN '-' || TRIM(a.ITNO)         END
+					AS TLNO
+			,	CASE WHEN TRIM(a.HNDP_BZPR_TLNO) IS NOT NULL THEN TRIM(a.HNDP_BZPR_TLNO) || '-' END
+				|| CASE WHEN TRIM(a.HNDP_MTNO) IS NOT NULL THEN TRIM(a.HNDP_MTNO)                     END
+				|| CASE WHEN TRIM(a.HNDP_ITNO) IS NOT NULL THEN '-' || TRIM(a.HNDP_ITNO)              END
+					AS HNDP_TLNO
+			,	a.EMAL_ADR
+			,	a.EPNO
+			,	a.BLNG_ORZ_CD
+			FROM
+				CB01N310 a
+				LEFT OUTER JOIN
+				(
+					SELECT HR_CMN_CD_KND_NO,HR_CMN_CD,CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_008'
+				) c1Pst ON (a.HR_PST_CD = c1Pst.HR_CMN_CD)
+				LEFT OUTER JOIN
+				(
+					SELECT HR_CMN_CD_KND_NO,HR_CMN_CD,CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_007'
+				) c1Sdt ON (a.HR_OSDT_CD = c1Sdt.HR_CMN_CD)
+			WHERE
+				a.EPNO = ( SELECT MAX(EPNO) FROM GA09N209 WHERE PSIT_MENU_ID = #{psitMenuId} AND MCHPR_YN = '1' )
+		)
+		SELECT
+			a.EP_NM AS "epNm"
+		,	a.STD_NM AS "stdNm"
+		,	NVL(a.TLNO, a.HNDP_TLNO) AS "tlNo"
+		,	a.EMAL_ADR AS "epEmal"
+		,	b.CHPR_EMAL_ADR_ECP_VL AS "chprEmalVl"
+		,	c.IPRT_MSG_CD AS "iprtMsgCd"
+		,	c.MSG_SND_CN AS "msgSndCn"
+		,	a.EPNO AS "epNo"
+		,	a.BLNG_ORZ_CD AS "orzCd"
+		FROM
+			CTE_TB a
+			LEFT OUTER JOIN
+			(
+				SELECT CHPR_EMAL_ADR_ECP_VL
+				FROM GA01N301
+				WHERE DELP_CD = '100116101' AND BZTP_TCD = '000001' AND BZTP_DL_TCD = '0001'
+			) b ON (1=1)
+			LEFT OUTER JOIN
+			(
+				SELECT IPRT_MSG_CD, MSG_SND_CN
+				FROM GA09N501
+				WHERE IPRT_MSG_CD = 'MA0001' AND USE_YN = '1'
+			) c ON (1=1)
+
+	]]>
+	</select>
+
+
+
+	<select id="selectGA01N603ValidationCnt" parameterType="com.miraeasset.biz.rq.dr.vo.GA01N601VO" resultType="Map">
+		/* RQDR1000U0.selectGA01N603ValidationCnt : 박스출고, 폐기 신청 건 입력 시 Validation */
+		WITH CTE_TB AS
+		(
+			SELECT a.DOC_RQS_SQNC_NO
+			  FROM GA01N601 a
+			 WHERE EXISTS (
+					SELECT z.RCT_NO FROM GA01N101 z
+					WHERE z.UNIF_RQS_PCD = #{unifRqsPcd} AND z.RQS_SCD IN ('05','10','15')
+						AND z.RCT_NO = a.RCT_NO
+				)
+		)
+		SELECT COUNT(DOC_RQS_SQNC_NO) AS "cnt"
+		FROM GA01N603 a
+		WHERE
+			DOC_BOX_SQNC_NO IN
+			<foreach collection="arrDocBoxSqncNo" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+			</foreach>
+			AND
+			EXISTS (
+				SELECT z.DOC_RQS_SQNC_NO FROM CTE_TB z WHERE z.DOC_RQS_SQNC_NO = a.DOC_RQS_SQNC_NO
+			)
+	</select>
+
+
+</mapper>

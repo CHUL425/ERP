@@ -1,0 +1,24 @@
+<component name="libraryTable">
+  <library name="swagger">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/spring-plugin-core-1.2.0.RELEASE.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/spring-plugin-metadata-1.2.0.RELEASE.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-schema-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/mapstruct-1.2.0.Final.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-swagger-ui-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-swagger-common-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/swagger-models-1.5.20.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/guava-20.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/classmate-1.4.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-swagger2-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/aopalliance-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-core-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-spring-web-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/swagger-annotations-1.5.20.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/springfox-spi-2.9.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/webapps/WEB-INF/lib/swagger/byte-buddy-1.8.12.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

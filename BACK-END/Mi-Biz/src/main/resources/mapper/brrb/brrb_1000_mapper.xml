@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brrb_1000_mapper">
+    <select id="selectListAT08N101"
+            parameterType="com.miraeasset.biz.br.rb.vo.BRRB1000U0In00VO"
+            resultType="com.miraeasset.biz.br.rb.vo.BRRB1000U0Out00VO">
+        /* brrb_1000_mapper.selectListAT08N101 : 본지점임차현황 조회 */
+        SELECT * FROM (
+        SELECT * FROM (
+        SELECT ROW_NUMBER() OVER(ORDER BY B.OFCBLD_TCD, A.LS_CNTC_NO, A.LS_CNTC_ADTN_SRNO) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT
+        , '01' AS LS_SF_TCD
+        , '임대' AS LS_SF_TCD_NM
+        , (SELECT CMN_CD_VL_DEF_CN
+            FROM AT09C302
+            WHERE CD_KND_NO = 'OFCBLD_TCD'
+            AND CMN_CD_VL = B.OFCBLD_TCD) AS OFCBLD_TCD_NM
+        , A.CNTC_NM  AS LVIN_CO_NM
+        , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.ORZ_CD) AS ORZ_NM
+        , B.LEAS_AR2 AS RENT_AR
+        , B.ONLY_AR2 AS ONLY_AR
+        , B.LEAS_GRT_A AS GRT_A
+        , A.SURT_EXP_PY_LS_A + A.LS_A_VAT AS MLY_RENTC
+        , CASE WHEN REGEXP_INSTR(REPLACE(B.MN_MCST_CN, ',', ''), '[^0-9]') = 0
+               THEN TO_NUMBER(REPLACE(B.MN_MCST_CN, ',', '')) ELSE 0
+          END AS MLY_MCST
+        , A.FST_LS_OP_DT
+        , A.LS_END_DT
+        , A.LS_CNTC_NO
+        , A.LS_CNTC_ADTN_SRNO
+        FROM AT08N100 A /*계약관리*/
+        , AT08N101 B /*계약관리_부동산*/
+        WHERE A.LS_CNTC_NO = B.LS_CNTC_NO
+        AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+        AND A.LST_CNTC_YN = '1' /*최종계약여부 = Y*/
+        AND B.REST_AST_TCD = '07' /*기조차산구분 = 임대*/
+        AND A.CNTC_CCLC_TCD = '01' /* 계약해지구분코드 = 정상 */
+        AND A.CNTC_TCD NOT IN ('09', '10') /* 계약구분코드 이수관, 중도해지는 안보이게 처리 */
+        <if test=' (ofcbldTcd != null and ofcbldTcd != "") or ofcbldTcd == "00" '>
+            AND OFCBLD_TCD = #{ofcbldTcd}
+        </if>
+        ORDER BY B.OFCBLD_TCD, A.LS_CNTC_NO, A.LS_CNTC_ADTN_SRNO
+
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+    <select id="selectListGA02N201"
+            parameterType="com.miraeasset.biz.br.rb.vo.BRRB1000U0In00VO"
+            resultType="com.miraeasset.biz.br.rb.vo.BRRB1000U0Out00VO">
+        SELECT * FROM (
+        SELECT * FROM (
+
+        SELECT ROW_NUMBER() OVER(ORDER BY A.OFCBLD_TCD, A.LVIN_CO_NM) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT
+        , '02' AS LS_SF_TCD
+        , '자가' AS LS_SF_TCD_NM
+        , A.BAS_YM
+        , (SELECT CMN_CD_VL_DEF_CN
+        FROM AT09C302
+        WHERE CD_KND_NO = 'OFCBLD_TCD'
+        AND CMN_CD_VL = A.OFCBLD_TCD) AS OFCBLD_TCD_NM
+        , A.LVIN_CO_NM
+        , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.ORZ_CD) AS ORZ_NM
+        , A.RENT_AR
+        , A.ONLY_AR
+        , A.GRT_A
+        , A.MLY_RENTC
+        , A.MLY_MCST
+        , A.OFCBLD_TCD
+        , A.ORZ_CD
+        FROM GA02N201 A
+        WHERE A.BAS_YM = SUBSTR(#{basYm}, 1, 6)
+        <if test=' ofcbldTcd != null and ofcbldTcd != "" '>
+            AND A.OFCBLD_TCD = #{ofcbldTcd}
+        </if>
+        ORDER BY A.OFCBLD_TCD, A.LVIN_CO_NM
+
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+
+ <select id="selectGA02N201Rcen"
+            parameterType="com.miraeasset.biz.br.rb.vo.BRRB1000U0In00VO"
+            resultType="com.miraeasset.biz.br.rb.vo.BRRB1000U0Out00VO">
+      /* brrb_1000_mapper.selectGA02N201Rcen : 자가지점 가장 최근데이터 조회 */
+      SELECT '02' AS LS_SF_TCD
+	        , '자가' AS LS_SF_TCD_NM
+	        , A.BAS_YM
+	        , (SELECT CMN_CD_VL_DEF_CN
+	        FROM AT09C302
+	        WHERE CD_KND_NO = 'OFCBLD_TCD'
+	        AND CMN_CD_VL = A.OFCBLD_TCD) AS OFCBLD_TCD_NM
+	        , A.LVIN_CO_NM
+	        , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.ORZ_CD) AS ORZ_NM
+	        , A.RENT_AR
+	        , A.ONLY_AR
+	        , A.GRT_A
+	        , A.MLY_RENTC
+	        , A.MLY_MCST
+	        , A.OFCBLD_TCD
+	        , A.ORZ_CD
+        FROM GA02N201 A
+        WHERE 1=1
+          AND A.BAS_YM = (SELECT MAX(BAS_YM) FROM GA02N201 WHERE OFCBLD_TCD= #{ofcbldTcd})
+          AND A.OFCBLD_TCD = #{ofcbldTcd}
+        ORDER BY A.OFCBLD_TCD, A.LVIN_CO_NM
+    </select>
+
+
+    <select id="selectOneGA02N201"
+            parameterType="com.miraeasset.biz.br.rb.vo.BRRB1000U0In01VO"
+            resultType="com.miraeasset.biz.br.rb.vo.BRRB1000U0Out01VO">
+        SELECT A.*, (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = #{orzCd}) AS ORZ_NM
+        FROM GA02N201 A
+        WHERE BAS_YM = SUBSTR(#{basYm}, 1, 6)
+          AND OFCBLD_TCD = #{ofcbldTcd}
+          AND ORZ_CD = #{orzCd}
+    </select>
+
+    <insert id="mergeGA02N201" parameterType="com.miraeasset.biz.br.rb.vo.BRRB1000U0Out01VO">
+        MERGE INTO GA02N201 A
+        USING DUAL
+        ON (A.BAS_YM = SUBSTR(#{basYm}, 1, 6) AND A.OFCBLD_TCD = #{ofcbldTcd} AND A.ORZ_CD = #{orzCd})
+        WHEN MATCHED THEN
+            UPDATE
+            SET A.LVIN_CO_NM   = #{lvinCoNm},
+                A.RENT_AR      = #{rentAr},
+                A.ONLY_AR      = #{onlyAr},
+                A.GRT_A        = #{grtA},
+                A.MLY_RENTC    = #{mlyRentc},
+                A.MLY_MCST     = #{mlyMcst},
+                A.OPTR_ID      = #{optrId},
+                A.OPRT_CHNL_CD = #{oprtChnlCd},
+                A.OPRT_ORZ_CD  = #{oprtOrzCd},
+                A.OPRT_IP_ADR  = #{oprtIpAdr},
+                A.OPRT_DTTM    = SYSDATE
+        WHEN NOT MATCHED THEN
+            INSERT
+            VALUES (SUBSTR(#{basYm}, 1, 6),
+                    #{ofcbldTcd},
+                    #{orzCd},
+                    #{lvinCoNm},
+                    #{rentAr},
+                    #{onlyAr},
+                    #{grtA},
+                    #{mlyRentc},
+                    #{mlyMcst},
+                    #{optrId},
+                    #{oprtChnlCd},
+                    #{oprtOrzCd},
+                    #{oprtIpAdr},
+                    SYSDATE)
+    </insert>
+
+    <delete id="deleteGA02N201" parameterType="com.miraeasset.biz.br.rb.vo.BRRB1000U0In01VO">
+        DELETE
+        FROM GA02N201
+        WHERE BAS_YM = SUBSTR(#{basYm}, 1, 6)
+          AND OFCBLD_TCD = #{ofcbldTcd}
+          AND ORZ_CD = #{orzCd}
+    </delete>
+
+
+</mapper>

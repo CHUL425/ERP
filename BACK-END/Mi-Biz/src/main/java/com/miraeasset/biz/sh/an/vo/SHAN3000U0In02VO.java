@@ -1,0 +1,67 @@
+/*******************************************************************************************************
+* 	01. 프 로 젝 트 명	: 총무포털
+*	02. 업 무 구 분 명	: SH
+*	03. 파    일   명	: SHAN3000U0In02VO.java
+*	04. 작  성  일  자	: 2024.02.07
+*	05. 작   성   자	: CHS
+*	06. 관 련 기 능	: 안전보건공지 확인처리 IN
+*	07. 주  요  사  항	: 키값 조회
+*******************************************************************************************************/
+
+package com.miraeasset.biz.sh.an.vo;
+
+import java.math.BigDecimal;
+
+import org.springframework.stereotype.Component;
+
+import com.miraeasset.biz.common.vo.BaseVO;
+
+import io.swagger.annotations.ApiModelProperty;
+
+@Component
+public class SHAN3000U0In02VO extends BaseVO{
+
+	@ApiModelProperty(notes= "로그인정보-사원번호")
+	private String cfmtEpno;
+	
+	@ApiModelProperty(notes= "작성일자", required=true)
+	private String madeDt; 
+	@ApiModelProperty(notes= "일련번호", required=true)
+	private BigDecimal srno; 
+	@ApiModelProperty(notes= "공지구분코드", required=true)
+	private String cmklTcd; 
+	@ApiModelProperty(notes= "확인여부", required=true)
+	private String cfmtYn; 
+	 
+	public String getCfmtEpno() {
+		return cfmtEpno;
+	}
+	public void setCfmtEpno(String cfmtEpno) {
+		this.cfmtEpno = cfmtEpno;
+	}
+	public BigDecimal getSrno() {
+		return srno;
+	}
+	public void setSrno(BigDecimal srno) {
+		this.srno = srno;
+	}
+	public String getMadeDt() {
+		return madeDt;
+	}
+	public void setMadeDt(String madeDt) {
+		this.madeDt = madeDt;
+	}
+	public String getCmklTcd() {
+		return cmklTcd;
+	}
+	public void setCmklTcd(String cmklTcd) {
+		this.cmklTcd = cmklTcd;
+	}
+	public String getCfmtYn() {
+		return cfmtYn;
+	}
+	public void setCfmtYn(String cfmtYn) {
+		this.cfmtYn = cfmtYn;
+	} 
+	
+}

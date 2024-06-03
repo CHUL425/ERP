@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="post_mapper">
+
+    <select id="selectPreSchw" parameterType="com.miraeasset.biz.common.basic.vo.BasicPost00In00VO" resultType="com.miraeasset.biz.common.basic.vo.BasicPost00Out00VO">
+			/* Post00.selectPreChoSung : 고객주소 검색용  cszt_cb03c111_vf012 */
+			SELECT DECODE(SUBSTR(#{schw}, TO_NUMBER(B.CNT),1), 'ㄱ', 44032
+			                                               , 'ㄲ', 44620
+			                                               , 'ㄴ', 45208
+			                                               , 'ㄷ', 45796
+			                                               , 'ㄸ', 46384
+			                                               , 'ㄹ', 46972
+			                                               , 'ㅁ', 47560
+			                                               , 'ㅂ', 48148
+			                                               , 'ㅃ', 48736
+			                                               , 'ㅅ', 49324
+			                                               , 'ㅆ', 49912
+			                                               , 'ㅇ', 50500
+			                                               , 'ㅈ', 51088
+			                                               , 'ㅉ', 51676
+			                                               , 'ㅊ', 52264
+			                                               , 'ㅋ', 52852
+			                                               , 'ㅌ', 53440
+			                                               , 'ㅍ', 54028
+			                                               , 'ㅎ', 54616
+			                                               , 1)    AS SRNO1
+			     , DECODE(SUBSTR(#{schw}, TO_NUMBER(B.CNT),1), 'ㄱ', NCHR(44032)
+			                                               , 'ㄲ', NCHR(44620)
+			                                               , 'ㄴ', NCHR(45208)
+			                                               , 'ㄷ', NCHR(45796)
+			                                               , 'ㄸ', NCHR(46384)
+			                                               , 'ㄹ', NCHR(46972)
+			                                               , 'ㅁ', NCHR(47560)
+			                                               , 'ㅂ', NCHR(48148)
+			                                               , 'ㅃ', NCHR(48736)
+			                                               , 'ㅅ', NCHR(49324)
+			                                               , 'ㅆ', NCHR(49912)
+			                                               , 'ㅇ', NCHR(50500)
+			                                               , 'ㅈ', NCHR(51088)
+			                                               , 'ㅉ', NCHR(51676)
+			                                               , 'ㅊ', NCHR(52264)
+			                                               , 'ㅋ', NCHR(52852)
+			                                               , 'ㅌ', NCHR(53440)
+			                                               , 'ㅍ', NCHR(54028)
+			                                               , 'ㅎ', NCHR(54616)
+			                                               , SUBSTR( #{schw}, TO_NUMBER(B.CNT),1))    AS SCHW1
+			     , DECODE(SUBSTR(#{schw}, TO_NUMBER(B.CNT),1), 'ㄱ', NCHR(44620)
+			                                               , 'ㄲ', NCHR(45208)
+			                                               , 'ㄴ', NCHR(45796)
+			                                               , 'ㄷ', NCHR(46384)
+			                                               , 'ㄸ', NCHR(46972)
+			                                               , 'ㄹ', NCHR(47560)
+			                                               , 'ㅁ', NCHR(48148)
+			                                               , 'ㅂ', NCHR(48736)
+			                                               , 'ㅃ', NCHR(49324)
+			                                               , 'ㅅ', NCHR(49912)
+			                                               , 'ㅆ', NCHR(50500)
+			                                               , 'ㅇ', NCHR(51088)
+			                                               , 'ㅈ', NCHR(51676)
+			                                               , 'ㅉ', NCHR(52264)
+			                                               , 'ㅊ', NCHR(52852)
+			                                               , 'ㅋ', NCHR(53440)
+			                                               , 'ㅌ', NCHR(54028)
+			                                               , 'ㅍ', NCHR(54616)
+			                                               , 'ㅎ', NCHR(54616)
+			                                               , SUBSTR( #{schw}, TO_NUMBER(B.CNT),1))    AS SCHW2                                               
+			  FROM DUAL A
+			     , (SELECT CMN_CD_VL CNT FROM CB03C111 WHERE CMN_CD = 'CLDR_DT_CD') B
+			 WHERE CNT <![CDATA[ < ]]>= LPAD(LENGTH( #{schw} ), 2, '0')
+ 			  
+    </select>
+    
+    <select id="selectUnifAdr" parameterType="com.miraeasset.biz.common.basic.vo.BasicPost00In01VO" resultType="com.miraeasset.biz.common.basic.vo.BasicPost00Out01VO">
+    
+			/* Post00.selectUnifAdr : 고객주소 통합검색  cszt_cs04n011_df001 */    
+			SELECT * FROM (
+			SELECT * FROM (
+			SELECT 
+						     ROW_NUMBER() OVER(ORDER BY Z.NEXT_KEY, ROWNUM DESC) AS RNUM     
+						   , COUNT(1) OVER() AS AL_CNT            /* 전체건수 */      
+			               , ZPCD
+			               , ZPCD_SEQ
+			               , ADR
+			               , DTL_ADR
+			
+			FROM (
+			
+			SELECT ZPCD                                                           AS ZPCD
+			     , MAX(ZPCD_SEQ)                                                  AS ZPCD_SEQ
+			       
+			     , TRIM(SIDO_NM)                                                  ||        /* 시도명         */
+			       DECODE(TRIM(SGG_NM)   , NULL, NULL      , ' '||TRIM(SGG_NM))   ||        /* 시군구명       */
+			       DECODE(TRIM(EMDG_ADR) , NULL, NULL      , ' '||TRIM(EMDG_ADR)) ||        /* 읍면동주소     */
+			       DECODE(TRIM(RIADR_NM) , NULL, NULL      , ' '||TRIM(RIADR_NM)) ||        /* 리주소명       */
+			       DECODE(TRIM(IL_NM)    , NULL, NULL      , ' '||TRIM(IL_NM))    ||        /* 도서명         */
+			       DECODE(TRIM(MDST_ADR) , NULL, NULL      , ' '||TRIM(MDST_ADR))           /* 다량배달처주소 */
+			                                                                      AS ADR 
+			       /* 번지 */
+			     , DECODE(TRIM(MHN), NULL, NULL
+			                       , '산', TRIM(MHN)|| min(TRIM(STRT_HSNO)) || ' ~ ' || TRIM(MHN)||max(TRIM(EHN))
+			                       , min(TRIM(STRT_HSNO))|| TRIM(MHN) || ' ~ ' || max(TRIM(EHN)) || TRIM(MHN))
+			                       
+			                                                                      AS DTL_ADR
+			     , '1'||ZPCD||max(ZPCD_SEQ)                                       AS NEXT_KEY  
+			  FROM CS04C010  A                                                              /* 우편번호구주소조회 */
+			 WHERE 
+			${schWhere1}
+			
+			 GROUP BY ZPCD, SIDO_NM, SGG_NM, EMDG_ADR, RIADR_NM, IL_NM, MDST_ADR, MHN /* 차피 다 동일해서 하나만 보여준다. */
+			 UNION ALL
+			SELECT ZPCD
+			     , 0
+			     , TRIM(                                                                          
+			       TRIM(SIDO_NM)                                                            /* 시도명         */
+			       ||DECODE(TRIM(SGG_NM), NULL, NULL, ' '||TRIM(SGG_NM))                    /* 시군구명       */     
+			       ||' ' || TRIM(STET_NM)                                                   /* 도로명         */
+			       ||' ' || TO_NUMBER(BDNO)                                                 /*건물본번호      */
+			       ||DECODE(BDSNO, '0', NULL, '-'|| TO_NUMBER(BDSNO))          
+			       )                                                              AS ADR                                                                   
+			     , DECODE(BLD_NM, '', NULL, BLD_NM)                               AS BLD_NM     
+			     , '2'||RADDR_ADR_CD                                              AS NEXT_KEY
+			     
+			  FROM CS04N011                                                                 /* 새주소조회-국가기초구역번호 */
+			 WHERE DEL_YN             = '0'
+			${schWhere2}
+			
+			  AND BDNO||BDSNO       LIKE NVL( '%'||TRIM( #{bdno} )||'%','%')||NVL( '%'||TRIM( #{bdsno} )||'%','%') 
+			 ORDER BY NEXT_KEY  
+			 
+			) Z
+    			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) ZZ 
+			  ) ZZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) ZZ WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	
+			  
+    
+    </select>
+
+
+
+	<insert id="insertGA09N502" parameterType="com.miraeasset.biz.common.vo.GA09N502VO">
+		/* RQDR1000U0.insertGA09N502 : 메신저, 이메일, 알림톡 발송 로그 등록 */
+
+		INSERT INTO GA09N502
+		( 	MSG_SND_SRNO			/* 	메시지발송일련번호	 */
+		,	IPRT_MSG_CD				/* 	알림메시지코드	 */
+		,	MSG_SND_CN				/* 	메시지발송내용	 */
+		,	SMS_SND_DT				/* 	SMS발송일자	 */
+		,	SMS_SND_TMD				/* 	SMS발송시각	 */
+		,	ORZ_CD					/* 	조직코드	 */
+		,	EPNO					/* 	사원번호	 */
+		,	DELP_CD					/* 	거래처코드	 */
+		,	BZTP_TCD				/* 	업종구분코드	 */
+		,	BZTP_DL_TCD				/* 	업종상세구분코드	 */
+		,	TLNO_ECP_VL				/* 	전화번호암호화값	 */
+		,	EMAL_ADR_ECP_VL			/* 	이메일주소암호화값	 */
+		,	RCT_NO					/* 	접수번호	 */
+		,	MSG_SND_RESP_CN			/* 	메시지발송응답내용	 */
+		,	CFMT_YN					/* 	확인여부	 */
+
+		,	OPTR_ID				/* 	조작자ID	 */
+		,	OPRT_CHNL_CD		/* 	조작채널코드	 */
+		,	OPRT_ORZ_CD			/* 	조작조직코드	 */
+		,	OPRT_IP_ADR			/* 	조작IP주소	 */
+		,	OPRT_DTTM			/* 	조작일시	 */
+		)
+		VALUES
+		(	 #{msgSndSrno}
+			,#{iprtMsgCd}
+			,#{msgSndCn}
+			,#{smsSndDt}
+			,#{smsSndTmd}
+			,#{orzCd}
+			,#{epno}
+			,#{delpCd}
+			,#{bztpTcd}
+			,#{bztpDlTcd}
+			,#{tlnoEcpVl}
+			,#{emalAdrEcpVl}
+			,#{rctNo}
+			,#{msgSndRespCn}
+			,#{cfmtYn}
+
+			,#{optrId      }     /* 조작자ID */
+			,#{oprtChnlCd  }     /* 조작채널코드 */
+			,#{oprtOrzCd   }     /* 조작조직코드 */
+			,#{oprtIpAdr   }     /* 조작IP주소 */
+			,SYSDATE             /* 조작일시 */
+		)
+	</insert>
+
+	<select id="selectGA09N503CrnSrno" parameterType="String" resultType="String">
+		SELECT NVL(MAX(CRN_SRNO) + 1, 1) AS CRN_SRNO
+          FROM GA09N503
+         WHERE CRN_DT = #{crnDt}
+	</select>
+
+	<insert id="insertGA09N503" parameterType="com.miraeasset.biz.common.vo.GA09N503VO">
+		/* post_mapper.insertGA09N503 : 메신저, 이메일, 알림톡 발송 대기 등록 */
+		INSERT INTO GA09N503
+		( 	CRN_DT					/* 	생성일자	     */
+		,   CRN_SRNO				/*  생성일련번호 	 */
+		,	IPRT_MSG_CD				/* 	알림메시지코드	 */
+		,	MSG_SND_CN				/* 	메시지발송내용	 */
+		,	SMS_SND_DT				/* 	SMS발송일자	 */
+		,	SMS_SND_TMD				/* 	SMS발송시각	 */
+		,	ORZ_CD					/* 	조직코드	 */
+		,	EPNO					/* 	사원번호	 */
+		,	DELP_CD					/* 	거래처코드	 */
+		,	BZTP_TCD				/* 	업종구분코드	 */
+		,	BZTP_DL_TCD				/* 	업종상세구분코드	 */
+		,	TLNO_ECP_VL				/* 	전화번호암호화값	 */
+		,	EMAL_ADR_ECP_VL			/* 	이메일주소암호화값	 */
+		,	RCT_NO					/* 	접수번호	 */
+		,   SND_YN					/*  발송여부	 */
+
+		,	OPTR_ID				/* 	조작자ID	 */
+		,	OPRT_CHNL_CD		/* 	조작채널코드	 */
+		,	OPRT_ORZ_CD			/* 	조작조직코드	 */
+		,	OPRT_IP_ADR			/* 	조작IP주소	 */
+		,	OPRT_DTTM			/* 	조작일시	 */
+		)
+		VALUES
+			(#{crnDt}
+			,#{crnSrno}
+			,#{iprtMsgCd}
+			,#{msgSndCn}
+			,#{smsSndDt}
+			,#{smsSndTmd}
+			,#{orzCd}
+			,#{epno}
+			,#{delpCd}
+			,#{bztpTcd}
+			,#{bztpDlTcd}
+			,#{tlnoEcpVl}
+			,#{emalAdrEcpVl}
+			,#{rctNo}
+			,#{sndYn}
+
+			,#{optrId      }     /* 조작자ID */
+			,#{oprtChnlCd  }     /* 조작채널코드 */
+			,#{oprtOrzCd   }     /* 조작조직코드 */
+			,#{oprtIpAdr   }     /* 조작IP주소 */
+			,SYSDATE             /* 조작일시 */
+			)
+	</insert>
+	
+	<select id="selectListGA09N503" parameterType="com.miraeasset.biz.common.vo.GA09N503In00VO" resultType="com.miraeasset.biz.common.vo.GA09N503VO">
+		SELECT CRN_DT
+		     , CRN_SRNO
+		     , IPRT_MSG_CD
+		     , MSG_SND_CN
+		     , SMS_SND_DT
+		     , SMS_SND_TMD
+		     , ORZ_CD
+		     , EPNO
+		     , DELP_CD
+		     , BZTP_TCD
+		     , BZTP_DL_TCD
+		     , TLNO_ECP_VL
+		     , EMAL_ADR_ECP_VL
+		     , RCT_NO
+		     , SND_YN
+		  FROM GA09N503
+		 WHERE 1=1
+		  <if test=' smsSndDt != null and smsSndDt != "" '>
+		  AND SMS_SND_DT = #{smsSndDt}
+		  </if>
+		  <if test=' smsSndTmd != null and smsSndTmd != "" '>
+		  AND SMS_SND_TMD = #{smsSndTmd}
+		  </if>
+		  <if test=' sndYn == "0" or sndYn == "1" '>
+		  AND SND_YN = #{sndYn}
+		  </if>
+	</select>
+
+	<select id="updateGA09N503" parameterType="com.miraeasset.biz.common.vo.GA09N503VO">
+		UPDATE GA09N503
+           SET SND_YN   = #{sndYn}
+         WHERE CRN_DT   = #{crnDt}
+           AND CRN_SRNO = #{crnSrno}
+	</select>
+
+	<select id="getEpTlno" parameterType="String" resultType="String">
+		SELECT HNDP_BZPR_TLNO||HNDP_MTNO||HNDP_ITNO AS HNDP_TLNO
+		  FROM CB01N310
+         WHERE EPNO = #{epno}
+	</select>
+</mapper>
+
+

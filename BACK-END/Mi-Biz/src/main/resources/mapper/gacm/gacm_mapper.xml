@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gacm_mapper">
+	
+	<select id="selectListGA01N303" parameterType="com.miraeasset.biz.ga.cm.vo.GACM1000U0In00VO" resultType="com.miraeasset.biz.ga.cm.vo.GACM1000U0Out00VO">
+		/* GAEM1000U0.selectListGA01N303 = 계약서관리 목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+				
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.CNRT_MT_NO, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()  AS AL_CNT  
+				     , T1.CNRT_MT_NO
+				     , T1.DELP_CD
+				     , TRIM(T2.DELP_NM) AS DELP_NM
+				     , T1.CNTC_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CNTC_TCD' AND CMN_CD_VL = T1.CNTC_TCD AND ROWNUM = 1 ) AS CNTC_TCD_NM     
+				     , T1.CNTC_NM
+				     , T1.CNTC_A
+				     , T1.CNTC_STRT_DT
+				     , T1.CNTC_END_DT
+				     , T1.ENTP_SELT_MCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'ENTP_SELT_MCD' AND CMN_CD_VL = T1.ENTP_SELT_MCD AND ROWNUM = 1 ) AS ENTP_SELT_MCD_NM          
+				     , T1.NTE_CN
+				     , T4.ACTG_ACSJ_CD
+				     , CASE WHEN T4.CNT > 1 THEN T4.ACSJ_CD_NM || ' 외 ' || T4.CNT || '건'
+				            ELSE T4.ACSJ_CD_NM
+				        END AS ACSJ_CD_NM
+				     , (SELECT COUNT(1) FROM GA01N306	WHERE CNRT_MT_NO = T1.CNRT_MT_NO AND CNRT_KCD = '01' ) AS DRFT_DOC_CNT
+				  FROM GA01N303	T1 -- 계약서관리
+				     , AT05C010 T2 -- 거래처
+				     , ( 
+				        SELECT CNRT_MT_NO
+				             , CNRT_KCD
+				             , ACTG_ACSJ_CD
+				             , ACSJ_CD_NM
+				             , CNT
+				        FROM (
+				             SELECT RANK() OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD ORDER BY ACTG_ACSJ_CD) AS RN
+				                  , COUNT(1) OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD) AS CNT
+				                  , A.CNRT_MT_NO 
+				                  , A.CNRT_KCD 
+				                  , A.ACTG_ACSJ_CD
+				                  , B.ACSJ_CD_NM 
+				               FROM GA01N304	A -- 계약서별계정과목코드
+				                  , AT01C001    B -- 계정과목코드
+				              WHERE B.ACSJ_CD  (+)= A.ACTG_ACSJ_CD 
+				                AND B.ACTG_BAS_CD = 'G009'
+				                AND B.ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+				                AND A.CNRT_KCD    = '01' /* 계약서종류코드 01:계약서관리 02:RE100 */
+				            )
+				            WHERE RN = 1
+				      ) T4 -- 계약서별계정과목     
+				  WHERE 1=1
+				    AND T2.DELP_CD     (+)= T1.DELP_CD
+				    AND T4.CNRT_MT_NO  (+)= T1.CNRT_MT_NO 
+				    AND T1.DEL_YN         = '0'
+				    AND T1.CNTC_STRT_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+				    AND T1.DELP_CD        LIKE '%' || TRIM( #{delpCd}  )     || '%' /* 업체코드 */
+				    AND T1.CNTC_NM        LIKE '%' || TRIM( #{cntcNm}  )     || '%' /* 계약명  */
+				    AND T1.CNTC_TCD       LIKE '%' || TRIM( #{cntcTcd} )     || '%' /* 계약구분코드  */
+				    AND T1.ENTP_SELT_MCD  LIKE '%' || TRIM( #{entpSeltMcd} ) || '%' /* 업체선정방법코드   */
+		       <if test='actgAcsjCd != null and actgAcsjCd !="" '>    				    
+				    AND T1.CNRT_MT_NO IN 
+				         ( SELECT A.CNRT_MT_NO 
+				             FROM GA01N304	A -- 계약서별계정과목코드
+				            WHERE A.CNRT_KCD    = '01' /* 계약서종류코드 01:계약서관리 02:RE100 */
+				              AND A.ACTG_ACSJ_CD LIKE '%' || TRIM( #{actgAcsjCd} ) || '%'
+				         )
+			   </if>
+				  ORDER BY T1.CNTC_STRT_DT DESC
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>	
+	
+	<select id="selectListGA01N304" parameterType="com.miraeasset.biz.common.meta.vo.GA01N304VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N304VO">
+		/* GACM1000U0.selectListGA01N304 = 계약서별계정과목코드 목록조회 */	
+             SELECT A.CNRT_MT_NO 
+                  , A.ACTG_ACSJ_CD
+                  , B.ACSJ_CD_NM 
+               FROM GA01N304	A -- 계약서별계정과목코드
+                  , AT01C001    B -- 계정과목코드
+              WHERE B.ACSJ_CD  (+)= A.ACTG_ACSJ_CD 
+                AND B.ACTG_BAS_CD = 'G009'
+                AND B.ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+                AND A.CNRT_MT_NO = #{cnrtMtNo} /* 계약서관리번호   */
+                AND A.CNRT_KCD   = '01' /* 계약서종류코드  01:계약서관리 02:RE100 */
+              ORDER BY A.CNRT_MT_NO 	
+	</select>                
+	
+	<select id="selectListGA01N306" parameterType="com.miraeasset.biz.common.meta.vo.GA01N306VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N306VO">
+		/* GACM1000U0.selectListGA01N306 = 계약서별기안문서 목록조회 */	
+			SELECT A.CNRT_MT_NO 
+			     , A.DRFT_DOC_NO  
+			     , B.DRFT_DOC_TTL_NM
+			  FROM GA01N306	A -- 계약서별기안문서
+			     , AT09N401 B -- 기안문서
+			 WHERE 1=1
+			   AND A.CNRT_MT_NO = #{cnrtMtNo} /* 계약서관리번호   */
+			   AND A.CNRT_KCD   = #{cnrtKcd } /* 계약서종류코드  01:계약서관리 02:RE100 */
+			   AND B.DRFT_DOC_NO (+)= A.DRFT_DOC_NO
+			 ORDER BY A.CNRT_MT_NO 	          	
+	</select> 
+		
+	<select id="selectGA01N303PK" parameterType="com.miraeasset.biz.ga.cm.vo.GACM1000U0In01VO" resultType="com.miraeasset.biz.ga.cm.vo.GACM1000U0Out01VO">
+		/* GACM1000U0.selectGA01N303PK = 계약서관리 상세조회(PK) */
+			SELECT T1.DELP_CD
+			     , TRIM(T2.DELP_NM) AS DELP_NM
+			     , T1.CNTC_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CNTC_TCD' AND CMN_CD_VL = T1.CNTC_TCD AND ROWNUM = 1 ) AS CNTC_TCD_NM     
+			     , T1.CNTC_NM
+			     , T1.CNTC_A
+			     , T1.CNTC_STRT_DT
+			     , T1.CNTC_END_DT
+			     , T1.ENTP_SELT_MCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'ENTP_SELT_MCD' AND CMN_CD_VL = T1.ENTP_SELT_MCD AND ROWNUM = 1 ) AS ENTP_SELT_MCD_NM          
+			     , T1.NTE_CN
+			     , T1.CNRT_MT_NO
+				 , TRIM(T2.DELP_RPTV_NM) AS DELP_RPTV_NM
+				 , T2.BLNO
+			  FROM GA01N303	T1 -- 계약서관리
+			     , AT05C010 T2 -- 거래처
+			  WHERE 1=1
+			    AND T2.DELP_CD     (+)= T1.DELP_CD
+			    AND T1.DEL_YN         = '0'
+			    AND T1.CNRT_MT_NO     = #{cnrtMtNo}    /* 계약서관리번호  */
+	</select>		
+	
+	<select id="selectGA01N304PK" parameterType="com.miraeasset.biz.common.meta.vo.GA01N304VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N304VO">
+		/* GACM1000U0.selectGA01N304PK = 계약서별계정과목코드 상세조회(PK) */	
+             SELECT A.CNRT_MT_NO
+                  , A.ACTG_ACSJ_CD
+                  , B.ACSJ_CD_NM 
+               FROM GA01N304	A -- 계약서별계정과목코드
+                  , AT01C001    B -- 계정과목코드
+              WHERE B.ACSJ_CD  (+)= A.ACTG_ACSJ_CD 
+                AND B.ACTG_BAS_CD = 'G009'
+                AND B.ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+                AND A.CNRT_MT_NO   = #{cnrtMtNo}    /* 계약서관리번호   */
+                AND A.ACTG_ACSJ_CD = #{actgAcsjCd}   /*회계계정과목코드*/  
+                AND A.CNRT_KCD     = #{cnrtKcd}     /* 계약서종류코드   */
+
+	</select>  
+	
+	    		
+	<select id="selectGA01N306PK" parameterType="com.miraeasset.biz.common.meta.vo.GA01N306VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N306VO">
+		/* GACM1000U0.selectGA01N306PK = 계약서별기안문서 상세조회(PK) */	
+             SELECT A.CNRT_MT_NO 
+                  , A.DRFT_DOC_NO 
+                  , A.CNRT_KCD
+               FROM GA01N306	A -- 계약서별기안문서
+              WHERE A.CNRT_MT_NO   = #{cnrtMtNo}    /* 계약서관리번호   */
+                AND A.DRFT_DOC_NO =  #{drftDocNo}   /*회계계정과목코드*/  
+                AND A.CNRT_KCD     = #{cnrtKcd}     /* 계약서종류코드   */
+	</select>  
+	
+	<insert id="insertGA01N303" parameterType="com.miraeasset.biz.common.meta.vo.GA01N303VO" >
+		/* GACM1000U0.insertGA01N303 = 계약서관리 신규등록 */	
+			INSERT INTO GA01N303	-- 계약서관리
+			( 
+			  CNRT_MT_NO           /*계약서관리번호   */
+			, DELP_CD              /*거래처코드      */
+			, CNTC_TCD             /*계약구분코드    */
+			, CNTC_NM              /*계약명          */
+			, CNTC_A               /*계약금액        */
+			, CNTC_STRT_DT         /*계약시작일자    */
+			, CNTC_END_DT          /*계약종료일자    */
+			, ENTP_SELT_MCD        /*업체선정방법코드*/
+			, NTE_CN               /*비고내용        */
+			, DEL_YN               /*삭제여부        */
+			, OPTR_ID              /*조작자ID        */
+			, OPRT_CHNL_CD         /*조작채널코드    */
+			, OPRT_ORZ_CD          /*조작조직코드    */
+			, OPRT_IP_ADR          /*조작IP주소      */
+			, OPRT_DTTM            /*조작일시        */
+			)
+			VALUES
+			(
+			  #{cnrtMtNo    }      /*계약서관리번호    */ 
+			, #{delpCd      }      /*거래처코드      */ 
+			, #{cntcTcd     }      /*계약구분코드    */ 
+			, #{cntcNm      }      /*계약명          */ 
+			, #{cntcA       }      /*계약금액        */ 
+			, #{cntcStrtDt  }      /*계약시작일자    */ 
+			, #{cntcEndDt   }      /*계약종료일자    */ 
+			, #{entpSeltMcd }      /*업체선정방법코드*/ 
+			, #{nteCn       }      /*비고내용        */ 
+			, #{delYn       }      /*삭제여부        */ 
+			, #{optrId      }      /*조작자ID        */ 
+			, #{oprtChnlCd  }      /*조작채널코드    */ 
+			, #{oprtOrzCd   }      /*조작조직코드    */ 
+			, #{oprtIpAdr   }      /*조작IP주소      */ 
+			, SYSDATE              /*조작일시        */ 
+			)
+	</insert>	
+
+	<insert id="insertGA01N304" parameterType="com.miraeasset.biz.common.meta.vo.GA01N304VO" >
+		/* GACM1000U0.insertGA01N304 = 계약서별계정과목코드 신규등록 */		
+			INSERT INTO GA01N304	-- 계약서별계정과목코드
+			(   
+			  CNRT_MT_NO        /*계약서관리번호     */
+			, CNRT_KCD          /*계약서종류코드    */
+			, ACTG_ACSJ_CD      /*회계계정과목코드*/
+			, OPTR_ID           /*조작자ID        */
+			, OPRT_CHNL_CD      /*조작채널코드    */
+			, OPRT_ORZ_CD       /*조작조직코드    */
+			, OPRT_IP_ADR       /*조작IP주소      */
+			, OPRT_DTTM         /*조작일시        */
+			)
+			VALUES
+			(
+			  #{cnrtMtNo    }   /*계약서관리번호    */    
+			, #{cnrtKcd     }   /*계약서종류코드*/         
+			, #{actgAcsjCd  }   /*회계계정과목코드*/         
+			, #{optrId      }   /*조작자ID        */         
+			, #{oprtChnlCd  }   /*조작채널코드    */         
+			, #{oprtOrzCd   }   /*조작조직코드    */         
+			, #{oprtIpAdr   }   /*조작IP주소      */         
+			, SYSDATE           /*조작일시        */       
+			)	
+	</insert>	
+	
+	<insert id="insertGA01N306" parameterType="com.miraeasset.biz.common.meta.vo.GA01N306VO" >
+		/* GACM1000U0.insertGA01N306 = 계약서별기안문서 신규등록 */		
+			INSERT INTO GA01N306	-- 계약서별기안문서
+			(   
+			  CNRT_MT_NO        /*계약서관리번호     */
+			, CNRT_KCD          /*계약서종류코드    */
+			, DRFT_DOC_NO       /*기안문서번호*/
+			, OPTR_ID           /*조작자ID        */
+			, OPRT_CHNL_CD      /*조작채널코드    */
+			, OPRT_ORZ_CD       /*조작조직코드    */
+			, OPRT_IP_ADR       /*조작IP주소      */
+			, OPRT_DTTM         /*조작일시        */
+			)
+			VALUES
+			(
+			  #{cnrtMtNo    }   /*계약서관리번호    */    
+			, #{cnrtKcd     }   /*계약서종류코드*/         
+			, #{drftDocNo   }   /*기안문서번호*/         
+			, #{optrId      }   /*조작자ID        */         
+			, #{oprtChnlCd  }   /*조작채널코드    */         
+			, #{oprtOrzCd   }   /*조작조직코드    */         
+			, #{oprtIpAdr   }   /*조작IP주소      */         
+			, SYSDATE           /*조작일시        */       
+			)	
+	</insert>		
+		
+	<update id="updateGA01N303" parameterType="com.miraeasset.biz.common.meta.vo.GA01N303VO" >
+		/* GACM1000U0.updateGA01N303 = 계약서관리 수정(PK) */	
+	
+			UPDATE GA01N303	-- 계약서관리
+			   SET CNTC_TCD       = #{cntcTcd     }      /*계약구분코드    */        
+			     , CNTC_NM        = #{cntcNm      }      /*계약명          */        
+			     , CNTC_A         = #{cntcA       }      /*계약금액        */        
+			     , CNTC_STRT_DT   = #{cntcStrtDt  }      /*계약시작일자    */        
+			     , CNTC_END_DT    = #{cntcEndDt   }      /*계약종료일자    */        
+			     , ENTP_SELT_MCD  = #{entpSeltMcd }      /*업체선정방법코드*/        
+			     , NTE_CN         = #{nteCn       }      /*비고내용        */    
+			     , DELP_CD        = #{delpCd      }      /*거래처코드      */      
+			     , OPTR_ID        = #{optrId      } 
+			     , OPRT_CHNL_CD   = #{oprtChnlCd  } 
+			     , OPRT_ORZ_CD    = #{oprtOrzCd   } 
+			     , OPRT_IP_ADR    = #{oprtIpAdr   } 
+			     , OPRT_DTTM      = SYSDATE					   
+			 WHERE CNRT_MT_NO     = #{cnrtMtNo    }      /*기안문서번호    */          
+   
+	</update>	
+			
+	<update id="updateDelGA01N303" parameterType="com.miraeasset.biz.common.meta.vo.GA01N303VO" >
+		/* GACM1000U0.updateDelGA01N303 = 계약서관리 삭제 */	
+	
+			UPDATE GA01N303	-- 계약서관리
+			   SET DEL_YN        = #{delYn       }   /*삭제여부    */    
+			     , OPTR_ID       = #{optrId     } 
+			     , OPRT_CHNL_CD  = #{oprtChnlCd } 
+			     , OPRT_ORZ_CD   = #{oprtOrzCd  } 
+			     , OPRT_IP_ADR   = #{oprtIpAdr  } 
+			     , OPRT_DTTM     = SYSDATE					   
+			 WHERE CNRT_MT_NO     = #{cnrtMtNo    }      /*기안문서번호    */    
+	</update>			
+
+	<select id="selectAT01C001PK" parameterType="com.miraeasset.biz.common.meta.vo.AT01C001VO" resultType="com.miraeasset.biz.common.meta.vo.AT01C001VO">
+		/* AT01C001VO.selectAT01C001PK = 계약서별계정과목코드 상세조회(PK) */	
+			SELECT CO_CD               /*회사코드        */
+			     , ACSJ_CD             /*계정과목코드    */
+			     , ACTG_BAS_CD         /*회계기준코드    */
+			     , ACSJ_CD_NM          /*계정과목코드명  */
+			     , ACSJ_ENG_NM         /*계정과목영문명  */
+			     , ACSJ_ABRV_NM        /*계정과목약어명  */
+			     , HRK_ACSJ_CD         /*상위계정과목코드*/
+			     , HRK_ANS_TCD         /*상위가감구분코드*/
+			     , SORT_ACSJ_CD        /*정렬계정과목코드*/
+			     , ACCT_PCD            /*계정유형코드    */
+			     , DNC_TCD             /*차대구분코드    */
+			     , FBLT_YN             /*기표여부        */
+			     , AST_PTN_TCD         /*자산유형구분코드*/
+			     , ACSJ_GCD            /*계정과목등급코드*/
+			     , BDGT_ACSJ_CD        /*예산계정과목코드*/
+			     , HO_RSLN_YN          /*본사결의여부    */
+			     , HO_HW_YN            /*본사수기여부    */
+			     , BR_RSLN_YN          /*지점결의여부    */
+			     , BR_HW_YN            /*지점수기여부    */
+			     , SMRY_PRC_YN         /*적요처리여부    */
+			     , ACCT_USE_YN         /*계정사용여부    */
+			     , HO_EXCC_RSLN_YN     /*본사정산결의여부*/
+			     , BR_EXCC_RSLN_YN     /*지점정산결의여부*/
+			     , OPTR_ID             /*조작자ID        */
+			     , OPRT_CHNL_CD        /*조작채널코드    */
+			     , OPRT_ORZ_CD         /*조작조직코드    */
+			     , OPRT_IP_ADR         /*조작IP주소      */
+			     , OPRT_DTTM           /*조작일시        */
+			  FROM AT01C001 -- 계정과목코드     
+			 WHERE ACSJ_CD      = #{acsjCd    }  /*계정과목코드    */ 
+			   AND ACTG_BAS_CD  = 'G009'
+			   AND ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   	
+			   AND CO_CD        = '005'  /* 회사코드 */
+			   AND ACTG_BAS_CD  = 'G009' /* 회계기준코드 */
+	</select>   
+	
+	<delete id="deleteGA01N304WithGA01N303" parameterType="com.miraeasset.biz.common.meta.vo.GA01N304VO" >
+		/* GA01N304VO.deleteGA01N304WithGA01N303 : 계약서별계정과목코드 삭제(부모키 연계)*/	
+			DELETE GA01N304 -- 계약서별계정과목코드
+			 WHERE CNRT_MT_NO   = #{cnrtMtNo   }      /*계약서관리번호     */          
+ 	</delete>			
+	
+	<delete id="deleteGA01N306WithGA01N303" parameterType="com.miraeasset.biz.common.meta.vo.GA01N306VO" >
+		/* GA01N304VO.deleteGA01N304WithGA01N303 : 계약서별기안문서 삭제(부모키 연계)*/	
+			DELETE GA01N306 -- 계약서별기안문서
+			 WHERE CNRT_MT_NO   = #{cnrtMtNo   }      /*계약서관리번호     */          
+ 	</delete>		
+
+	<select id="selLstGA01N303ByDelpCd" parameterType="com.miraeasset.biz.ga.cm.vo.GACM1000U0In10VO" resultType="com.miraeasset.biz.ga.cm.vo.GACM1000U0Out10VO">
+		/* GAEM1000U0.selLstGA01N303ByDelpCd = 업체계약현황조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.CNRT_MT_NO , ROWNUM DESC) AS RNUM                                                                                        
+				     , COUNT(1) OVER()  AS AL_CNT                                                                                                                          
+
+                     , T1.CNRT_MT_NO                                                                                                                                       
+				     , T1.CNTC_NM                                                                                                                                          
+				     , T1.CNTC_A                                                                                                                                           
+				     , T1.CNTC_STRT_DT                                                                                                                                     
+				     , T1.CNTC_END_DT                                                                                                                                      
+				     , T1.CNTC_TCD                                                                                                                                         
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CNTC_TCD' AND CMN_CD_VL = T1.CNTC_TCD AND ROWNUM = 1 ) AS CNTC_TCD_NM                    
+				     , T1.DELP_CD                                                                                                                                          
+				     , (SELECT DELP_NM FROM AT05C010 WHERE DELP_CD = T1.DELP_CD AND ROWNUM = 1) AS DELP_NM                                                                 
+				     , T1.ENTP_SELT_MCD                                                                                                                                    
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'ENTP_SELT_MCD' AND CMN_CD_VL = T1.ENTP_SELT_MCD AND ROWNUM = 1 ) AS ENTP_SELT_MCD_NM     
+				     , T1.NTE_CN                                                                                                                                           
+				     --, T2.ACTG_ACSJ_CD        
+				     --, T2.ACSJ_CD_NM
+                     , ( 
+                    SELECT LISTAGG(ACSJ_CD_NM,'/') WITHIN GROUP (ORDER BY CNRT_MT_NO ) AS LIST_DATA
+                      FROM (
+				        SELECT CNRT_MT_NO
+				             , CNRT_KCD
+				             , ACTG_ACSJ_CD
+				             , ACSJ_CD_NM
+				             , CNT
+				        FROM (
+				             SELECT RANK() OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD ORDER BY ACTG_ACSJ_CD) AS RN
+				                  , COUNT(1) OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD) AS CNT
+				                  , A.CNRT_MT_NO 
+				                  , A.CNRT_KCD 
+				                  , A.ACTG_ACSJ_CD
+				                  , B.ACSJ_CD_NM 
+				               FROM GA01N304	A -- 계약서별계정과목코드
+				                  , AT01C001  B -- 계정과목코드
+				              WHERE B.ACSJ_CD  (+)= A.ACTG_ACSJ_CD 
+				                AND B.ACTG_BAS_CD = 'G009'
+				                AND B.ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+				                AND A.CNRT_KCD    = '01' /* 계약서종류코드 01:계약서관리 02:RE100 */
+                                AND A.CNRT_MT_NO = T1.CNRT_MT_NO                                                                                                            
+				                AND A.CNRT_KCD   = '01' /* 01:계약서관리 02:ESG(RE100) */     
+				            )
+                           )
+                  ) AS ACSJ_CD_NM	
+                     , ( 
+                    SELECT LISTAGG(ACTG_ACSJ_CD,'/') WITHIN GROUP (ORDER BY CNRT_MT_NO ) AS LIST_DATA
+                      FROM (
+				        SELECT CNRT_MT_NO
+				             , CNRT_KCD
+				             , ACTG_ACSJ_CD
+				             , ACSJ_CD_NM
+				             , CNT
+				        FROM (
+				             SELECT RANK() OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD ORDER BY ACTG_ACSJ_CD) AS RN
+				                  , COUNT(1) OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD) AS CNT
+				                  , A.CNRT_MT_NO 
+				                  , A.CNRT_KCD 
+				                  , A.ACTG_ACSJ_CD
+				                  , B.ACSJ_CD_NM 
+				               FROM GA01N304	A -- 계약서별계정과목코드
+				                  , AT01C001  B -- 계정과목코드
+				              WHERE B.ACSJ_CD  (+)= A.ACTG_ACSJ_CD 
+				                AND B.ACTG_BAS_CD = 'G009'
+				                AND B.ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+				                AND A.CNRT_KCD    = '01' /* 계약서종류코드 01:계약서관리 02:RE100 */
+                                AND A.CNRT_MT_NO = T1.CNRT_MT_NO                                                                                                            
+				                AND A.CNRT_KCD   = '01' /* 01:계약서관리 02:ESG(RE100) */     
+				            )
+                           )
+                  ) AS ACTG_ACSJ_CD	
+
+				  FROM GA01N303	T1 -- 계약서관리                                                                                                                           
+				 WHERE 1=1                                                                                                                                                 
+				   AND T1.DELP_CD = #{delpCd}  /*거래처코드 */                                                                                                            
+				   AND T1.DEL_YN  = '0'                                                                                                                                    
+				 ORDER BY T1.CNRT_MT_NO     
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>	
+	
+</mapper>

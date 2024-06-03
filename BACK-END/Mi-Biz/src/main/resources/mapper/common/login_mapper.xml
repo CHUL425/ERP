@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="login_mapper">
+
+    <select id="selectOneUserInfo" parameterType="com.miraeasset.biz.common.login.vo.LoginInVO"
+            resultType="com.miraeasset.biz.common.login.vo.LoginOutVO">
+        SELECT A.EPNO
+             , A.EP_NM
+             , A.EP_ENG_NM
+             , A.JNCO_DT
+             , A.RTMT_DT
+             , A.BLNG_ORZ_CD
+             , A.APTM_NOW_WRKP_ORZ_CD
+             , A.NOW_WRKP_ORZ_CD
+             , A.HR_ORZ_CD
+             , A.HR_HLDO_CD
+             , A.EP_IDFY_TCD
+             , A.RPSR_EPNO
+             , A.EP_BZ_TCD
+             , A.SEX_TCD
+             , A.XEMP_IDFY_NO_ECP_VL
+             , A.HR_EP_TCD
+             , A.HR_PST_CD
+             , A.HR_PST_YRORD
+             , A.HR_OSDT_CD
+             , A.HR_OCGRP_CD
+             , A.CTNO
+             , A.RTN
+             , A.MTNO
+             , A.ITNO
+             , A.INTA_TLNO
+             , A.HNDP_BZPR_TLNO
+             , A.HNDP_MTNO
+             , A.HNDP_ITNO
+             , A.EMAL_ADR
+             , A.ZPCD
+             , A.ADR
+             , A.PWD_ECP_VL
+             , A.PWD_ERR_NC
+             , A.PWD_LST_CHNG_DT
+             , A.BZ_PWD_ECP_VL
+             , A.BZ_PWD_ERR_NC
+             , A.BZ_PWD_LST_CHNG_DT
+             , A.DRT_BR_BZ_PRC_ABL_YN
+             , A.EMP_SORT_SEQ
+             , A.CS_CNTR_EMP_MT_CD
+             , A.CS_CNTR_RPSR_YN
+             , A.CS_CNTR_RPSR_EPNO
+             , A.APVR_TCD
+             , A.CHBF_EPNO
+             , A.EMP_OFC_TLNO
+             , A.HR_LST_ALTR_DT
+             , A.HR_RFLC_DT
+             , A.OPTR_ID
+             , A.OPRT_CHNL_CD
+             , A.OPRT_ORZ_CD
+             , A.OPRT_IP_ADR
+             , A.OPRT_DTTM
+             , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.BLNG_ORZ_CD) AS ORZ_NM
+             , '0'                                                        AS ADMN_YN
+             , (SELECT CD_STD_NM
+                  FROM CB01C111
+                 WHERE HR_CMN_CD_KND_NO = 'HRM_007'
+                   AND HR_CMN_CD        = A.HR_OSDT_CD)                   AS HR_OSDT_CD_NM
+             , (SELECT CD_STD_NM
+                FROM CB01C111
+                WHERE HR_CMN_CD_KND_NO = 'HRM_008'
+                  AND HR_CMN_CD        = A.HR_PST_CD  )                   AS HR_PST_CD_NM
+        FROM CB01N310 A
+        WHERE A.EPNO = #{userId}
+    </select>
+
+    <select id="selectListLoginHis" parameterType="com.miraeasset.biz.common.basic.vo.BasicLoginHisInVO"
+            resultType="com.miraeasset.biz.common.basic.vo.BasicLoginHisOutVO">
+        /* LoginHis.selectListLoginHis : 로그인이력조회 */
+        SELECT * FROM (
+        SELECT * FROM (
+        SELECT
+        ROW_NUMBER() OVER(ORDER BY T1.LGIN_DTTM, T1.EPNO, ROWNUM DESC) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+        , T1.EPNO AS EPNO
+        , T2.EP_NM AS EP_NM
+        , TO_CHAR(T1.LGIN_DTTM,'YYYY-MM-DD HH24:MI:SS') AS LGIN_DTTM
+        , TO_CHAR(T1.LGOT_DTTM,'YYYY-MM-DD HH24:MI:SS') AS LGOT_DTTM
+        , T1.OPTR_ID AS OPTR_ID
+        , T1.OPRT_CHNL_CD AS OPRT_CHNL_CD
+        , ( SELECT CMN_CD_VL_NM FROM CB03C111 WHERE CMN_CD = 'TR_CHNL_CD' AND CMN_CD_VL = T1.OPRT_CHNL_CD AND ROWNUM = 1
+        ) AS OPRT_CHNL_NM
+        , T1.OPRT_ORZ_CD AS OPRT_ORZ_CD
+        , T1.OPRT_IP_ADR AS OPRT_IP_ADR
+        , TO_CHAR(T1.OPRT_DTTM,'YYYY-MM-DD HH24:MI:SS') AS OPRT_DTTM
+        FROM GA09H902 T1 /* 로그인이력 */
+        , CB01N310 T2 /* 사원 */
+        WHERE T2.EPNO (+)= T1.EPNO
+        AND TO_CHAR(T1.LGIN_DTTM ,'YYYYMMDD') <![CDATA[ > ]]>= #{strtDt}
+        AND TO_CHAR(T1.LGIN_DTTM ,'YYYYMMDD') <![CDATA[ < ]]>= #{endDt}
+        AND T1.EPNO LIKE '%' || NVL(TRIM( #{epno} ), '') || '%'
+        ORDER BY T1.LGIN_DTTM, T1.EPNO
+
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+    <select id="selelctListAccsAblOrzCd"
+            parameterType="com.miraeasset.biz.common.login.vo.LoginOutVO"
+            resultType="String">
+        SELECT BLNG_ORZ_CD AS ORZ_CD
+        FROM CB01N310
+        WHERE EPNO = #{epno} /* 소속조직 */
+    </select>
+
+    <select id="selectListUserGrpCd"
+            parameterType="com.miraeasset.biz.common.login.vo.LoginOutVO"
+            resultType="String">
+        SELECT DISTINCT USER_GRP_CD
+        FROM GA09N201 A
+           , GA01N101 B
+        WHERE A.RCT_NO = B.RCT_NO
+          AND B.RQS_SCD = '10' /* 신청상태코드 = 완료 */
+          AND (A.EMP_ORZ_TCD = '01' AND A.EPNO = #{epno}
+            OR A.EMP_ORZ_TCD = '02' AND A.ORZ_CD IN (SELECT ORZ_CD
+                                                       FROM CB01N210
+                                                     START WITH ORZ_CD = (SELECT BLNG_ORZ_CD FROM CB01N310 WHERE EPNO = #{epno})
+                                                     CONNECT BY PRIOR HRK_ORZ_CD = ORZ_CD)
+              )
+          AND TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN A.STRT_DT AND A.END_DT
+    </select>
+
+    <select id="selectListAccsAblMenu"
+            parameterType="String"
+            resultType="com.miraeasset.biz.ss.bs.vo.SSBS7000VOOut00VO">
+        SELECT A.USER_GRP_CD
+             , A.RCT_NO
+             , A.PSIT_MENU_ID
+             , A.PRC_ABL_YN
+             , A.ENP_ACCS_ABL_YN
+        FROM GA09N205 A
+           , GA01N101 B
+        WHERE A.RCT_NO = B.RCT_NO
+          AND B.RQS_SCD = '10' /* 신청상태코드 = 완료 */
+          AND USER_GRP_CD = #{userGrpCd}
+    </select>
+
+    <select id="selectListAccsAbleMenuTree" parameterType="String"
+            resultType="com.miraeasset.biz.ss.bs.vo.SSBS4000U0Out00VO">
+        SELECT *
+        FROM GA09N203
+        START WITH PSIT_MENU_ID = #{psitMenuId}
+        CONNECT BY PRIOR HRK_MENU_ID = PSIT_MENU_ID;
+    </select>
+
+    <select id="selectOneLnkMtOrzCd" parameterType="String" resultType="String">
+        SELECT LNK_MT_ORZ_CD
+        FROM CB01N210
+        WHERE ORZ_CD = #{blngOrzCd}
+    </select>
+
+    <select id="selectOneHobrTcd" parameterType="String" resultType="String">
+        SELECT HOBR_TCD
+        FROM CB01N210
+        WHERE ORZ_CD = #{lnkMtOrzCd}
+    </select>
+
+
+    <select id="selectListLoginUserMenu" parameterType="com.miraeasset.biz.common.login.vo.LoginOutVO"
+            resultType="com.miraeasset.biz.common.login.vo.LoginUserMenuVO">
+        SELECT A.PSIT_MENU_ID
+             , A.MENU_NM
+             , A.HRK_MENU_ID
+             , A.PSIT_SCRN_ID AS PSIT_SCRN_ID
+             , (SELECT SCRN_NM FROM GA09N204 WHERE PSIT_MENU_ID = PSIT_SCRN_ID) AS SCRN_NM
+             , A.URL_ADR
+             , A.USE_YN
+             , A.SCRN_OPUT_SQN
+             , A.MENU_DPTH_VL
+             , NVL(B.QRY_ABL_YN, '0') AS QRY_ABL_YN
+             , NVL(B.PRC_ABL_YN, '0') AS PRC_ABL_YN
+             , NVL(B.ENP_ACCS_ABL_YN, '0') AS ENP_ACCS_ABL_YN
+             , DECODE(C.PSIT_MENU_ID, NULL, '0', '1') AS FAVORITE_YN
+          FROM GA09N203 A ,
+               (SELECT DISTINCT B.PSIT_MENU_ID AS PSIT_MENU_ID,
+                                '1' AS QRY_ABL_YN ,
+                                DECODE(A.PSIT_MENU_ID, B.PSIT_SCRN_ID, A.PRC_ABL_YN , NULL) AS PRC_ABL_YN ,
+                                DECODE(A.PSIT_MENU_ID, B.PSIT_SCRN_ID, A.ENP_ACCS_ABL_YN, NULL) AS ENP_ACCS_ABL_YN
+                           FROM (SELECT A.PSIT_MENU_ID AS PSIT_MENU_ID ,
+                                        MAX(A.PRC_ABL_YN) AS PRC_ABL_YN ,
+                                        MAX(ENP_ACCS_ABL_YN) AS ENP_ACCS_ABL_YN
+                                   FROM GA09N205 A ,
+                                        GA01N101 B
+                                  WHERE A.RCT_NO = B.RCT_NO
+                                    AND B.RQS_SCD = '10' /* 승인완료 */
+                                    AND USER_GRP_CD IN
+                                    <foreach collection="userGrpCdList" index="index" item="item" open="(" close=")" separator=",">
+                                        #{item}
+                                    </foreach>
+                                  GROUP BY A.PSIT_MENU_ID
+                                  ) A ,
+                                  GA09N203 B
+                                  START WITH B.PSIT_SCRN_ID = A.PSIT_MENU_ID CONNECT BY PRIOR B.HRK_MENU_ID = B.PSIT_MENU_ID
+               ) B ,
+               (SELECT * FROM GA09N207 WHERE EPNO = #{epno}) C
+         WHERE A.PSIT_MENU_ID = B.PSIT_MENU_ID(+)
+           AND A.PSIT_SCRN_ID = C.PSIT_MENU_ID(+)
+           AND A.USE_YN = '1'
+    </select>
+
+
+    <insert id="insertLoginUserHistory" parameterType="com.miraeasset.biz.common.login.vo.LoginOutVO">
+        /* login_mapper.insertLoginUserHistory : 로그인이력 생성(로그인) */
+        INSERT INTO GA09H902
+        (
+             EPNO,
+             LGIN_DT,
+             LGIN_TMD,
+             LGOT_DTTM,
+             OPTR_ID,
+             OPRT_CHNL_CD,
+             OPRT_ORZ_CD,
+             OPRT_IP_ADR,
+             OPRT_DTTM
+        ) VALUES (
+             #{epno},
+             #{lginDt},
+             #{lginTmd},
+             NULL,
+             #{epno},
+             #{connChnlCd},
+             #{blngOrzCd},
+             #{connIp},
+             SYSDATE
+        )
+    </insert>
+
+    <update id="updateLoginUserHistory" parameterType="com.miraeasset.biz.common.login.vo.LoginOutVO">
+        /* login_mapper.updateLoginUserHistory : 로그인이력 업데이트(로그아웃)  */
+        UPDATE GA09H902
+           SET LGOT_DTTM = SYSDATE
+         WHERE EPNO = #{epno}
+           AND LGIN_DT = #{lginDt}
+           AND LGIN_TMD = #{lginTmd}
+    </update>
+
+
+    <insert id="insertLoginUserPracticeHistory" parameterType="com.miraeasset.biz.common.login.vo.LoginUserPracticeHistoryVO">
+        /* login_mapper.insertLoginUserPracticeHistory : 실행이력 생성 */
+        INSERT INTO GA09H903
+        (
+             EPNO,
+             PRCT_DT,
+             PRCT_DTMD,
+             PSIT_MENU_ID,
+             CTRL_NM,
+             OPTR_ID,
+             OPRT_CHNL_CD,
+             OPRT_ORZ_CD,
+             OPRT_IP_ADR,
+             OPRT_DTTM
+        ) VALUES (
+              #{optrId},
+              TO_CHAR(SYSDATE, 'YYYYMMDD'),
+              TO_CHAR(SYSTIMESTAMP, 'HH24MISSFF'),
+              #{psitMenuId},
+              #{ctrlNm},
+              #{optrId},
+              #{oprtChnlCd},
+              #{oprtOrzCd},
+              #{oprtIpAdr},
+              SYSDATE
+        )
+    </insert>
+
+    <select id="selectSysAuthOrzCd" resultType="String">
+        /* login_mapper.selectSysAuthOrzCd : 시스템 권한 팀점 체크  */
+        -- [20231214] 사용자그룹 없으면 일반사용자 권한 추가, 시스템 권한 팀점이면 시스템관리자 권한 추가
+        SELECT CMN_CD_VL
+          FROM GA09C302
+         WHERE CD_KND_NO = 'SYS_AUTH_ORZ_CD'
+    </select>
+
+
+</mapper>
+
+

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brrb_4000_mapper">
+    <select id="selectOne00AT01N101" parameterType="com.miraeasset.biz.br.rb.vo.BRRB4000V0In00VO"
+            resultType="BigDecimal">
+        /* ATFS2610V0.selectList00AT01N101 : 보조원장조회 */
+        SELECT /*+ LEADING(X B) USE_NL(B) INDEX_SS_ASC(B,IX_AT01N102_02) */
+        NVL(SUM(DECODE(B.DNC_TCD, '1', B.FNCT_CURR_A, 0)), 0) AS dsd_a /* 차변금액 */
+        FROM
+        <if test='orzCd != "000000"'>
+            (SELECT ACTG_ORZ_CD
+            FROM AT09N111 /* 회계팀점코드 */
+            WHERE CO_CD = '005'
+            CONNECT BY PRIOR CO_CD = '005'
+            AND PRIOR ACTG_ORZ_CD = HRK_ORZ_CD
+            START WITH ACTG_ORZ_CD = #{orzCd}
+            ) X ,
+        </if>
+        AT01N101 A /* 전표 */
+        , AT01N102 B /* 전표상세 */
+        , AT01C013 C /* 거래유형코드 */
+        , AT01C011 D /* 업무구분코드 */
+        , AT01C012 E /* 업무세분코드 */
+        WHERE 1=1
+        <if test='orzCd != "000000"'>
+            AND B.SP_ORZ_CD = X.ACTG_ORZ_CD
+        </if>
+        AND A.CO_CD = B.CO_CD
+        AND A.ACTG_SP_ID = B.ACTG_SP_ID
+        AND A.ACTG_TR_PCD = C.ACTG_TR_PCD(+)
+        AND C.ACTG_BZ_TCD = D.ACTG_BZ_TCD(+)
+        AND C.ACTG_BZ_TCD = E.ACTG_BZ_TCD(+)
+        AND C.ACTG_BZ_SDIVN_CD = E.ACTG_BZ_SDIVN_CD(+)
+        AND A.CO_CD = '005'
+        AND B.SP_DT LIKE #{basYm}||'%'
+        AND B.ACTG_BAS_CD IN ('G000', 'G009')
+        AND B.ACSJ_CD = #{acsjCd}
+        AND B.SP_APV_CD = '40' /* 전표승인코드 승인완료 */
+        <if test="dscptSmryCn != null and dscptSmryCn != ''">
+            AND B.DSCPT_SMRY_CN LIKE '%'||#{dscptSmryCn}||'%'
+        </if>
+        <if test="expDscptSmryCn != null and expDscptSmryCn != ''">
+            AND B.DSCPT_SMRY_CN NOT LIKE '%'||#{expDscptSmryCn}||'%'
+        </if>
+
+    </select>
+</mapper>

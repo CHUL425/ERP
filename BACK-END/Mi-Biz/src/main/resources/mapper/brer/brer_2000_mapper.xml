@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brer_2000_mapper">
+
+    <select id="selectList00GA02N003" parameterType="com.miraeasset.biz.br.er.vo.BRER2000U0In00VO"
+            resultType="com.miraeasset.biz.br.er.vo.BRER2000U0Out00VO">
+        /* GABM2000V0.selectList00GA02N003 : 지점실내외관리_UPS */
+        SELECT * FROM (
+        SELECT * FROM (
+        SELECT ROW_NUMBER() OVER(ORDER BY ROWNUM DESC) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT
+        , ORZ_CD /*지점코드*/
+        , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.ORZ_CD) AS ORZ_NM /*지점명*/
+        , TP_NM /*구분*/
+        , DELP_CD /*거래처코드*/
+        , (SELECT DELP_NM FROM AT05C010 WHERE DELP_CD = A.DELP_CD) AS DELP_NM /*관리업체*/
+        , IST_YM /*설치년월*/
+        , CNTC_CAPA /*계약용량*/
+        , MAKG_YM /*제작년월*/
+        , CAPA_Q_CN /*용량및수량내용*/
+        , NTE_CN /*비고내용*/
+        FROM GA02N003 A
+        WHERE ORZ_CD = DECODE(#{orzCd},'',A.ORZ_CD,#{orzCd})
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+            ) ZZ WHERE RNUM > (#{pageIndex})
+        </if>
+    </select>
+
+    <insert id="merge00GA02N003" parameterType="com.miraeasset.biz.br.er.vo.BRER2000U0Out00VO">
+        /* BRER2000U0.merge00GA02N003 : 지점실내외관리_UPS */
+        MERGE INTO GA02N003
+        USING DUAL
+        ON (ORZ_CD = #{orzCd}
+            AND TP_NM = #{tpNm}
+            )
+        WHEN MATCHED THEN
+            UPDATE
+            SET DELP_CD      = #{delpCd} /* 거래처코드 */
+              , IST_YM       = #{istYm} /* 설치년월 */
+              , CNTC_CAPA    = #{cntcCapa} /* 계약용량 */
+              , MAKG_YM      = #{makgYm} /* 제작년월 */
+              , CAPA_Q_CN    = #{capaQCn} /* 용량수량내용 */
+              , NTE_CN       = #{nteCn} /* 비고내용 */
+              , OPTR_ID      = #{optrId}
+              , OPRT_CHNL_CD = #{oprtChnlCd}
+              , OPRT_ORZ_CD  = #{oprtOrzCd}
+              , OPRT_IP_ADR  = #{oprtIpAdr}
+              , OPRT_DTTM    = SYSDATE
+        WHEN NOT MATCHED THEN
+            INSERT
+            ( ORZ_CD /* 조직코드 */
+            , TP_NM /* 구분명 */
+            , DELP_CD /* 거래처코드 */
+            , CNTC_CAPA /* 계약용량 */
+            , MAKG_YM /* 제작년월 */
+            , CAPA_Q_CN /* 용량수량내용 */
+            , NTE_CN /* 비고내용 */
+            , IST_YM /* 설치년월 */
+            , OPTR_ID /* 조작자ID */
+            , OPRT_CHNL_CD /* 조작채널코드 */
+            , OPRT_ORZ_CD /* 조작조직코드 */
+            , OPRT_IP_ADR /* 조작IP주소 */
+            , OPRT_DTTM /* 조작일시 */
+            )
+            VALUES ( #{orzCd}
+                   , #{tpNm}
+                   , #{delpCd}
+                   , #{cntcCapa}
+                   , #{makgYm}
+                   , #{capaQCn}
+                   , #{nteCn}
+                   , #{istYm}
+                   , #{optrId}
+                   , #{oprtChnlCd}
+                   , #{oprtOrzCd}
+                   , #{oprtIpAdr}
+                   , SYSDATE)
+    </insert>
+
+    <delete id="delete00GA02N003" parameterType="com.miraeasset.biz.br.er.vo.BRER2000U0In00VO">
+        /* BRER2000U0.delete00GA02N003 : 지점실내외관리_UPS 삭제 */
+        DELETE
+        FROM GA02N003
+        WHERE ORZ_CD = #{orzCd}
+          AND TP_NM = #{tpNm}
+    </delete>
+
+</mapper>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cmps_mapper">
+	<select id="select00AT05C010List" parameterType="com.miraeasset.biz.common.cm.ps.vo.CMPS1000V0In00VO" resultType="com.miraeasset.biz.common.cm.ps.vo.CMPS1000V0Out00VO">
+	/* CMPS1000V0.select00AT05C010List : 거래처조회 팝업 */
+	SELECT * FROM (
+	SELECT * FROM (
+		SELECT DELP_CD       AS DELP_CD      /* 거래처코드 */
+             , DELP_NM       AS DELP_NM      /* 거래처명 */
+             , BLNO          AS BLNO         /* 사업자등록번호 */
+             , DELP_RPTV_NM  AS DELP_RPTV_NM /* 거래처대표자명 */
+             , CONO          AS CONO         /* 법인등록번호 */
+             , DELP_TCD      AS DELP_TCD     /* 거래처구분코드 */
+             , ROWNUM          AS RNUM
+			 , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+          FROM (SELECT A.DELP_CD              AS DELP_CD
+                     , A.DELP_NM              AS DELP_NM
+                     , A.BLNO                 AS BLNO
+                     , A.DELP_RPTV_NM         AS DELP_RPTV_NM
+                     , A.DELP_EMAL_ADR_ECP_VL AS EMAL_ADR
+                     , A.CONO                 AS CONO
+                     , A.DELP_TCD             AS DELP_TCD
+                  FROM AT05C010 A /* 거래처 */
+                 WHERE 1=1
+                   <if test="srchKwrd != null and srchKwrd != ''">
+                   AND (   A.DELP_CD LIKE #{srchKwrd, jdbcType=VARCHAR} ||'%'
+                        OR A.DELP_NM LIKE '%' || #{srchKwrd, jdbcType=VARCHAR} || '%'
+                        OR A.BLNO    LIKE '%' || #{srchKwrd, jdbcType=VARCHAR} || '%'
+                       )
+                   </if>
+                   AND A.TR_ABL_YN = '1'
+                 ORDER BY A.DELP_CD
+             )
+	-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+	<if test='pageSize == null or pageSize == 0 '>
+	) Z
+	) ZZ
+	</if>
+	<if test='pageSize > 0'>
+	) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+	) ZZ WHERE RNUM > ( #{pageIndex})
+	</if>
+	-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	
+	</select>
+
+    <select id="select00AT05C010ListPK" parameterType="com.miraeasset.biz.common.cm.ps.vo.CMPS1000V0In00VO" resultType="com.miraeasset.biz.common.cm.ps.vo.CMPS1000V0Out00VO">
+        /* CMPS1000V0.select00AT05C010ListPK : 거래처조회 팝업(PK) */
+        SELECT * FROM (
+        SELECT * FROM (
+        SELECT DELP_CD       AS DELP_CD      /* 거래처코드 */
+        , DELP_NM       AS DELP_NM      /* 거래처명 */
+        , BLNO          AS BLNO         /* 사업자등록번호 */
+        , DELP_RPTV_NM  AS DELP_RPTV_NM /* 거래처대표자명 */
+        , CONO          AS CONO         /* 법인등록번호 */
+        , DELP_TCD      AS DELP_TCD     /* 거래처구분코드 */
+        , ROWNUM          AS RNUM
+        , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+        FROM (SELECT A.DELP_CD              AS DELP_CD
+        , A.DELP_NM              AS DELP_NM
+        , A.BLNO                 AS BLNO
+        , A.DELP_RPTV_NM         AS DELP_RPTV_NM
+        , A.DELP_EMAL_ADR_ECP_VL AS EMAL_ADR
+        , A.CONO                 AS CONO
+        , A.DELP_TCD             AS DELP_TCD
+        FROM AT05C010 A /* 거래처 */
+        WHERE 1=1
+          AND A.DELP_CD = #{srchKwrd, jdbcType=VARCHAR}
+          AND A.TR_ABL_YN = '1'
+        ORDER BY A.DELP_CD
+        )
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+
+    </select>
+</mapper>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brrb_3000_mapper">
+
+    <select id="selectOne00AT08N123" parameterType="com.miraeasset.biz.br.rb.vo.BRRB2000V0In00VO"
+            resultType="BigDecimal">
+        /* ATRS8030U2.selectList00AT08N123 : 임대차보증금 명세 조회 참조 */
+        /* 임대차보증금합계(홍천제외) */
+        SELECT NVL(SUM(T1.GRT_A), 0) AS GRT_A --보증금액
+        FROM AT08N123 T1                                            --명세_임대차보증금
+           , (SELECT T0.LS_CNTC_NO        --리스계약번호
+                   , T0.LS_CNTC_ADTN_SRNO --리스계약부가일련번호
+                   , T0.CNTC_NM           --계약명
+                   , T0.CNTC_TCD          --계약구분코드
+                   , T0.CNTC_CCLC_TCD     --계약해지구분코드
+                   , T0.ITR_YN            --내부거래여부
+                   , T0.LS_OP_DT          --임대차개시일자
+                   , T0.LS_END_DT         --임대차종료일자
+                   , T0.USE_RGT_AST_TCD   --사용권자산구분
+                   , T1.REST_AST_TCD      --부동산자산구분
+                   , LS_TERM_MMCNT        --리스기간개월수
+              FROM AT08N100 T0 --계약관리
+                 , AT08N101 T1 --계약관리_부동산
+              WHERE T0.LS_CNTC_NO = T1.LS_CNTC_NO
+                AND T0.LS_CNTC_ADTN_SRNO = T1.LS_CNTC_ADTN_SRNO) T2 --계약관리
+        WHERE T1.LS_CNTC_NO = T2.LS_CNTC_NO
+          AND T1.LS_CNTC_ADTN_SRNO = T2.LS_CNTC_ADTN_SRNO
+          AND T1.LEAS_TCD = '3'
+          AND T1.BAS_YM = #{basYm}
+          AND T2.CNTC_NM NOT LIKE '%홍천%'
+    </select>
+
+    <select id="selectOne00AT03N332" parameterType="com.miraeasset.biz.br.rb.vo.BRRB2000V0In00VO"
+            resultType="BigDecimal">
+        /* 내부이전금리 : 지점 특정계정의 자금사용률  */
+        SELECT NVL(MAX(MNY_USE_R), 0) AS MNY_USE_R
+        FROM AT03N332 A
+           , CB01N210 B
+        WHERE A.ORZ_CD = B.ORZ_CD
+          AND A.ACSJ_CD = '1620040304'
+          AND B.HOBR_TCD = '02'
+          AND B.ORZ_USE_YN = '1'
+          AND A.BAS_YM = #{basYm}
+    </select>
+
+    <select id="selectOne00AT05N401" parameterType="com.miraeasset.biz.br.rb.vo.BRRB2000V0In00VO"
+            resultType="BigDecimal">
+        /* 계산서 조회 */
+        SELECT NVL(SUM(SUPA), 0) AS SUPA
+        FROM AT05N401 A
+        INNER JOIN AT05N201 B
+        ON (A.PCHS_SALS_TCD = B.PCHS_SALS_TCD
+        AND A.EVDN_ISU_DT = B.EVDN_ISU_DT
+        AND A.EVDN_SRNO = B.EVDN_SRNO)
+        INNER JOIN AT05N200 C
+        ON (B.RSLN_TCD = C.RSLN_TCD
+        AND B.RSLN_ORZ_CD = C.RSLN_ORZ_CD
+        AND B.RSLN_DT = C.RSLN_DT
+        AND B.RSLN_SRNO = C.RSLN_SRNO)
+        WHERE 1=1
+        AND A.ACTG_ORZ_CD = 'S03001'
+        AND A.CNCL_YN = '0'
+        AND A.EVDN_ISU_DT LIKE #{basYm} || '%'
+        AND A.PCHS_SALS_TCD = #{pchsSalsTcd}
+        AND A.EVDN_PCD = #{evdnPcd}
+        AND A.RSN_TCD = #{rsnTcd}
+        <if test=' dscptSmryCn != null and dscptSmryCn != "" '>
+            AND A.DSCPT_SMRY_CN LIKE '%'||#{dscptSmryCn}||'%'
+        </if>
+        <if test=' ocrrAcsjCd != null and ocrrAcsjCd != ""  '>
+            AND B.OCCR_ACSJ_CD = #{ocrrAcsjCd}
+        </if>
+         AND C.APRV_SCD = '40'
+    </select>
+
+    <select id="selectOne00AT05N200" parameterType="com.miraeasset.biz.br.rb.vo.BRRB3000V0In00VO"
+            resultType="BigDecimal">
+        /* 결의서 조회 */
+
+        SELECT /*+ RESULT_CACHE */
+            NVL(SUM(A.RSLN_A),0) AS RSLN_A
+        FROM
+            AT05N200 A
+            INNER JOIN AT05N201 B ON (
+                A.RSLN_TCD = A.RSLN_TCD AND A.RSLN_ORZ_CD = 'S03001' AND A.RSLN_DT LIKE #{basYm} || '%'
+                AND A.RSLN_TCD = B.RSLN_TCD AND A.RSLN_ORZ_CD = B.RSLN_ORZ_CD AND A.RSLN_DT = B.RSLN_DT AND A.RSLN_SRNO = B.RSLN_SRNO
+                AND B.OCCR_ACSJ_CD = #{ocrrAcsjCd}
+            )
+    </select>
+
+    <select id="selectOne00AT03N531" parameterType="com.miraeasset.biz.br.rb.vo.BRRB2000V0In00VO"
+            resultType="BigDecimal">
+        /* [3420] 보전금액합계 (5270060101 계정 199212 발신조직으로 검색, ATCS3420V0.selectList00AT03N530 : 손익보전내역 조회 참고, ★현재 차장님 개선 쿼리★ */
+
+        SELECT /*+ RESULT_CACHE */
+            NVL(SUM(CASE WHEN C.DNC_TCD != X.DNC_TCD THEN NVL(C.TR_A * (-1),0) ELSE NVL(C.TR_A,0) END), 0) AS TR_A /* 거래금액 */
+        FROM
+            (
+                SELECT B.TR_DT, B.SRNO, B.DL_SRNO, B.ACSJ_CD
+                FROM AT03N531 B
+                WHERE B.TR_DT LIKE #{basYm} || '%' AND B.ORZ_CD = '199212' AND B.ACSJ_CD = '5270060101' AND B.TR_SBJ_CD = 'S'
+            ) B
+                INNER JOIN AT03N530 A ON (B.TR_DT = A.TR_DT AND B.SRNO = A.SRNO AND A.APRV_SCD = '40' AND A.CNCL_YN = '0')
+                INNER JOIN AT03N531 C ON (B.TR_DT = C.TR_DT AND B.SRNO = C.SRNO AND B.DL_SRNO = C.DL_SRNO AND C.TR_SBJ_CD = 'R')
+                LEFT OUTER JOIN AT09N602 D ON (A.APRV_WRRPT_NO = D.APRV_WRRPT_NO AND A.APRV_WRRPT_ORZ_CD = D.APRV_WRRPT_ORZ_CD AND D.APRV_WRRPT_TCD = '4')
+                LEFT OUTER JOIN AT01C001 X ON (B.ACSJ_CD = X.ACSJ_CD AND X.CO_CD = '005' AND X.ACTG_BAS_CD = 'G009')
+    </select>
+</mapper>

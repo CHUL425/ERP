@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rqpr_mapper">
+
+	<delete id="deleteGA03N103ByRctNo" parameterType="String" >
+		/* RQPR1000U0.deleteGA03N103ByRctNo = 개인명패상세_GA03N103 접수번호기준 삭제  */	
+		DELETE GA03N103 WHERE RCT_NO =  #{rctNo}
+	</delete>		
+	<insert id="insertGA03N103" parameterType="com.miraeasset.biz.common.meta.vo.GA03N103VO" >
+		/* RQPR1000U0.insertGA03N103 = 개인명패상세_GA03N103 신규등록  */	
+		INSERT INTO GA03N103 (
+		   RCT_NO
+		 , PCH_RQS_ATCL_SEQ
+		 , ATCL_TCD
+		 , ATCL_CD
+		 , EPNO
+		 , NL_BLNG_NM
+		 , ENG_BLNG_NM
+		 , NL_NM
+		 , ENG_NM
+		 , NL_JRNK_NM
+		 , ENG_JRNK_NM
+		 , NL_OSDT_NM
+		 , ENG_OSDT_NM
+		 , PST_OSDT_CHOC_TCD
+		 , BR_BIZ_OSDT_NM
+		 
+/*부문2개, fileNo 1개 컬럼 추가후 세팅 TODO */
+		 
+		 , LCNS_CD1
+		 , LCNS_CD2
+		 , LCNS_CD3
+		 , LCNS_CD4
+		 , LCNS_CD5
+		 , LCNS_CD6
+		 , LCNS_CD7
+		 , LCNS_CD8
+		 , LCNS_CD9
+		 , LCNS_CD10
+		 , OPTR_ID
+		 , OPRT_CHNL_CD
+		 , OPRT_ORZ_CD
+		 , OPRT_IP_ADR
+		 , OPRT_DTTM
+		) 
+		 VALUES (
+		  #{rctNo        } 
+		, #{pchRqsAtclSeq}
+		, #{atclTcd      }
+		, #{atclCd       }
+		, #{epno         }
+		, #{nlBlngNm     }
+		, #{engBlngNm    }
+		, #{nlNm}
+		, #{engNm}
+		, #{nlJrnkNm}
+		, #{engJrnkNm}
+		, #{nlOsdtNm}
+		, #{engOsdtNm}
+		, #{pstOsdtChocTcd}
+		, #{brBizOsdtNm}
+		, #{lcnsCd1}
+		, #{lcnsCd2}
+		, #{lcnsCd3}
+		, #{lcnsCd4}
+		, #{lcnsCd5}
+		, #{lcnsCd6}
+		, #{lcnsCd7}
+		, #{lcnsCd8}
+		, #{lcnsCd9}
+		, #{lcnsCd10}
+		, #{optrId       } 
+		, #{oprtChnlCd   } 
+		, #{oprtOrzCd    } 
+		, #{oprtIpAdr    } 
+		, SYSDATE
+		)	
+	</insert>
+	
+	
+	
+	<select id="selectListGA03N103Dtl" parameterType="String" resultType="com.miraeasset.biz.rq.pr.vo.RQPR2000U0Out01VO">
+		/* RQPR2000U0.selectListGA03N103Dtl = 구매신청 상세정보 */
+			SELECT *
+              FROM (
+		    SELECT A.RCT_NO
+			     , A.PCH_RQS_ATCL_SEQ
+			     , A.ATCL_TCD
+			     , A.ATCL_CD
+                 , A.DELP_CD 
+                 , TRIM(E.DELP_NM) AS DELP_NM
+                 , D.CMN_CD_VL_DEF_CN AS ATCL_NM
+			     , A.EPNO
+			     , C.EP_NM 
+			     , CASE WHEN A.EPNO IS NULL THEN '' ELSE A.EPNO||'('|| C.EP_NM ||')' END AS EP_NM_DL
+			     , (CASE WHEN B.NL_OSDT_NM IS NULL THEN B.NL_JRNK_NM 
+                         WHEN B.NL_JRNK_NM IS NULL THEN B.NL_OSDT_NM 
+                         WHEN B.NL_OSDT_NM IS NULL AND B.NL_JRNK_NM IS NULL THEN ''
+                         ELSE B.NL_OSDT_NM||'/'||B.NL_JRNK_NM 
+                    END) AS NL_JRNK_OSDT_NM
+                 , A.RQS_RQM_PTCR_CN
+			     , A.PCH_PR
+			     , A.PCH_Q
+			     , A.PCH_SMTL_A
+                 , CASE WHEN B.ATCL_CD = '0400008' AND LCNS_CD1 IS NOT NULL THEN 
+                                                     (SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD1)
+                     || DECODE(LCNS_CD2,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD2))
+                     || DECODE(LCNS_CD3,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD3))
+                     || DECODE(LCNS_CD4,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD4))
+                     || DECODE(LCNS_CD5,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD5))
+                     || DECODE(LCNS_CD6,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD6))
+                     || DECODE(LCNS_CD7,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD7))
+                     || DECODE(LCNS_CD8,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD8))
+                     || DECODE(LCNS_CD9,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD9))
+                     || DECODE(LCNS_CD10,NULL,'',','||(SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_120' AND HR_CMN_CD = B.LCNS_CD10))
+                   ELSE '' END 
+                   AS LCNS_INFO
+			  FROM GA03N102 A
+			       LEFT OUTER JOIN GA03N103 B ON A.RCT_NO = B.RCT_NO AND A.PCH_RQS_ATCL_SEQ = B.PCH_RQS_ATCL_SEQ
+			       LEFT OUTER JOIN CB01N310 C ON A.EPNO = C.EPNO
+                   LEFT OUTER JOIN GA09C302 D ON D.CD_KND_NO='ATCL_CD' AND A.ATCL_CD = D.CMN_CD_VL
+                   LEFT OUTER JOIN AT05C010 E ON E.DELP_CD = A.DELP_CD 
+			 WHERE A.RCT_NO = #{rctNo}
+             UNION ALL 
+             SELECT A.RCT_NO, 99,NULL,NULL,
+                    A.DELP_CD, TRIM(E.DELP_NM)||'합계' AS DELP_NM,
+                    NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
+                    SUM(A.PCH_SMTL_A) AS PCH_SMTL_A,
+                    NULL
+               FROM GA03N102 A
+                    LEFT OUTER JOIN AT05C010 E ON E.DELP_CD = A.DELP_CD 
+              WHERE A.RCT_NO = #{rctNo}
+             GROUP BY A.RCT_NO, A.DELP_CD, E.DELP_NM
+             )
+             ORDER BY DELP_CD, PCH_RQS_ATCL_SEQ
+             
+             
+			 
+	</select>
+</mapper>

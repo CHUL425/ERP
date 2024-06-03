@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brlb_mapper">
+    <select id="selectList00AT08N101"
+            parameterType="com.miraeasset.biz.br.lb.vo.BRLB1000V0In00VO"
+            resultType="com.miraeasset.biz.br.lb.vo.BRLB1000V0Out00VO">
+        /* brlb_mapper.selectList00AT08N101 : 본지점임차현황 조회 */
+        SELECT * FROM (
+        SELECT * FROM (
+
+        SELECT ROW_NUMBER() OVER(ORDER BY ROWNUM DESC) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT
+        , A.ORZ_CD /*조직코드*/
+        , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.ORZ_CD) AS ORZ_NM /*조직명*/
+        , A.LS_CNTC_NO /*리스계약번호 */
+        , A.LS_CNTC_ADTN_SRNO /*리스계약부가일련번호 */
+        , A.CNTC_NM /*계약명*/
+        /* [20231212] 임대인명 임대인암호화명으로 변경 */
+        --, B.LESOR_NM /*임대인명*/
+        , B.LESOR_NM_ECP_VL AS LESOR_NM /* 임대인암호화명 */
+        /* [20240305] 최초리스개시일자에서 리스개시일자로 변경 */
+        --, A.FST_LS_OP_DT /*최초리스개시일자*/
+        , A.LS_OP_DT  /*리스개시일자*/
+        , A.LS_END_DT /*리스종료일자*/
+        , B.LEAS_AR2 /*임차면적(평)*/
+        , B.ONLY_AR2 /*전용면적(평)*/
+        , B.LEAS_AR1 /*임차면적(m2)*/
+        , B.ONLY_AR1 /*전용면적(m2)*/
+        , B.LEAS_GRT_A /*임차보증금*/
+        , A.SURT_EXP_PY_LS_A /*부가세제외지급리스금액*/
+        , A.LS_A_VAT /*리스금액부가가치세*/
+        , B.MN_MCST_CN AS MN_MCST /*월관리비*/
+        , B.ADR_ECP_VL /*주소암호화값*/
+        , DECODE(NVL(A.MCLC_ABL_YN,'0'),'1','Y','N') AS MCLC_ABL_YN /*중도해지가능여부*/
+        , A.MCLC_INFM_MMCNT /*중도해지통보개월수*/
+        , B.BD_PRSV_CD /*채권보전코드*/
+        , (SELECT CMN_CD_VL_DEF_CN FROM AT09C302 WHERE CD_KND_NO = 'BD_PRSV_CD' AND CMN_CD_VL = B.BD_PRSV_CD) AS
+        BD_PRSV_CD_NM /*채권보전코드명*/
+        , B.BD_PRSV_R /*채권보전율*/
+        , DECODE(A.ATC_FILE_NO, NULL, NULL, 'ERP_' || A.ATC_FILE_NO) AS ATC_FILE_NO /*첨부파일번호*/
+        , (SELECT COUNT(*) FROM AT09N411 WHERE FILE_NO = A.ATC_FILE_NO) AS ATC_FILE_CNT
+        , A.LS_CNTC_CN  /*리스계약내용*/
+        , A.FOC_LS_TERM_MMCNT  /*무상리스기간개월수(렌트프리)*/
+        FROM AT08N100 A /*계약관리*/
+        , AT08N101 B /*계약관리_부동산*/
+        WHERE A.LS_CNTC_NO = B.LS_CNTC_NO
+        AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+        AND A.LST_CNTC_YN = '1' /*최종계약여부*/
+        AND A.CNTC_CCLC_TCD = '01' /*계약해지구분코드 = 정상*/
+        AND A.APRV_SCD = '40' /* 20240313 결재상태 = 승인 */
+        AND B.REST_AST_TCD IN ('01', '02', '03', '05','06') /*기초자산구분코드 IN (본사-01, 지점-02,03 , 사택-05, 임차기타-06)*/
+        <if test=' orzCd != null and orzCd != "000000" '>
+            AND A.ORZ_CD = #{orzCd} /*조직코드*/
+        </if>
+        
+        AND A.LS_END_DT BETWEEN #{lsEndDtStart} AND #{lsEndDtEnd} /*리스계약종료일자*/
+        ORDER BY A.ORZ_CD, A.LS_CNTC_NO, A.FST_LS_OP_DT
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+    <select id="selectList00AT05N200"
+            parameterType="com.miraeasset.biz.br.lb.vo.BRLB1000V0In02VO"
+            resultType="com.miraeasset.biz.br.lb.vo.BRLB1000V0Out02VO">
+        WITH X AS (
+        /* brlb_mapper.selectList00AT05N200 : 임차료/관리비현황 조회 */
+        /* ATBS5760V0.selectList00AT05N200 : 결의서 상세 조회 참조 */
+        SELECT
+        <choose>
+            <when test=' qryType == "M" '>substr(A.SP_CRN_DT,1,6)</when>
+            <otherwise>A.SP_CRN_DT</otherwise>
+        </choose>
+        AS SP_CRN_DT /* 전표일자 */
+        , A.RSLN_ORZ_CD /* 결의팀점번호 */
+        , B.OCCR_ACSJ_CD
+        , SUM(CASE WHEN A.RSLN_TCD = '1' AND A.EPDT_STL_TCD = '20' /* 법인카드 */ THEN NVL(B.RSLN_DL_A,0) /* 승인금액 */
+        WHEN A.RSLN_TCD = '1' AND A.EPDT_STL_TCD IN ('04', '10') /* 법인카드 */ THEN (NVL(H.WONCNV_PCHS_SMTL_A,0) * CASE
+        WHEN H.PCHS_TCD = 'B' THEN -1 ELSE 1 END) /* 승인금액 */
+        WHEN A.EVDN_TCD = '2' THEN NVL(I.PY_A, 0) /* 지급조서 */
+        WHEN A.EVDN_TCD NOT IN ('2', '3') AND B.EVDN_KCD IN ('01', '02') THEN NVL(D.SUPA,0) + NVL(D.ADTN_TA,0) +
+        NVL(D.ETC_SUPA,0) /* 세금계산서증빙리스트조회 */
+        WHEN A.EVDN_TCD NOT IN ('2', '3') AND B.EVDN_KCD NOT IN ('01', '02') THEN NVL(B.RSLN_DL_A, 0) /* 기타미지급증빙리스트조회 */
+        ELSE B.RSLN_DL_A
+        END) AS EVD_P /* 증빙금액 */
+        FROM AT05N200 A /* 재무_결의서 */
+        , AT05N201 B /* 재무_결의서상세 */
+        , AT05N401 D /* 재무_증빙 */
+        , AT05C010 E /* 구매_거래처 */
+        , AT05N422 H /* 재무_카드매입내역 */
+        , AT05N414 I /* 지급조서 */
+        , AT05N013 J /* 소득자 */
+        WHERE 1=1
+        /* ORIGIN COND */
+        AND A.RSLN_TCD = B.RSLN_TCD(+)
+        AND A.RSLN_ORZ_CD = B.RSLN_ORZ_CD(+)
+        AND A.RSLN_DT = B.RSLN_DT(+)
+        AND A.RSLN_SRNO = B.RSLN_SRNO(+)
+        AND B.PCHS_SALS_TCD = D.PCHS_SALS_TCD(+)
+        AND B.EVDN_ISU_DT = D.EVDN_ISU_DT(+)
+        AND B.EVDN_SRNO = D.EVDN_SRNO(+)
+        AND D.CNCL_YN(+) = '0' /* 정상 */
+        AND B.DELP_CD = E.DELP_CD(+)
+        AND B.CRD_CARD_NO = H.CRD_CARD_NO(+)
+        AND B.RV_DT = H.RV_DT(+)
+        AND B.RV_NO = H.RV_NO(+)
+        AND B.PY_ICM_TCD = I.PY_ICM_TCD(+)
+        AND B.ICM_PY_DT = I.ICM_PY_DT(+)
+        AND B.PY_SRNO = I.PY_SRNO(+)
+        AND I.PERS_CORP_TCD = J.PERS_CORP_TCD(+)
+        AND I.ICMR_SRNO = J.ICMR_SRNO(+)
+        AND A.RSLN_TCD IN ('1', '2', '7', '9')
+        /* NEW COND */
+        AND A.APRV_SCD = '40'
+        <choose>
+            <when test=' qryType == "M" '>
+                AND A.SP_CRN_DT BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(SUBSTR(#{qryStartDt},1,6), 'YYYYMM'), -1),
+                'YYYYMM')||'01' AND SUBSTR(#{qryEndDt},1,6)||'31'
+            </when>
+            <otherwise>
+                AND A.SP_CRN_DT BETWEEN TO_CHAR(TO_DATE(#{qryStartDt})-1, 'YYYYMMDD') AND #{qryEndDt}
+            </otherwise>
+        </choose>
+        <if test=' orzCd != null and orzCd != "" and orzCd != "000000" '>
+            AND A.RSLN_ORZ_CD IN (
+            SELECT ORZ_CD FROM CB01N210
+            CONNECT BY PRIOR ORZ_CD = HRK_ORZ_CD
+            START WITH ORZ_CD = #{orzCd}
+            )
+        </if>
+        <choose>
+            <when test=' acsjGcd == "5" '>AND B.OCCR_ACSJ_CD IN (SELECT DISTINCT ACSJ_CD FROM AT01C001 WHERE HRK_ACSJ_CD = #{acsjCd})</when>
+            <otherwise>AND B.OCCR_ACSJ_CD = #{acsjCd}</otherwise>
+        </choose>
+        GROUP BY
+        <choose>
+            <when test=' qryType == "M" '>substr(A.SP_CRN_DT,1,6)</when>
+            <otherwise>A.SP_CRN_DT</otherwise>
+        </choose>
+        , A.RSLN_ORZ_CD
+        , B.OCCR_ACSJ_CD
+        ) (
+        SELECT * FROM (
+        SELECT * FROM (
+
+        SELECT ROW_NUMBER() OVER(ORDER BY ROWNUM DESC) AS RNUM
+             , COUNT(1) OVER() AS AL_CNT
+             , A.*
+             , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = #{orzCd}) AS ORZ_NM
+          FROM (SELECT A.SP_DT, A.ACSJ_CD, SUM(TDAY_BALA) AS TDAY_BALA, SUM(DYBF_BALA) AS DYBF_BALA, SUM(ICCD_A) AS ICCD_A
+                  FROM (SELECT A.SP_CRN_DT AS SP_DT
+                             , A.RSLN_ORZ_CD AS ORZ_CD
+                             --, (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.RSLN_ORZ_CD) AS ORZ_NM
+                             , A.OCCR_ACSJ_CD AS ACSJ_CD
+                             , NVL(A.EVD_P, 0) AS TDAY_BALA
+                             , NVL(B.EVD_P, 0) AS DYBF_BALA
+                             , NVL(A.EVD_P, 0)
+                             - NVL(B.EVD_P, 0) AS ICCD_A
+                          FROM (SELECT * FROM X) A /* 당일 */
+                             , (SELECT * FROM X) B /* 전일 */
+                         WHERE 1=1
+                           <choose>
+                               <when test=' qryType == "M" '>AND TO_DATE(A.SP_CRN_DT, 'YYYYMM') =
+                                   add_months(TO_DATE(B.SP_CRN_DT(+),'YYYYMM'), 1)
+                               </when>
+                               <otherwise>AND TO_DATE(A.SP_CRN_DT) = TO_DATE(B.SP_CRN_DT(+))+1</otherwise>
+                           </choose>
+                           AND A.RSLN_ORZ_CD = B.RSLN_ORZ_CD(+)
+                           AND A.OCCR_ACSJ_CD = B.OCCR_ACSJ_CD(+)
+                        ) A
+                GROUP BY SP_DT, ACSJ_CD
+               ) A
+        WHERE SP_DT >= TO_CHAR(add_months(TO_DATE(#{qryStartDt},'YYYYMMDD'), -1), 'YYYYMMDD')
+        ORDER BY SP_DT, ACSJ_CD
+
+
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+        )
+    </select>
+    
+
+    <select id="selectAT08N101ByOrz"
+        parameterType="String"
+        resultType="com.miraeasset.biz.br.lb.vo.BRLB1000V0Out00VO">
+        /* brlb_mapper.selectAT08N101ByOrz : 지점임차비용 비교조회 */
+       SELECT ORZ_CD
+            , ORZ_NM 
+	        , SUM(LEAS_AR2)         AS LEAS_AR2
+	        , SUM(ONLY_AR2)         AS ONLY_AR2
+	        , SUM(SURT_EXP_PY_LS_A) AS SURT_EXP_PY_LS_A
+	        , SUM(LS_A_VAT)         AS LS_A_VAT
+	        , SUM(NVL(MN_MCST,0))   AS MN_MCST
+    FROM (
+       SELECT A.ORZ_CD /*조직코드*/
+            , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.ORZ_CD) AS ORZ_NM /*조직명*/
+            , B.LEAS_AR2 /*임차면적(평)*/
+            , B.ONLY_AR2 /*전용면적(평)*/
+            --, B.LEAS_AR1 /*임차면적(m2)*/
+            --, B.ONLY_AR1 /*전용면적(m2)*/
+            --, B.LEAS_GRT_A /*임차보증금*/
+            , A.SURT_EXP_PY_LS_A      /*부가세제외지급리스금액*/
+            , A.LS_A_VAT              /*리스금액부가가치세*/
+            , REGEXP_REPLACE(B.MN_MCST_CN, '[^0-9]','') AS MN_MCST /*월관리비*/ 
+            ,B.MN_MCST_CN
+        FROM AT08N100 A /*계약관리*/
+           , AT08N101 B /*계약관리_부동산*/
+        WHERE A.LS_CNTC_NO = B.LS_CNTC_NO
+          AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+          AND A.LST_CNTC_YN = '1' /*최종계약여부*/
+          AND A.CNTC_CCLC_TCD = '01' /*계약해지구분코드 = 정상*/
+          AND A.APRV_SCD = '40' /* 20240313 결재상태 = 승인 */
+          AND B.REST_AST_TCD IN ('01', '02', '03', '05','06') /*기초자산구분코드 IN (본사-01, 지점-02,03 , 사택-05, 임차기타-06)*/
+          AND A.ORZ_CD=#{orzCd}
+       )
+    GROUP BY ORZ_CD,ORZ_NM
+    </select>
+    
+</mapper>

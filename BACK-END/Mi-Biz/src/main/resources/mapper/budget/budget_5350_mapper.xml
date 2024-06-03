@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="budget_5350_mapper">
+
+	<select id="selectList00AT05N121" parameterType="com.miraeasset.biz.budget.vo.BGT5350In00VO" resultType="com.miraeasset.biz.budget.vo.BGT53500Out00VO">
+		/* ATBS5350V0.selectList00AT05N121 : 예산사용내역조회 */
+    	SELECT * FROM (		
+		SELECT ZZ.* FROM ( 
+		SELECT ROWNUM AS RNUM
+             , COUNT(1) OVER() AS AL_CNT            /* 전체건수 */		
+		     , Z.* 
+		 FROM (
+		 
+		SELECT
+		  A.RSLN_ORZ_CD                   AS RSLN_ORZ_CD      /* 결의팀점코드 */
+		, E.PRC_ORZ_NM                         AS DCS_TMP_CDN      /* 결의팀점코드명 */
+		, A.RSLN_DT                            AS RSLN_DT          /* 결의일 */
+		, A.RSLN_SRNO                          AS RSLN_SRNO        /* 결의일련번호 */
+		, A.RSLN_DT||LPAD(A.RSLN_SRNO,5,'0')   AS DCS_NO           /* 결의번호 */
+		, A.BDGT_ACSJ_CD                       AS BDGT_ACSJ_CD     /* 예산계정과목코드 */
+		, G.BDGT_ACSJ_CD_NM                    AS BDGT_ACSJ_CD_NM  /* 예산계정과목코드명 */
+		, D.OCCR_ACSJ_CD                       AS OPP_ACSJ_CD      /* 상대계정과목코드 */
+		, F.ACSJ_CD_NM                         AS OPP_AC_SBJ_CDN   /* 상대계정과목코드명 */
+		, NVL(DL_SMRY_CN,DSCPT_SMRY_CN)        AS DL_SMRY_CN       /* 상세적요 */
+		, NVL(CASE WHEN A.BDGT_ORZ_CD = A.RSLN_ORZ_CD
+		THEN A.RSLN_USE_A -
+		NVL((SELECT SUM(SA.ALT_A)
+		FROM AT05N214 SA /* 결의대체 */
+		WHERE A.RSLN_TCD    = SA.RSLN_TCD
+		AND A.RSLN_ORZ_CD = SA.RSLN_ORZ_CD
+		AND A.RSLN_DT     = SA.RSLN_DT
+		AND A.RSLN_SRNO   = SA.RSLN_SRNO
+		AND A.RSLN_DL_NO  = SA.RSLN_DL_NO
+		),0)
+		ELSE A.RSLN_USE_A END,0) * CASE WHEN D.DNC_TCD = '2' THEN -1 ELSE 1 END  AS RSLN_USE_A   /* 대체금액 */
+		, D.DELP_CD                            AS DELP_CD   /* 거래처코드 */
+		, H.DELP_NM                            AS DELP_NM   /* 거래처명 */
+		, I.ACSJ_CD                            AS HRK_ACSJ_CD    /* 상위계정과목코드명 */
+		, I.ACSJ_CD_NM                         AS HRK_ACSJ_CD_NM /* 상위계정과목코드명 */
+		, D.SP_DT                              AS SP_DT          /* 전표일자 */
+		, A.RSLN_DL_NO
+		, A.RSLN_TCD
+		, D.OCCR_ACSJ_CD
+		, A.BDGT_USE_TCD
+		, A.BDGT_ORZ_CD
+		, A.BDGT_YM
+		, A.USE_SRNO
+		FROM AT05N121 A /* 예산집행내역 */
+		, AT09N501 B /* 회계결산기초정보 */
+		, AT05N200 C /* 결의서 */
+		, AT05N201 D /* 결의서상세 */
+		, AT09N111 E /* 회계팀점코드 */
+		, AT01C001 F /* 계정과목코드 */
+		, AT05C001 G /* 예산계정과목코드 */
+		, AT05C010 H /* 거래처 */
+		, AT01C001 I /* 계정과목코드 */
+		WHERE A.RSLN_TCD     = D.RSLN_TCD
+		AND A.RSLN_ORZ_CD  = D.RSLN_ORZ_CD
+		AND A.RSLN_DT      = D.RSLN_DT
+		AND A.RSLN_SRNO    = D.RSLN_SRNO
+		AND A.RSLN_DL_NO   = D.RSLN_DL_NO
+		AND C.RSLN_TCD     = D.RSLN_TCD
+		AND C.RSLN_ORZ_CD  = D.RSLN_ORZ_CD
+		AND C.RSLN_DT      = D.RSLN_DT
+		AND C.RSLN_SRNO    = D.RSLN_SRNO
+		AND A.RSLN_ORZ_CD  = E.ACTG_ORZ_CD
+		AND E.CO_CD        = '005'  /* 회사코드 */
+		AND D.OCCR_ACSJ_CD = F.ACSJ_CD
+		AND F.HRK_ACSJ_CD  = I.ACSJ_CD(+)
+		AND F.CO_CD        = '005'  /* 회사코드 */
+		AND F.ACTG_BAS_CD  = 'G009' /* 회계기준코드 */
+		AND I.CO_CD      (+) = '005'  /* 회사코드 */
+		AND I.ACTG_BAS_CD(+) = 'G009' /* 회계기준코드 */
+		AND A.BDGT_ACSJ_CD = G.BDGT_ACSJ_CD
+		AND D.DELP_CD      = H.DELP_CD(+) /* 거래처코드 */
+		AND A.BDGT_YM BETWEEN SUBSTR(B.SESN_STRT_DT,1,6) AND SUBSTR(B.SESN_SETL_DT,1,6)
+		AND B.SESN_TCD = #{sesnTcd}
+		<if test='dtTcd == "1"'>
+			AND C.RSLN_DT BETWEEN #{fromDt} AND #{toDt}
+		</if>
+		<if test='dtTcd == "2"'>
+			AND D.SP_DT BETWEEN #{fromDt} AND #{toDt}
+		</if>
+		AND A.BDGT_ORZ_CD    IN (
+		SELECT ACTG_ORZ_CD
+		FROM AT09N111 /* 예산팀점코드 */
+		WHERE CO_CD = '005'   /* 회사코드 */
+		CONNECT BY PRIOR ACTG_ORZ_CD = HRK_ORZ_CD
+		START WITH ACTG_ORZ_CD = #{bdgtOrzCd}
+		)
+		<if test='bdgtAcsjCd != null and bdgtAcsjCd != ""'>
+			AND A.BDGT_ACSJ_CD = #{bdgtAcsjCd}
+		</if>
+		<if test='useApvTcd == "1"'>
+			AND A.USE_APV_TCD IN ('1','2')
+		</if>
+		<if test='useApvTcd == "2"'>
+			AND A.USE_APV_TCD IN ('2')
+		</if>
+		ORDER BY A.RSLN_DT, A.RSLN_ORZ_CD, A.RSLN_SRNO, A.RSLN_DL_NO, A.RSLN_TCD, A.BDGT_ACSJ_CD, D.OCCR_ACSJ_CD, A.BDGT_USE_TCD, A.BDGT_ORZ_CD, A.BDGT_YM, A.USE_SRNO
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+			  ) ZZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z 
+			  ) ZZ  WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+	</select>
+
+
+</mapper>
+
+

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:task="http://www.springframework.org/schema/task"
+	   xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:beans="http://www.springframework.org/schema/util" xmlns:jee="http://www.springframework.org/schema/jee"
+	   xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring
+		http://mybatis.org/schema/mybatis-spring.xsd
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/mvc
+		http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/task
+		http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-4.3.xsd http://www.springframework.org/schema/util https://www.springframework.org/schema/util/spring-util.xsd http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd">
+
+	<!-- AOP 설정 -->
+	<aop:aspectj-autoproxy />
+
+	<!-- properties 파일 연동 -->
+	<bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="order" value="2"/>
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="locations">
+            <list>
+                <value>/WEB-INF/config/config.properties</value>
+            </list>
+        </property>
+        <property name="fileEncoding" value="utf-8"/>
+    </bean>
+
+	<!-- DBCP 설정(로컬) -->
+	<bean id='dataSource' class='org.apache.commons.dbcp2.BasicDataSource' destroy-method="close">
+		<property name='driverClassName' value='${db.classname}'/>
+		<property name="url" value="${db.url}"/>
+		<property name="username" value='${db.username}'/>
+		<property name="password" value='${db.password}'/>
+
+		<property name="minEvictableIdleTimeMillis" value="3600000"/>
+		<property name="timeBetweenEvictionRunsMillis" value="60000"/>
+	</bean>
+
+	<bean id='dataSourceUmp' class='org.apache.commons.dbcp2.BasicDataSource' destroy-method="close">
+		<property name='driverClassName' value='${db.ump.classname}'/>
+		<property name="url" value="${db.ump.url}"/>
+		<property name="username" value='${db.ump.username}'/>
+		<property name="password" value='${db.ump.password}'/>
+
+		<property name="minEvictableIdleTimeMillis" value="3600000"/>
+		<property name="timeBetweenEvictionRunsMillis" value="60000"/>
+	</bean>
+
+<!--	&lt;!&ndash; 정보계(bizpt) Datasource &ndash;&gt;-->
+<!--	<jee:jndi-lookup id="dataSourceBiz" jndi-name="jdbc/biz" />-->
+<!--	<bean id="dataSource" class="net.sf.log4jdbc.Log4jdbcProxyDataSource">-->
+<!--		<constructor-arg ref="dataSourceBiz" />-->
+<!--		<property name="logFormatter">-->
+<!--			<bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">-->
+<!--				<property name="loggingType" value="MULTI_LINE" />-->
+<!--				<property name="sqlPrefix" value="SQL:::" />-->
+<!--			</bean>-->
+<!--		</property>-->
+<!--	</bean>-->
+
+<!--	&lt;!&ndash; 업무계(neoread) Datasource &ndash;&gt;-->
+<!--	<jee:jndi-lookup id="dataSourceBizUmp" jndi-name="jdbc/ump_read" />-->
+<!--	<bean id="dataSourceUmp" class="net.sf.log4jdbc.Log4jdbcProxyDataSource">-->
+<!--		<constructor-arg ref="dataSourceBizUmp" />-->
+<!--		<property name="logFormatter">-->
+<!--			<bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">-->
+<!--				<property name="loggingType" value="MULTI_LINE" />-->
+<!--				<property name="sqlPrefix" value="SQL:::" />-->
+<!--			</bean>-->
+<!--		</property>-->
+<!--	</bean>-->
+
+
+
+
+
+	<!-- SqlSessionFactoryBean 설정 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="configLocation"	value="classpath:sqlmapper-config.xml" />
+
+		<property name="mapperLocations">
+			<array>
+				<value>classpath*:mapper/*.xml</value>
+				<value>classpath*:mapper/*/*.xml</value>
+			</array>
+		</property>
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+	<!-- SqlSessionTemplate 설정 -->
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactory" />
+	</bean>
+
+	<!-- DataSourceTransactionManager 설정 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+
+	<!-- transaction annotation 설정 -->
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+
+
+
+	<!-- SqlSessionFactoryBean 설정 -->
+	<bean id="sqlSessionFactoryUmp" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="configLocation"	value="classpath:sqlmapper-config.xml" />
+
+		<property name="mapperLocations">
+			<array>
+				<value>classpath*:mapper_ump/*.xml</value>
+				<value>classpath*:mapper_ump/*/*.xml</value>
+			</array>
+		</property>
+		<property name="dataSource" ref="dataSourceUmp"/>
+	</bean>
+
+	<!-- SqlSessionTemplate 설정 -->
+	<bean id="sqlSessionTemplateUmp" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactoryUmp" />
+	</bean>
+
+	<!-- DataSourceTransactionManager 설정 -->
+	<bean id="transactionManagerUmp" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSourceUmp"/>
+	</bean>
+
+	<!-- transaction annotation 설정 -->
+	<tx:annotation-driven transaction-manager="transactionManagerUmp"/>
+
+
+
+
+
+
+
+
+	<!--
+		필요시 이런 식 으로 사용 가능
+		@Transactional
+		@Override
+		public void AAA(DTO DTO)
+	-->
+
+	<context:component-scan base-package="com.miraeasset.biz" use-default-filters="false" >
+    	<context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+    	<context:include-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+    	<context:include-filter type="annotation" expression="org.springframework.stereotype.Component"/>
+    </context:component-scan>
+
+	<!-- 파일 업로드 설정 -->
+	<!--property name="maxUploadSize" value="5048576" //-->
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="defaultEncoding" value="UTF-8" />
+	</bean>
+
+	<!-- Scheduled -->
+	<task:annotation-driven />
+
+
+
+</beans>

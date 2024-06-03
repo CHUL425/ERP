@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gaem_mapper">
+	
+	<select id="selectAT05C010" parameterType="com.miraeasset.biz.ga.em.vo.GAEM1000U0In10VO" resultType="com.miraeasset.biz.ga.em.vo.GAEM1000U0Out10VO">
+		/* GAEM1000U0.selectAT05C010 = 거래처 팝업 조회(소득자포함) */
+			SELECT * FROM (
+			SELECT * FROM (					
+				SELECT ROW_NUMBER() OVER(ORDER BY A.DELP_CD , ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()         AS AL_CNT       /* 전체건수      */     
+				     , A.DELP_CD               AS DELP_CD
+				     , TRIM(A.DELP_NM)         AS DELP_NM
+				     , A.BLNO                  AS BLNO
+				     , TRIM(A.DELP_RPTV_NM)    AS DELP_RPTV_NM
+				     , A.DELP_EMAL_ADR_ECP_VL  AS EMAL_ADR
+				     , A.CONO                  AS CONO
+				     , A.DELP_TCD              AS DELP_TCD
+			         , ( SELECT CMN_CD_VL_DEF_CN FROM AT09C302 WHERE CD_KND_NO = 'DELP_TCD' AND CMN_CD_VL = A.DELP_TCD AND ROWNUM = 1 ) AS DELP_TCD_NM 	  				     
+				  FROM AT05C010 A /* 거래처 */
+				 WHERE 1=1
+					<if test='delpCd == null'>      		   
+				   AND (   A.DELP_CD LIKE        TRIM(#{trdDvCd}) ||'%'
+				        OR A.DELP_NM LIKE '%' || TRIM(#{trdDvCd}) || '%'
+				        OR A.BLNO    LIKE '%' || TRIM(#{trdDvCd}) || '%'
+				       )
+				     </if>
+					<if test='delpCd != null'>      		   
+						AND A.DELP_CD          = #{delpCd}
+					</if>
+											       
+				   AND A.TR_ABL_YN = '1'
+				 ORDER BY A.DELP_CD
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>	
+	
+	<select id="selectListGA01N301" parameterType="com.miraeasset.biz.ga.em.vo.GAEM1000U0In00VO" resultType="com.miraeasset.biz.ga.em.vo.GAEM1000U0Out00VO">
+		/* GAEM1000U0.selectListGA01N301 = 업체관리 목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.DELP_CD ,T1.BZTP_TCD,T1.BZTP_DL_TCD , ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+				     , T1.DELP_CD
+				     , TRIM(T2.DELP_NM) AS DELP_NM
+				     , T2.BLNO
+				     , TRIM(T1.BZTP_TCD) AS BZTP_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'BZTP_TCD' AND CMN_CD_VL = TRIM(T1.BZTP_TCD) AND ROWNUM = 1 ) AS BZTP_TCD_NM
+				     , T1.BZTP_DL_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'BZTP_DL_TCD' AND CMN_CD_VL = T1.BZTP_DL_TCD AND ROWNUM = 1 ) AS BZTP_DL_TCD_NM
+				     , T1.ENTP_CHPR_NM
+				     , T1.CHPR_TLNO_ECP_VL     AS CHPR_TLNO
+				     , T1.CHPR_EMAL_ADR_ECP_VL AS CHPR_EMAL_ADR
+				     , T1.PRJT_MT_ENTP_NM
+				     , T1.FST_CNTC_DT
+				     , ( SELECT COUNT(1) FROM GA01N302  WHERE DELP_CD = T1.DELP_CD AND DEL_YN='0' ) AS MEMO_CNT
+				  FROM GA01N301 T1 -- 업체관리
+				     , AT05C010 T2 -- 거래처 
+				 WHERE T2.DELP_CD = T1.DELP_CD     
+				     AND T1.BZTP_TCD    LIKE '%' || TRIM( #{bztpTcd} )    || '%' /* 업무구분코드 */
+				     AND T2.DELP_NM     LIKE '%' || TRIM( #{delpNm} )     || '%' /* 업체명 */
+				     AND T1.BZTP_DL_TCD LIKE '%' || TRIM( #{bztpDlTcd} )  || '%' /* 업무구분상세코드 */
+				 ORDER BY T1.DELP_CD ,T1.BZTP_TCD,T1.BZTP_DL_TCD  
+
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>	
+	
+	<select id="selLstGA01N302ByDelpCd" parameterType="com.miraeasset.biz.common.meta.vo.GA01N302VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N302VO">
+		/* GAEM1000U0.selLstGA01N302ByDelpCd = 업체별메모 내역조회 */
+
+			SELECT ROW_NUMBER() OVER(ORDER BY T1.DELP_CD ,T1.REGI_SRNO , ROWNUM DESC) AS RNUM     
+			     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+			     , T1.DELP_CD
+			     , T1.REGI_SRNO
+			     , T1.REGI_EPNO
+			     , T2.EP_NM AS REGI_EP_NM    
+			     , ( SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO='HRM_008' AND HR_CMN_CD = T2.HR_PST_CD AND ROWNUM = 1) AS HR_PST_NM
+			     , T1.REGI_DT
+			     , T1.MEMO_CN
+			     , T1.REGI_SRNO
+			  FROM GA01N302 T1 -- 업체별메모
+			     , CB01N310 T2 -- 직원     
+			 WHERE T2.EPNO (+)= T1.REGI_EPNO
+			   AND T1.DEL_YN  = '0'
+			   AND T1.DELP_CD = #{delpCd}
+			 ORDER BY T1.DELP_CD ,T1.REGI_SRNO  
+
+	</select>			
+	
+	
+	<select id="selectGA01N301PK" parameterType="com.miraeasset.biz.ga.em.vo.GAEM1000U0In01VO" resultType="com.miraeasset.biz.ga.em.vo.GAEM1000U0Out01VO">
+		/* GAEM1000U0.selectGA01N301PK = 업체관리 상세조회(PK) */
+				SELECT T1.DELP_CD
+				     , TRIM(T2.DELP_NM) AS DELP_NM
+				     , T2.BLNO
+				     , TRIM(T1.BZTP_TCD) AS BZTP_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'BZTP_TCD' AND CMN_CD_VL = TRIM(T1.BZTP_TCD) AND ROWNUM = 1 ) AS BZTP_TCD_NM
+				     , T1.BZTP_DL_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'BZTP_DL_TCD' AND CMN_CD_VL = T1.BZTP_DL_TCD AND ROWNUM = 1 ) AS BZTP_DL_TCD_NM
+				     , T1.ENTP_CHPR_NM
+				     , T1.CHPR_TLNO_ECP_VL     AS CHPR_TLNO
+				     , T1.CHPR_EMAL_ADR_ECP_VL AS CHPR_EMAL_ADR
+				     , T1.PRJT_MT_ENTP_NM
+				     , T1.FST_CNTC_DT
+				     , ( SELECT COUNT(1) FROM GA01N302  WHERE DELP_CD = T1.DELP_CD AND DEL_YN='0' ) AS MEMO_CNT
+				  FROM GA01N301 T1 -- 업체관리
+				     , AT05C010 T2 -- 거래처 
+				 WHERE T2.DELP_CD = T1.DELP_CD     
+				     AND T1.DELP_CD      = TRIM( #{delpCd}    )  /* 거래처코드 */
+				     AND T1.BZTP_TCD     LIKE TRIM( #{bztpTcd}   ) ||'%'  /* 업무구분코드 */
+				     AND T1.BZTP_DL_TCD  = TRIM( #{bztpDlTcd} )  /* 업무상세구분코드 */
+	</select>		
+	
+	<insert id="insertGA01N301" parameterType="com.miraeasset.biz.common.meta.vo.GA01N301VO" >
+		/* GAEM1000U0.insertGA01N301 = 업체관리 신규등록 */	
+		INSERT INTO GA01N301 --  업체관리
+		( 
+		  DELP_CD                  /*거래처코드              */
+		, BZTP_TCD                 /*업종구분코드            */
+		, BZTP_DL_TCD              /*업종상세구분코드        */
+		, ENTP_CHPR_NM             /*업체담당자명            */
+		, CHPR_TLNO_ECP_VL         /*담당자전화번호암호화값  */
+		, CHPR_EMAL_ADR_ECP_VL     /*담당자이메일주소암호화값*/
+		, PRJT_MT_ENTP_NM          /*프로젝트관리업체명  */
+		, FST_CNTC_DT              /*최초계약일자            */
+		, OPTR_ID                  /*조작자ID                */
+		, OPRT_CHNL_CD             /*조작채널코드            */
+		, OPRT_ORZ_CD              /*조작조직코드            */
+		, OPRT_IP_ADR              /*조작IP주소              */
+		, OPRT_DTTM                /*조작일시                */
+		)
+		VALUES
+		(         
+		  #{delpCd          }      /*거래처코드              */
+		, #{bztpTcd         }      /*업종구분코드            */
+		, #{bztpDlTcd       }      /*업종상세구분코드        */
+		, #{entpChprNm      }      /*업체담당자명            */
+		, #{chprTlnoEcpVl   }      /*담당자전화번호암호화값  */
+		, #{chprEmalAdrEcpVl}      /*담당자이메일주소암호화값*/
+		, #{prjtMtEntpNm    }      /*프로젝트관리업체명*/
+		, #{fstCntcDt       }      /*최초계약일자            */
+		, #{optrId          }      /*조작자ID                */
+		, #{oprtChnlCd      }      /*조작채널코드            */
+		, #{oprtOrzCd       }      /*조작조직코드            */
+		, #{oprtIpAdr       }      /*조작IP주소              */
+		, SYSDATE                  /*조작일시                */
+		)
+	</insert>	
+	
+	<insert id="insertGA01N302" parameterType="com.miraeasset.biz.common.meta.vo.GA01N302VO" >
+		/* GAEM1000U0.insertGA01N302 = 업체별메모 신규등록 */	
+		INSERT INTO GA01N302 -- 업체별메모
+		( 
+		  DELP_CD           /*거래처코드  */
+		, REGI_SRNO         /*등록일련번호*/
+		, REGI_EPNO         /*등록사원번호*/
+		, REGI_DT           /*등록일자    */
+		, MEMO_CN           /*메모내용    */
+		, DEL_YN            /*삭제여부    */
+		, OPTR_ID           /*조작자ID    */
+		, OPRT_CHNL_CD      /*조작채널코드*/
+		, OPRT_ORZ_CD       /*조작조직코드*/
+		, OPRT_IP_ADR       /*조작IP주소  */
+		, OPRT_DTTM         /*조작일시    */
+		)
+		VALUES
+		( 
+		  #{delpCd     }    /*거래처코드  */   
+		, ( SELECT NVL(MAX(REGI_SRNO),0) + 1 FROM GA01N302 WHERE DELP_CD =  #{delpCd}  )   
+		, #{regiEpno   }    /*등록사원번호*/   
+		, #{regiDt     }    /*등록일자    */   
+		, #{memoCn     }    /*메모내용    */   
+		, #{delYn      }    /*삭제여부    */   
+		, #{optrId     }    /*조작자ID    */   
+		, #{oprtChnlCd }    /*조작채널코드*/   
+		, #{oprtOrzCd  }    /*조작조직코드*/   
+		, #{oprtIpAdr  }    /*조작IP주소  */   
+		, SYSDATE           /*조작일시    */   
+		)
+	</insert>		
+		
+	<update id="updateGA01N301" parameterType="com.miraeasset.biz.common.meta.vo.GA01N301VO" >
+		/* GAEM1000U0.updateGA01N301 = 업체관리 수정(PK) */	
+	
+		UPDATE GA01N301 --  업체관리
+		   SET ENTP_CHPR_NM          = #{entpChprNm      }  
+		     , CHPR_TLNO_ECP_VL      = #{chprTlnoEcpVl   } 
+		     , CHPR_EMAL_ADR_ECP_VL  = #{chprEmalAdrEcpVl} 
+		     , PRJT_MT_ENTP_NM       = #{prjtMtEntpNm    }
+		     , FST_CNTC_DT           = #{fstCntcDt       } 
+		     , OPTR_ID               = #{optrId          } 
+		     , OPRT_CHNL_CD          = #{oprtChnlCd      } 
+		     , OPRT_ORZ_CD           = #{oprtOrzCd       } 
+		     , OPRT_IP_ADR           = #{oprtIpAdr       } 
+		     , OPRT_DTTM             = SYSDATE
+		 WHERE DELP_CD               = #{delpCd          }
+		   AND BZTP_TCD              LIKE #{bztpTcd      } || '%'
+		   AND BZTP_DL_TCD           = #{bztpDlTcd       }
+	</update>	
+	
+	<update id="deleteGA01N301" parameterType="com.miraeasset.biz.common.meta.vo.GA01N301VO" >
+		/* GAEM1000U0.deleteGA01N301 = 업체관리 삭제(PK) */	
+	
+		DELETE GA01N301 --  업체관리
+		 WHERE DELP_CD               = #{delpCd          }
+		   AND BZTP_TCD              LIKE #{bztpTcd      } || '%'
+		   AND BZTP_DL_TCD           = #{bztpDlTcd       }
+		   
+	</update>	
+	
+	
+	<update id="updateDelGA01N302" parameterType="com.miraeasset.biz.common.meta.vo.GA01N302VO" >
+		/* GAEM1000U0.updateDelGA01N302 = 업체별메모 삭제 */	
+
+			UPDATE GA01N302 -- 업체별메모  
+			   SET DEL_YN        = #{delYn      }   /*삭제여부    */    
+			     , OPTR_ID       = #{optrId     } 
+			     , OPRT_CHNL_CD  = #{oprtChnlCd } 
+			     , OPRT_ORZ_CD   = #{oprtOrzCd  } 
+			     , OPRT_IP_ADR   = #{oprtIpAdr  } 
+			     , OPRT_DTTM     = SYSDATE					   
+			 WHERE DELP_CD       = #{delpCd     }   /*거래처코드*/    
+			   AND REGI_SRNO     = #{regiSrno   }   /*등록일련번호*/   
+   </update>	   
+
+	<select id="selLstGA01N301ByDelpCd" parameterType="com.miraeasset.biz.ga.em.vo.GAEM1000U0In11VO" resultType="com.miraeasset.biz.ga.em.vo.GAEM1000U0Out11VO">
+		/* GAEM1000U0.selLstGA01N301ByDelpCd = 업체관리 업체계약현황조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.DELP_CD ,T1.BZTP_TCD,T1.BZTP_DL_TCD , ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+				     , T1.DELP_CD
+				     , TRIM(T2.DELP_NM) AS DELP_NM
+				     , T2.BLNO
+				     , TRIM(T1.BZTP_TCD) AS BZTP_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'BZTP_TCD' AND CMN_CD_VL = TRIM(T1.BZTP_TCD) AND ROWNUM = 1 ) AS BZTP_TCD_NM
+				     , T1.BZTP_DL_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'BZTP_DL_TCD' AND CMN_CD_VL = T1.BZTP_DL_TCD AND ROWNUM = 1 ) AS BZTP_DL_TCD_NM
+				     , T1.ENTP_CHPR_NM
+				     , T1.CHPR_TLNO_ECP_VL     AS CHPR_TLNO
+				     , T1.CHPR_EMAL_ADR_ECP_VL AS CHPR_EMAL_ADR
+				     , T1.PRJT_MT_ENTP_NM
+				     , T1.FST_CNTC_DT
+				     , ( SELECT COUNT(1) FROM GA01N302  WHERE DELP_CD = T1.DELP_CD AND DEL_YN='0' ) AS MEMO_CNT
+				  FROM GA01N301 T1 -- 업체관리
+				     , AT05C010 T2 -- 거래처 
+				 WHERE T2.DELP_CD = T1.DELP_CD     
+ 			       AND T1.DELP_CD = TRIM( #{delpCd} ) /* 업체코드 */
+				 ORDER BY T1.DELP_CD ,T1.BZTP_TCD,T1.BZTP_DL_TCD  
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>		
+</mapper>

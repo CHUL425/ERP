@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gaam_mapper">
+
+	<select id="selectAtclInfo" parameterType="com.miraeasset.biz.ga.am.vo.GAAM1000U0In00VO" resultType="com.miraeasset.biz.common.meta.vo.GA03N101VO">
+		/* GAAM1000U0.selectAtclInfo =  구매물품코드별 조회*/
+		SELECT A.ATCL_TCD
+		     , A.ATCL_CD
+		     , B.CMN_CD_VL_DEF_CN AS ATCL_NM
+		     , A.DELP_CD
+		     , A.ATCL_SUPA
+		     , A.ATCL_TA
+		     , A.ATCL_PR_A
+		     , A.MIN_RQS_UNIT_Q
+		     , A.MIN_PCH_RQS_Q
+		     , A.MAX_PCH_RQS_Q
+		     , A.SPEC_CN
+		     , A.RQS_TCD
+		     , A.ESSN_RQM_YN
+		     , A.RQS_RQM_PTCR_CN
+		     , A.PL_PRSV_YN
+		     , A.ACSJ_CD
+		     , A.CNTC_STRT_DT
+		     , A.CNTC_END_DT
+		     , A.USE_YN
+		     , A.ATCL_IMG_FILE_NO
+		     , A.USER_INPT_YN
+		FROM GA03N101 A 
+		     LEFT OUTER JOIN GA09C302 B ON B.CD_KND_NO='ATCL_CD' AND A.ATCL_CD = B.CMN_CD_VL
+		WHERE A.ATCL_CD =  #{atclCd}
+		  AND A.USE_YN = '1'
+	</select>
+	
+	
+	<select id="selectAtclList" parameterType="com.miraeasset.biz.ga.am.vo.GAAM1000U0In01VO" resultType="com.miraeasset.biz.common.meta.vo.GA03N101VO">
+		/* GAAM1000U0.selectAtclList =  물품리스트 조회*/
+		<include refid="selectAtclList_select" />
+		ORDER BY A.ATCL_TCD, A.ATCL_CD
+		OFFSET #{pageIndex} ROWS FETCH NEXT #{pageSize} ROWS ONLY 	
+	</select>
+	<select id="selectAtclList_CNT" parameterType="com.miraeasset.biz.ga.am.vo.GAAM1000U0In01VO" resultType="com.miraeasset.biz.common.meta.vo.GA03N101VO">
+		/* GAAM1000U0.selectAtclList =  물품리스트 조회*/
+		SELECT COUNT(1) AS TOT_CNT
+		  FROM (
+		  <include refid="selectAtclList_select" />
+		       )
+	</select>
+	<sql id="selectAtclList_select">
+		SELECT A.ATCL_TCD
+		     , A.ATCL_CD
+		     , B.CMN_CD_VL_DEF_CN AS ATCL_NM
+		     , A.DELP_CD
+		     , A.ATCL_SUPA
+		     , A.ATCL_TA
+		     , A.ATCL_PR_A
+		     , A.MIN_RQS_UNIT_Q
+		     , A.MIN_PCH_RQS_Q
+		     , A.MAX_PCH_RQS_Q
+		     , A.SPEC_CN
+		     , A.RQS_TCD
+		     , A.ESSN_RQM_YN
+		     , A.RQS_RQM_PTCR_CN
+		     , A.PL_PRSV_YN
+		     , A.ACSJ_CD
+		     , A.CNTC_STRT_DT
+		     , A.CNTC_END_DT
+		     , A.USE_YN
+		     , A.ATCL_IMG_FILE_NO
+		     , A.USER_INPT_YN
+		     , #{totCnt} AS TOT_CNT
+		FROM GA03N101 A 
+		     LEFT OUTER JOIN GA09C302 B ON B.CD_KND_NO='ATCL_CD' AND A.ATCL_CD = B.CMN_CD_VL
+		WHERE A.USE_YN = '1'
+		<if test="atclTcd != null and atclTcd != ''">
+		  AND A.ATCL_TCD IN 
+		  <foreach collection="arrAtclTcd" item="item" index="index" open="(" close=")" separator=",">
+		  #{item}
+		  </foreach>
+		</if>
+	</sql>
+	
+</mapper>

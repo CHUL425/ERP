@@ -1,0 +1,621 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="aprv_mapper">
+
+    <select id="selectAprvList" parameterType="com.miraeasset.biz.common.aprv.vo.Aprv00In00VO" resultType="com.miraeasset.biz.common.aprv.vo.Aprv00Out00VO">
+			/* Aprv00.selectAprvList : 승인대기목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.APRV_WRRPT_MT_NO , ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+				     , T1.APRV_WRRPT_MT_NO
+				     , T1.APRV_SCD
+			         , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'APRV_SCD' AND CMN_CD_VL = T1.APRV_SCD AND ROWNUM = 1 ) AS APRV_SCD_NM    
+				     , T1.APRV_PCD
+			         , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'APRV_PCD' AND CMN_CD_VL = T1.APRV_PCD AND ROWNUM = 1 ) AS APRV_PCD_NM    
+				     , '01' AS BIZ_TCD 
+				     , '렌탈' AS BIZ_TCD_NM 
+				     , T3.RQS_TTL_NM
+				     , T3.RCT_NO 
+				     , T1.APRV_WRRPT_ORZ_CD
+			         , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.APRV_WRRPT_ORZ_CD AND ROWNUM = 1 ) AS APRV_WRRPT_ORZ_NM                         
+				     , T1.WRRPT_EPNO
+				     , T4.EP_NM AS WRRPT_EP_NM
+				     , T1.WRRPT_DT
+				     , T2.APRV_RNK 
+				     , T2.APRV_DL_RNK
+				  FROM GA09N606 T1 -- 결재정보
+				     , GA09N607 T2 -- 결재정보상세
+				     , GA01N003 T3 -- 임대신청
+				     , CB01N310 T4 -- 직원
+				     
+				 WHERE 1=1
+				   
+			       AND T2.APRV_EPNO          LIKE '%' || TRIM( #{aprvEpno} )    || '%' /* 결재자사원번호 */
+			       AND T2.APRV_WRRPT_ORZ_CD  LIKE '%' || TRIM( #{aprvWrrptOrzCd} )    || '%' /* 결재상신조족코드 */
+			       AND T1.WRRPT_EPNO         LIKE '%' || TRIM( #{wrrptEpno} )    || '%' /* 상신사원번호  */
+			       AND T4.EPNO               (+)= T1.WRRPT_EPNO
+			       AND T4.EP_NM              LIKE '%' || TRIM( #{wrrptEpNm} )    || '%' /* 상신사원명  */
+				   AND T2.APRV_RTRN_TCD  IS NULL
+				   -- 20230818 사원번호에 직책셋팅(해당팀의 결재권한의 직책을가지고있는 사원파악 어려움)
+				   AND LENGTH(T2.APRV_EPNO) > 2
+				   AND T2.APRV_WRRPT_MT_NO = T1.APRV_WRRPT_MT_NO
+				   AND T2.APRV_WRRPT_ORZ_CD = T1.APRV_WRRPT_ORZ_CD
+				   AND T3.APRV_WRRPT_MT_NO = T1.APRV_WRRPT_MT_NO
+				 ORDER BY T1.APRV_WRRPT_MT_NO, T2.APRV_RNK , T2.APRV_DL_RNK 
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 			  
+    </select>
+    
+	<update id="updateGA09N606Aprv" parameterType="com.miraeasset.biz.common.meta.vo.GA09N606Pu01InVO" >
+		/* Aprv00.updateGA09N606Aprv : 승인/반려처리 */
+		    
+		UPDATE GA09N606
+		   SET APRV_SCD   = #{aprvScd   }
+		 WHERE APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo      } 
+		   AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd   } 
+    </update>
+        
+	<update id="updateGA09N607Aprv" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607Pu01InVO" >
+		/* Aprv00.updateGA09N607Aprv : 승인/반려처리 */
+		    
+		UPDATE GA09N607
+		   SET APRV_RTRN_TCD  = #{aprvRtrnTcd   }
+		     , APRV_DTTM      = SYSDATE
+		     , APRV_RSN_CN    = #{aprvRsnCn     }
+		     , SBAP_YN        = #{sbapYn        }
+		     , SBAP_EPNO      = #{sbapEpno      }
+		 WHERE APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo      } 
+		   AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd   } 
+		   AND APRV_RNK          = #{aprvRnk          }
+		   AND APRV_DL_RNK       = #{aprvDlRnk        }		   
+		   AND APRV_EPNO         = #{aprvEpno         }     
+    </update>
+    
+	<update id="updateGA09N607RsnCn" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" >
+		/* Aprv00.updateGA09N607RsnCn : 결재사유내용 수정 */
+		    
+		UPDATE GA09N607
+		   SET APRV_RSN_CN    = #{aprvRsnCn     }
+		 WHERE APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo    } 
+		   AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd   } 
+		   AND APRV_RNK          = #{aprvRnk          }
+		   AND APRV_DL_RNK       = #{aprvDlRnk        }		   
+		   AND APRV_EPNO         = #{aprvEpno         }     
+    </update>    
+    
+    <insert id="insertGA09N606" parameterType="com.miraeasset.biz.common.meta.vo.GA09N606VO" >
+		/* Aprv00.insertGA09N606 : 결제등록 */
+		INSERT INTO GA09N606
+		( APRV_WRRPT_MT_NO    /*결재상신관리번호  */
+		, APRV_WRRPT_ORZ_CD   /*결재상신조직코드*/
+		, APRV_SCD            /*결재상태코드    */
+		, WRRPT_EPNO          /*상신사원번호    */
+		, WRRPT_DT            /*상신일자        */
+		, APRV_PCD            /*결재유형코드    */
+		, OPTR_ID             /*조작자ID        */
+		, OPRT_CHNL_CD        /*조작채널코드    */
+		, OPRT_ORZ_CD         /*조작조직코드    */
+		, OPRT_IP_ADR         /*조작IP주소      */
+		, OPRT_DTTM           /*조작일시        */
+		)
+		VALUES
+		( #{aprvWrrptMtNo   }  /*결재상신관리번호  */
+		, #{aprvWrrptOrzCd  }  /*결재상신조직코드*/
+		, #{aprvScd         }  /*결재상태코드    */
+		, #{wrrptEpno       }  /*상신사원번호    */
+		, #{wrrptDt         }  /*상신일자        */
+		, #{aprvPcd         }  /*결재유형코드    */
+		, #{optrId          }  /*조작자ID        */
+		, #{oprtChnlCd      }  /*조작채널코드    */
+		, #{oprtOrzCd       }  /*조작조직코드    */
+		, #{oprtIpAdr       }  /*조작IP주소      */ 
+		, SYSDATE  
+		)      
+    </insert>
+    
+    <insert id="insertGA09N607" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" >
+		/* Aprv00.insertGA09N607 : 결제상세등록 */
+		INSERT INTO GA09N607
+		( APRV_WRRPT_MT_NO   /*결재상신관리번호  */
+		, APRV_WRRPT_ORZ_CD  /*결재상신조직코드*/
+		, APRV_RNK           /*결재순위        */
+		, APRV_DL_RNK        /*결재상세순위    */
+		, APRV_WRRPT_TCD     /*결재상신구분코드*/
+		, APRV_RTRN_TCD      /*결재반려구분코드*/
+		, DCFC_PCD           /*결재자유형코드  */
+		, APRV_UNIT_TCD      /*결재단위구분코드 */
+		, APRV_UNIT_HR_OSDT_CD /*결재단위인사직책코드 */
+		, APRV_UNIT_GRP_CD   /*결재단위그룹코드 */
+		, APRV_UNIT_DL_VL    /*결재단위상세값 */
+		, APRV_ORZ_CD        /*결재조직코드    */
+		, APRV_EPNO          /*결재사원번호    */
+		, APRV_DTTM          /*결재일시        */
+		, APRV_RSN_CN        /*결재사유내용    */
+		, SBAP_YN            /*대결여부        */
+		, SBAP_EPNO          /*대결사원번호    */
+		, SBAP_CFMT_YN       /*대결확인여부    */
+		, OPTR_ID            /*조작자ID        */
+		, OPRT_CHNL_CD       /*조작채널코드    */
+		, OPRT_ORZ_CD        /*조작조직코드    */
+		, OPRT_IP_ADR        /*조작IP주소      */
+		, OPRT_DTTM          /*조작일시        */ 
+		)
+		VALUES
+		( #{aprvWrrptMtNo   }   /*결재상신관리번호  */
+		, #{aprvWrrptOrzCd  }   /*결재상신조직코드*/
+		, #{aprvRnk         }   /*결재순위        */
+		, #{aprvDlRnk       }   /*결재상세순위    */
+		, #{aprvWrrptTcd    }   /*결재상신구분코드*/
+		, #{aprvRtrnTcd     }   /*결재반려구분코드*/
+		, #{dcfcPcd         }   /*결재자유형코드  */
+		, #{aprvUnitTcd     }   /*결재단위구분코드 */
+		, #{aprvUnitHrOsdtCd}   /*결재단위인사직책코드 */
+		, #{aprvUnitGrpCd   }   /*결재단위그룹코드 */
+		, #{aprvUnitDlVl    }   /*결재단위상세값 */
+		, #{aprvOrzCd       }   /*결재조직코드    */
+		, #{aprvEpno        }   /*결재사원번호    */
+		, #{aprvDttm        }   /*결재일시        */
+		, #{aprvRsnCn       }   /*결재사유내용    */
+		, #{sbapYn          }   /*대결여부        */
+		, #{sbapEpno        }   /*대결사원번호    */
+		, #{sbapCfmtYn      }   /*대결확인여부    */
+		, #{optrId          }   /*조작자ID        */
+		, #{oprtChnlCd      }   /*조작채널코드    */
+		, #{oprtOrzCd       }   /*조작조직코드    */
+		, #{oprtIpAdr       }   /*조작IP주소      */
+		, SYSDATE               /*조작일시        */
+		)   
+    </insert>    
+    
+    <select id="selectAprvLine" parameterType="com.miraeasset.biz.common.meta.vo.GA09N601InVO" resultType="com.miraeasset.biz.common.meta.vo.GA09N601OutVO" >    
+    	/* Aprv01.selectAprvLine : 결재선관리조회 */
+    	SELECT APRVL_MT_NO  /* 결재선관리번호 */
+		     , APRVL_MT_NM  /* 결재선관리명 */ 
+		     , APRV_LST_RNK /* 결재최종순위 */
+		     , USE_YN       /* 사용여부 */
+		     , APRV_PCD     /* 결재유형코드 */
+		  FROM GA09N601
+		 WHERE 1=1
+		   AND APRVL_MT_NO = #{aprvlMtNo} 
+		   AND USE_YN = '1'
+    </select>
+    
+    <insert id="insertAprvLineDl" parameterType="com.miraeasset.biz.common.meta.vo.GA09N602InVO">
+	    /* Aprv01.insertAprvLineDl : 결재선관리상세등록 */
+	    	INSERT INTO GA09N602    /* 결재선관리상세 */
+	          ( APRVL_MT_NO         /* 결재선관리번호 */         
+	          , APRV_RNK            /* 결재순위 */
+	          , APRV_UNIT_TCD       /* 결재단위구분코드 */
+	          , APRV_UNIT_HR_OSDT_CD /* 결재단위인사직책코드 */
+	          , APRV_WRRPT_TCD      /* 결재상신구분코드 */
+	          , APRV_UNIT_GRP_CD    /* 결재단위그룹코드 */
+	          , APRV_UNIT_DL_VL     /* 결재단위상세값 */
+	          , DCFC_PCD            /* 결재자유형코드 */
+	          , USE_YN              /* 사용여부 */
+	          , OPTR_ID             /* 조작자ID */
+	          , OPRT_CHNL_CD        /* 조작채널코드 */
+	          , OPRT_ORZ_CD         /* 조작조직코드 */
+	          , OPRT_IP_ADR         /* 조작IP주소 */
+	          , OPRT_DTTM           /* 조작일시 */
+	           )
+	    VALUES ( #{aprvlMtNo}
+	           , #{aprvRnk} 
+	           , #{aprvUnitTcd}
+	           , #{aprvUnitHrOsdtCd}
+	           , #{aprvWrrptTcd}
+	           , #{aprvUnitGrpCd}
+	           , #{aprvUnitDlVl}
+	           , #{dcfcPcd}
+	           , #{useYn}
+	           , #{optrId}
+	           , #{oprtChnlCd}
+	           , #{oprtOrzCd}
+	           , #{oprtIpAdr}
+	           , #{oprtDttm}
+	            )
+    </insert>
+    
+    <select id="selectAprvWrrptDlList" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N607VO"> 
+    	/* Aprv01.selectAprvWrrptDlList : 결재_결재정보상세 조회 */
+    	SELECT APRV_WRRPT_MT_NO
+		     , APRV_RNK
+		     , APRV_DL_RNK
+		     , APRV_WRRPT_ORZ_CD
+		     , APRV_WRRPT_TCD
+		     , APRV_RTRN_TCD
+		     , DCFC_PCD
+		     , APRV_UNIT_TCD
+		     , APRV_UNIT_GRP_CD
+		     , APRV_UNIT_HR_OSDT_CD
+		     , APRV_UNIT_DL_VL
+		     , APRV_ORZ_CD
+		     , APRV_EPNO
+		     , APRV_DTTM
+		     , APRV_RSN_CN
+		     , SBAP_YN
+		     , SBAP_EPNO
+		     , SBAP_CFMT_YN
+		  FROM GA09N607
+		 WHERE 1=1
+		   AND APRV_WRRPT_MT_NO = #{aprvWrrptMtNo}
+		   AND APRV_RTRN_TCD IS NULL 
+    </select>
+    
+    <select id="selectNextAprvWrrptList" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N607VO">
+    	/* Aprv01.selectNextAprvWrrptList : 참조, 다움대상결재자 조회 */
+    	WITH CTE_TB AS (
+	        SELECT
+	            K, V AS ORZ_CD, SUBSTR(V ,1,5)||'X' AS ORZ_CD_X
+	        FROM
+	            (
+	                SELECT * FROM CB01N212 WHERE ORZ_CD = #{aprvWrrptOrzCd}
+	            ) z
+	            UNPIVOT ( V FOR K IN (LEVL1_ORZ_CD, LEVL2_ORZ_CD, LEVL3_ORZ_CD, LEVL4_ORZ_CD, LEVL5_ORZ_CD, LEVL6_ORZ_CD) )
+	    )
+	    SELECT
+	        a.K AS LVL,
+	        (CASE WHEN b.HR_OSDT_CD IS NULL THEN c.HR_OSDT_CD ELSE b.HR_OSDT_CD END) AS APRV_UNIT_HR_OSDT_CD,
+	        (CASE WHEN b.EPNO IS NULL THEN c.EPNO ELSE b.EPNO END) AS APRV_EPNO,
+	        (CASE WHEN b.BLNG_ORZ_CD IS NULL THEN c.BLNG_ORZ_CD ELSE b.BLNG_ORZ_CD END) AS APRV_ORZ_CD
+	    FROM
+	        CTE_TB a
+	        LEFT OUTER JOIN CB01N310 b ON (a.ORZ_CD = b.BLNG_ORZ_CD AND b.HR_HLDO_CD = 'A' AND b.HR_OSDT_CD IN (SELECT REGEXP_SUBSTR(HRPSTCD, '[^,]+', 1, LEVEL) HRPSTCD
+	                                                                                                              FROM (SELECT #{aprvUnitHrOsdtCd} AS HRPSTCD FROM DUAL)
+	                                                                                                           CONNECT BY LEVEL <![CDATA[ < ]]>= REGEXP_COUNT(HRPSTCD, '[^,]+')))
+	        LEFT OUTER JOIN CB01N310 c ON (a.ORZ_CD_X = c.BLNG_ORZ_CD AND c.HR_HLDO_CD = 'A' AND c.HR_OSDT_CD IN (SELECT REGEXP_SUBSTR(HRPSTCD, '[^,]+', 1, LEVEL) HRPSTCD
+	                                                                                                              FROM (SELECT #{aprvUnitHrOsdtCd} AS HRPSTCD FROM DUAL)
+	                                                                                                           CONNECT BY LEVEL <![CDATA[ < ]]>= REGEXP_COUNT(HRPSTCD, '[^,]+')))
+	    WHERE
+	        b.HR_OSDT_CD IS NOT NULL
+	        OR
+	        c.HR_OSDT_CD IS NOT NULL
+	    ORDER BY
+	        a.K DESC, b.HR_OSDT_CD DESC, c.HR_OSDT_CD DESC
+	    FETCH FIRST 1 ROW  ONLY	
+    </select>
+    
+    <update id="updateAprvWrrpt" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO">
+    	/* Aprv01.updateAprvWrrpt : 결재상세정보 수정 */
+    	UPDATE GA09N607
+           SET APRV_UNIT_GRP_CD     = #{aprvUnitGrpCd}
+             , APRV_ORZ_CD          = #{aprvOrzCd}
+             , APRV_UNIT_HR_OSDT_CD = #{aprvUnitHrOsdtCd}
+		  WHERE 1=1
+		    AND APRV_WRRPT_MT_NO = #{aprvWrrptMtNo}
+		    AND APRV_RNK         = #{aprvRnk}
+		    AND APRV_DL_RNK      = #{aprvDlRnk} 
+    </update>
+    
+    
+    <select id="selectAprvLineList" parameterType="com.miraeasset.biz.common.meta.vo.GA09N602Vf01InVO" resultType="com.miraeasset.biz.common.meta.vo.GA09N602Vf01OutVO">
+			/* Aprv01.selectAprvLineList : 결재선관리내역조회 */
+			SELECT APRVL_MT_NO FROM (
+			SELECT CASE /* 커스텀 케이스 */
+			            WHEN (#{bzChprYn} = 'Y' OR (#{bzAuthYn} = 'Y' AND #{aprvWrrptOrzCd} = 'S03001')) AND B.UNIF_RQS_PCD != '05' THEN
+							 CASE WHEN A.ORZ_CD IS NULL AND APRVL_TP_VL2 = 'CUS_FLAG1' THEN A.APRVL_MT_NO
+							 END
+						WHEN A.UNIF_RQS_PCD IS NOT NULL THEN
+ 						     /* USE_SEAL_YN = 1.사용인감계 0.사용인감계 외 */     
+						     CASE WHEN A.HOBR_TCD = '01' AND B.UNIF_RQS_PCD = '05' THEN	 
+							      ( /* 인감 본점 결재선 케이스 */
+							       SELECT CASE WHEN USE_SEAL_YN = APRVL_TP_VL1 THEN A.APRVL_MT_NO END
+							         FROM (
+							               SELECT MAX(USE_SEAL_YN) AS USE_SEAL_YN
+                                             FROM GA01N504
+                                            WHERE RCT_NO = #{rctNo}
+                                            GROUP BY RCT_NO
+							               )
+							       )
+							      WHEN A.HOBR_TCD = '02' AND B.UNIF_RQS_PCD = '05' THEN
+							      ( /* 인감 지점 결재선 케이스 */
+							       SELECT CASE WHEN USE_SEAL_YN = APRVL_TP_VL1 THEN A.APRVL_MT_NO END
+							         FROM (
+							               SELECT MAX(USE_SEAL_YN) AS USE_SEAL_YN
+                                             FROM GA01N504
+                                            WHERE RCT_NO = #{rctNo}
+                                            GROUP BY RCT_NO
+							               )
+							       )
+							END	       
+			            /* 디폴트 케이스 */
+			            ELSE 
+			                CASE WHEN A.HOBR_TCD = '01' AND #{aprvWrrptOrzCd} NOT LIKE 'W%' AND B.UNIF_RQS_PCD != '05' THEN
+				                    CASE WHEN A.UNIF_RQS_PCD IS NULL AND A.UNIF_RQS_DL_PCD IS NULL AND A.UNIF_RQS_TCD IS NULL AND APRVL_TP_VL1 IS NULL AND APRVL_TP_VL2 IS NULL THEN
+				                         CASE WHEN A.ORZ_CD = #{aprvWrrptOrzCd} THEN A.APRVL_MT_NO
+				                              WHEN A.ORZ_CD IS NULL AND #{aprvWrrptOrzCd} != 'S03001' THEN A.APRVL_MT_NO
+				                         END
+				                    END
+				                 WHEN A.HOBR_TCD = '02' OR #{aprvWrrptOrzCd} LIKE 'W%' AND B.UNIF_RQS_PCD != '05' THEN  
+				                    CASE WHEN A.UNIF_RQS_PCD IS NULL AND A.UNIF_RQS_DL_PCD IS NULL AND A.UNIF_RQS_TCD IS NULL AND APRVL_TP_VL1 IS NULL AND APRVL_TP_VL2 IS NULL THEN
+				                    	 CASE WHEN A.ORZ_CD = #{aprvWrrptOrzCd} THEN A.APRVL_MT_NO
+				                              WHEN A.ORZ_CD IS NULL AND #{aprvWrrptOrzCd} != 'S03001' THEN 'APRV02'
+				                         END
+				                    END
+			                END
+			            END APRVL_MT_NO
+			  FROM GA09N600 A
+			 INNER JOIN GA01N101 B
+			    ON (B.RCT_NO = #{rctNo} AND 1=1)
+			 WHERE 1=1
+			   AND A.HOBR_TCD = #{hobrTcd}
+			)
+			WHERE APRVL_MT_NO IS NOT NULL
+		    ORDER BY APRVL_MT_NO DESC
+  
+    </select>    
+    
+    
+    <update id="insertAprvLine" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" >
+    	BEGIN
+		INSERT INTO GA09N606
+				( APRV_WRRPT_MT_NO    /*결재상신관리번호  */
+				, APRV_WRRPT_ORZ_CD   /*결재상신조직코드*/
+				, APRV_SCD            /*결재상태코드    */
+				, WRRPT_EPNO          /*상신사원번호    */
+				, WRRPT_DT            /*상신일자        */
+				, APRV_PCD            /*결재유형코드    */
+				, OPTR_ID             /*조작자ID        */
+				, OPRT_CHNL_CD        /*조작채널코드    */
+				, OPRT_ORZ_CD         /*조작조직코드    */
+				, OPRT_IP_ADR         /*조작IP주소      */
+				, OPRT_DTTM           /*조작일시        */
+				)
+		VALUES
+				( #{aprvWrrptMtNo   }  /*결재상신관리번호  */
+				, #{aprvWrrptOrzCd  }  /*결재상신조직코드*/
+				, #{aprvScd         }  /*결재상태코드    */
+				, #{wrrptEpno       }  /*상신사원번호    */
+				, #{wrrptDt         }  /*상신일자        */
+				, #{aprvPcd         }  /*결재유형코드    */
+				, #{optrId          }  /*조작자ID        */
+				, #{oprtChnlCd      }  /*조작채널코드    */
+				, #{oprtOrzCd       }  /*조작조직코드    */
+				, #{oprtIpAdr       }  /*조작IP주소      */ 
+				, SYSDATE  
+				)
+		;
+		
+		INSERT INTO GA09N607
+		SELECT #{aprvWrrptMtNo} AS APRV_WRRPT_MT_NO
+		      , APRV_RNK
+		      , ROWNUM         AS APRV_DL_RNK
+		      , #{aprvWrrptOrzCd} AS APRV_WRRPT_ORZ_CD
+		      , B.APRV_WRRPT_TCD
+		      , CASE WHEN APRV_RNK = 1 THEN '1'
+		             ELSE '' END AS APRV_RTRN_TCD
+		      , B.DCFC_PCD
+		      , B.APRV_UNIT_TCD
+		      , NVL(B.APRV_UNIT_GRP_CD, #{aprvUnitGrpCd}) AS APRV_UNIT_GRP_CD
+		      , B.APRV_UNIT_HR_OSDT_CD
+		      , CASE WHEN B.APRV_UNIT_TCD = '10' THEN #{psitMenuId}
+		             ELSE B.APRV_UNIT_DL_VL END AS APRV_UNIT_DL_VL
+		      , NVL(B.APRV_UNIT_GRP_CD, #{aprvUnitGrpCd}) AS APRV_ORZ_CD
+		      , '' AS APRV_EPNO
+		      , '' AS APRV_DTTM
+		      , '' AS APRV_RSN_CN
+		      , '' AS SBAP_YN
+		      , '' AS SBAP_EPNO
+		      , '' AS SBAP_CFMT_YN
+		      , B.OPTR_ID
+		      , B.OPRT_CHNL_CD
+		      , B.OPRT_ORZ_CD
+		      , B.OPRT_IP_ADR
+		      , SYSDATE
+		   FROM GA09N601 A
+		  INNER JOIN GA09N602 B ON (A.APRVL_MT_NO = B.APRVL_MT_NO)
+		  WHERE 1=1
+		    AND A.APRVL_MT_NO = #{aprvMtNo}
+		;
+		UPDATE GA01N101
+           SET APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo}
+		     , APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd}
+			 , RQS_SCD           = #{rqsScd}
+		  WHERE RCT_NO  = #{rctNo}
+		;
+    	END
+    	;
+    </update>
+    
+    <select id="selectAprvLineList_proto" parameterType="com.miraeasset.biz.common.meta.vo.GA09N602Vf01InVO" resultType="com.miraeasset.biz.common.meta.vo.GA09N602Vf01OutVO">
+			/* Aprv01.selectAprvLineList : 결재선관리내역조회 */
+			SELECT T1.APRV_PCD 
+			     , T1.APRVL_MT_NO
+			     , T1.APRVL_MT_NM
+			     , T1.APRV_LST_RNK
+			     , T2.APRV_RNK
+			     , T2.APRV_UNIT_TCD
+			     , T2.APRV_UNIT_HR_OSDT_CD 
+			     , T2.APRV_WRRPT_TCD
+			     , T2.APRV_UNIT_GRP_CD
+			     , T2.APRV_UNIT_DL_VL
+			     , T2.DCFC_PCD
+			     , CASE WHEN APRV_UNIT_HR_OSDT_CD  = '01' AND APRV_WRRPT_TCD IN ('1','3')
+			                THEN ( SELECT EPNO 
+			                        FROM CB01N310 
+			                        WHERE NOW_WRKP_ORZ_CD = #{aprvWrrptOrzCd}
+			                          AND HR_HLDO_CD = 'A'                         
+			                          AND HR_OSDT_CD IN ('34','36','39','42','43'
+			                                            ,'44','45','47','50','55'
+			                                            ,'64','72','82','84','89'
+			                                            ,'90','91','92','93'
+			                                            )
+			                           AND ROWNUM = 1 )
+			            WHEN APRV_UNIT_HR_OSDT_CD  = '02' AND APRV_WRRPT_TCD IN ('1','4')   
+			                THEN ( SELECT EPNO 
+			                        FROM CB01N310 
+			                        WHERE NOW_WRKP_ORZ_CD = T2.APRV_UNIT_GRP_CD
+			                          AND HR_HLDO_CD = 'A'                         
+			                          AND HR_OSDT_CD IN ('34','36','39','42','43'
+			                                            ,'44','45','47','50','55'
+			                                            ,'64','72','82','84','89'
+			                                            ,'90','91','92','93'
+			                                            )
+			                           AND ROWNUM = 1 )            
+			            ELSE ''
+			          END AS DCFC_EPNO
+			
+			  FROM GA09N601 T1 --결재선관리
+			     , GA09N602	T2 --결재선관리상세
+			     , GA09N600	T3 --결재화면관리
+			 WHERE T3.SCRN_NO = #{scrnNo}     
+			   AND T3.APRVL_MT_NO = T1.APRVL_MT_NO
+			   AND T2.APRVL_MT_NO = T1.APRVL_MT_NO
+			   AND T1.USE_YN = '1'
+			   AND T2.USE_YN = '1'
+			 ORDER BY T2.APRVL_MT_NO,T2.APRV_RNK   
+  
+    </select>    
+    
+    
+    
+    <select id="selectAprvNext" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N607VO">
+			/* Aprv01.selectAprvNext : 다음결재내역조회 */
+			SELECT APRV_WRRPT_MT_NO
+			     , APRV_WRRPT_ORZ_CD
+			     , APRV_RNK
+			     , APRV_DL_RNK
+			     , APRV_WRRPT_TCD
+			     , APRV_RTRN_TCD
+			     , DCFC_PCD
+			     , APRV_ORZ_CD
+			     , APRV_EPNO
+			     , APRV_DTTM
+			     , APRV_RSN_CN
+			     , SBAP_YN
+			     , SBAP_EPNO
+			     , SBAP_CFMT_YN
+			  FROM (
+			        SELECT RANK() OVER(ORDER BY APRV_RNK||APRV_DL_RNK ASC) AS RN 
+			             , T1.*
+			          FROM GA09N607 T1
+			         WHERE APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo     }
+			           AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd  } 
+			           AND APRV_RNK||APRV_DL_RNK > #{aprvRnk}|| #{aprvDlRnk}
+			     )
+			 WHERE RN = 1    
+    </select>    
+    
+    <select id="selectAprvDtlPk" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N607VO">
+			/* Aprv01.selectAprvDtlPk : 결재상세정보조회 */
+			SELECT APRV_WRRPT_MT_NO
+			     , APRV_WRRPT_ORZ_CD
+			     , APRV_RNK
+			     , APRV_DL_RNK
+			     , APRV_WRRPT_TCD
+			     , APRV_RTRN_TCD
+			     , DCFC_PCD
+			     , APRV_ORZ_CD
+			     , APRV_EPNO
+			     , APRV_DTTM
+			     , APRV_RSN_CN
+			     , SBAP_YN
+			     , SBAP_EPNO
+			     , SBAP_CFMT_YN
+			  FROM GA09N607
+	         WHERE APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo   }
+	           AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd  } 
+	           AND APRV_RNK          = #{aprvRnk}
+	           AND APRV_DL_RNK       = #{aprvDlRnk}			     
+    </select>      
+    
+    <select id="selectGA09N606Pk" parameterType="com.miraeasset.biz.common.meta.vo.GA09N606VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N606VO">
+			/* Aprv01.selectGA09N606Pk : 결재정보조회(pk) */
+			SELECT APRV_WRRPT_MT_NO
+			     , APRV_WRRPT_ORZ_CD
+			     , APRV_WRRPT_ORZ_NM
+			     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.APRV_WRRPT_ORZ_CD AND ROWNUM = 1 ) AS APRV_WRRPT_ORZ_NM     
+			     , APRV_SCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'APRV_SCD' AND CMN_CD_VL = T1.APRV_SCD AND ROWNUM = 1 ) AS APRV_SCD_NM     
+			     , WRRPT_EPNO
+			     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.WRRPT_EPNO AND ROWNUM = 1 ) AS WRRPT_EP_NM    
+			     , WRRPT_DT
+			     , APRV_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'APRV_PCD' AND CMN_CD_VL = T1.APRV_PCD AND ROWNUM = 1 ) AS APRV_PCD_NM     
+			     , OPTR_ID
+			     , OPRT_CHNL_CD
+			     , OPRT_ORZ_CD
+			     , OPRT_IP_ADR
+			     , OPRT_DTTM
+			  FROM GA09N606 T1    
+			 WHERE APRV_WRRPT_MT_NO  = #{aprvWrrptMtNo   }
+			   AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd  }
+    </select>        
+    
+    <select id="selectBzChprYn" parameterType="com.miraeasset.biz.common.meta.vo.GA09N602Vf02InVO" resultType="com.miraeasset.biz.common.meta.vo.GA09N602Vf02OutVO">
+    	/* Aprv01.selectBzChprYn : 업무담장자 여부 조회 */
+    	SELECT CASE WHEN COUNT(*) > 0 THEN 'Y'
+		       ELSE 'N' END BZ_CHPR_YN
+		  FROM GA09N209
+		 WHERE 1=1
+		   AND EPNO = #{epno}
+    </select>
+    
+    <insert id="insertGA09N607Wdral" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607Pu01InVO" >
+	    <selectKey keyProperty="aprvRnk" resultType="java.lang.String" order="AFTER">
+			SELECT MAX(APRV_RNK) AS APRV_RNK
+		      FROM GA09N607
+		     WHERE 1=1
+		       AND APRV_WRRPT_MT_NO =  #{aprvWrrptMtNo}
+		       AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd} 
+		       AND APRV_RTRN_TCD IS NOT NULL
+		</selectKey>
+	    
+	    /* Aprv00.insertGA09N607Wdral : 철회정보 상태 등록 */
+	    INSERT INTO GA09N607
+	         ( APRV_WRRPT_MT_NO
+	         , APRV_RNK 
+	         , APRV_DL_RNK 
+	         , APRV_WRRPT_ORZ_CD 
+	         , APRV_RTRN_TCD
+	         , DCFC_PCD
+	         , APRV_ORZ_CD
+	         , APRV_EPNO
+	         , APRV_DTTM
+	         , OPTR_ID
+	         , OPRT_CHNL_CD
+	         , OPRT_ORZ_CD
+	         , OPRT_IP_ADR
+	         , OPRT_DTTM 
+	          )
+		SELECT T1.APRV_WRRPT_MT_NO
+		     , T1.APRV_RNK + 1    AS APRV_RNK
+		     , T1.APRV_DL_RNK + 1 AS APRV_DL_RNK
+		     , T1.APRV_WRRPT_ORZ_CD
+		     , '4' AS APRV_RTRN_TCD /* 4.철회 */
+		     , T1.DCFC_PCD 
+		     , #{aprvOrzCd} AS APRV_ORZ_CD
+		     , #{aprvEpno}  AS APRV_EPNO
+		     , SYSDATE AS APRV_DTTM
+		     , #{optrId     } AS OPTR_ID      /*조작자ID        */
+		     , #{oprtChnlCd } AS OPRT_CHNL_CD /*조작채널코드    */
+		     , #{oprtOrzCd  } AS OPRT_ORZ_CD  /*조작조직코드    */
+		     , #{oprtIpAdr  } AS OPRT_IP_ADR  /*조작IP주소      */ 
+		     , SYSDATE        AS OPRT_DTTM
+		  FROM GA09N607 T1
+		     , (SELECT APRV_WRRPT_MT_NO
+		             , MAX(APRV_RNK) AS APRV_RNK
+		          FROM GA09N607
+		         WHERE 1=1
+		           AND APRV_WRRPT_MT_NO =  #{aprvWrrptMtNo}
+		           AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd} 
+		           AND APRV_RTRN_TCD IS NOT NULL
+		         GROUP BY APRV_WRRPT_MT_NO 
+		        ) T2
+		 WHERE T1.APRV_WRRPT_MT_NO = T2.APRV_WRRPT_MT_NO        
+		   AND T1.APRV_RNK         = T2.APRV_RNK
+    </insert>
+    
+</mapper>
+
+

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ssbs_8000_mapper">
+    <select id="selectList00GA09C301" parameterType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0In00VO"
+            resultType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0Out00VO">
+        SELECT * FROM (
+        SELECT * FROM (
+
+        SELECT ROW_NUMBER() OVER(ORDER BY ROWNUM DESC) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT
+        , A.*
+        FROM GA09C301 A
+        WHERE 1=1
+        <if test=' cdKndNo != null and cdKndNo != "" '>
+            AND (CD_KND_NO LIKE '%' || #{cdKndNo} || '%' OR CD_KND_NM LIKE '%' || #{cdKndNo} || '%')
+        </if>
+        <if test=' cdKndNm != null and cdKndNm != "" '>
+            AND (CD_KND_NO LIKE '%' || #{cdKndNm} || '%' OR CD_KND_NM LIKE '%' || #{cdKndNm} || '%')
+        </if>
+        ORDER BY CD_KND_NO, CD_KND_NM
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+    <insert id="merge00GA09C301"
+            parameterType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0Out00VO">
+        MERGE INTO GA09C301 A
+        USING DUAL
+        ON (A.CD_KND_NO = #{cdKndNo})
+        WHEN MATCHED THEN
+            UPDATE
+            SET A.CD_KND_NM     = #{cdKndNm},
+                A.CMN_CD_DEF_CN = #{cmnCdDefCn},
+                A.CD_DGT        = #{cdDgt},
+                A.USE_YN        = #{useYn},
+                A.OPTR_ID       = #{optrId},
+                A.OPRT_CHNL_CD  = #{oprtChnlCd},
+                A.OPRT_ORZ_CD   = #{oprtOrzCd},
+                A.OPRT_IP_ADR   = #{oprtIpAdr},
+                A.OPRT_DTTM     = SYSDATE
+        WHEN NOT MATCHED THEN
+            INSERT
+            VALUES (#{cdKndNo},
+                    #{cdKndNm},
+                    #{cmnCdDefCn},
+                    #{cdDgt},
+                    #{useYn},
+                    #{optrId},
+                    #{oprtChnlCd},
+                    #{oprtOrzCd},
+                    #{oprtIpAdr},
+                    SYSDATE)
+    </insert>
+
+    <delete id="delete00GA09C301" parameterType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0In00VO">
+        DELETE GA09C301
+        WHERE CD_KND_NO = #{cdKndNo}
+    </delete>
+
+    <select id="selectList00GA09C302" parameterType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0In01VO"
+            resultType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0Out01VO">
+        SELECT * FROM (
+        SELECT * FROM (
+        SELECT ROW_NUMBER() OVER(ORDER BY ROWNUM DESC) AS RNUM
+        , COUNT(1) OVER() AS AL_CNT
+        , A.*
+        FROM GA09C302 A
+        WHERE CD_KND_NO = #{cdKndNo}
+        ORDER BY CD_KND_NO, CMN_CD_VL
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+    <insert id="merge00GA09C302" parameterType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0Out01VO">
+        MERGE INTO GA09C302 A
+        USING DUAL
+        ON (A.CD_KND_NO = #{cdKndNo} AND A.CMN_CD_VL = #{cmnCdVl})
+        WHEN MATCHED THEN
+            UPDATE
+            SET A.CMN_CD_VL_DEF_CN = #{cmnCdVlDefCn},
+                A.CD_DESC          = #{cdDesc},
+                A.USE_YN           = #{useYn},
+                A.SORT_SQN         = #{sortSqn},
+                A.USER_DEF_VL1     = #{userDefVl1},
+                A.USER_DEF_VL2     = #{userDefVl2},
+                A.OPTR_ID          = #{optrId},
+                A.OPRT_CHNL_CD     = #{oprtChnlCd},
+                A.OPRT_ORZ_CD      = #{oprtOrzCd},
+                A.OPRT_IP_ADR      = #{oprtIpAdr},
+                A.OPRT_DTTM        = SYSDATE
+        WHEN NOT MATCHED THEN
+            INSERT
+            VALUES (#{cdKndNo},
+                    #{cmnCdVl},
+                    #{cmnCdVlDefCn},
+                    #{cdDesc},
+                    #{useYn},
+                    #{sortSqn},
+                    #{userDefVl1},
+                    #{userDefVl2},
+                    #{optrId},
+                    #{oprtChnlCd},
+                    #{oprtOrzCd},
+                    #{oprtIpAdr},
+                    SYSDATE)
+    </insert>
+
+    <delete id="delete00GA09C302" parameterType="com.miraeasset.biz.ss.bs.vo.SSBS8000U0In01VO">
+        DELETE GA09C302
+        WHERE CD_KND_NO = #{cdKndNo}
+          AND CMN_CD_VL = #{cmnCdVl}
+    </delete>
+</mapper>

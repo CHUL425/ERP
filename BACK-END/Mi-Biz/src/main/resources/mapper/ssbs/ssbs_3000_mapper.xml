@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ssbs_3000_mapper">
+    <select id="findGA09N607" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO"
+            resultType="com.miraeasset.biz.common.meta.vo.GA09N607VO">
+        SELECT *
+          FROM GA09N607
+         WHERE 1=1
+            <if test="aprvWrrptMtNo != null">AND APRV_WRRPT_MT_NO = #{aprvWrrptMtNo}</if>
+            <if test="aprvRnk != null">AND APRV_RNK = #{aprvRnk}</if>
+            <if test="aprvDlRnk != null">AND APRV_DL_RNK = #{aprvDlRnk}</if>
+            <if test="aprvWrrptOrzCd != null">AND APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd}</if>
+            <if test="aprvWrrptTcd != null">AND APRV_WRRPT_TCD = #{aprvWrrptTcd}</if>
+            <if test="aprvRtrnTcd != null">AND APRV_RTRN_TCD = #{aprvRtrnTcd}</if>
+            <if test="dcfcPcd != null">AND DCFC_PCD = #{dcfcPcd}</if>
+            <if test="aprvUnitTcd != null">AND APRV_UNIT_TCD = #{aprvUnitTcd}</if>
+            <if test="aprvUnitGrpCd != null">AND APRV_UNIT_GRP_CD = #{aprvUnitGrpCd}</if>
+            <if test="aprvUnitHrOsdtCd != null">AND APRV_UNIT_HR_OSDT_CD = #{aprvUnitHrOsdtCd}</if>
+            <if test="aprvUnitDlVl != null">AND APRV_UNIT_DL_VL = #{aprvUnitDlVl}</if>
+            <if test="aprvOrzCd != null">AND APRV_ORZ_CD = #{aprvOrzCd}</if>
+            <if test="aprvEpno != null">AND APRV_EPNO = #{aprvEpno}</if>
+            <if test="aprvDttm != null">AND APRV_DTTM = #{aprvDttm}</if>
+            <if test="aprvRsnCn != null">AND APRV_RSN_CN = #{aprvRsnCn}</if>
+            <if test="sbapYn != null">AND SBAP_YN = #{sbapYn}</if>
+            <if test="sbapEpno != null">AND SBAP_EPNO = #{sbapEpno}</if>
+            <if test="sbapCfmtYn != null">AND SBAP_CFMT_YN = #{sbapCfmtYn}</if>
+    </select>
+
+    <update id="saveGA09N607" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO">
+        MERGE INTO GA09N607 A
+        USING DUAL ON (A.APRV_WRRPT_MT_NO = #{aprvWrrptMtNo} AND A.APRV_RNK = #{aprvRnk})
+        WHEN MATCHED THEN
+        UPDATE
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="aprvDlRnk != null">APRV_DL_RNK = #{aprvDlRnk},</if>
+            <if test="aprvWrrptOrzCd != null">APRV_WRRPT_ORZ_CD = #{aprvWrrptOrzCd},</if>
+            <if test="aprvWrrptTcd != null">APRV_WRRPT_TCD = #{aprvWrrptTcd},</if>
+            <if test="aprvRtrnTcd != null">APRV_RTRN_TCD = #{aprvRtrnTcd},</if>
+            <if test="dcfcPcd != null">DCFC_PCD = #{dcfcPcd},</if>
+            <if test="aprvUnitTcd != null">APRV_UNIT_TCD = #{aprvUnitTcd},</if>
+            <if test="aprvUnitGrpCd != null">APRV_UNIT_GRP_CD = #{aprvUnitGrpCd},</if>
+            <if test="aprvUnitHrOsdtCd != null">APRV_UNIT_HR_OSDT_CD = #{aprvUnitHrOsdtCd},</if>
+            <if test="aprvUnitDlVl != null">APRV_UNIT_DL_VL = #{aprvUnitDlVl},</if>
+            <if test="aprvOrzCd != null">APRV_ORZ_CD = #{aprvOrzCd},</if>
+            <if test="aprvEpno != null">APRV_EPNO = #{aprvEpno},</if>
+            <if test="aprvDttm != null">APRV_DTTM = #{aprvDttm},</if>
+            <if test="aprvRsnCn != null">APRV_RSN_CN = #{aprvRsnCn},</if>
+            <if test="sbapYn != null">SBAP_YN = #{sbapYn},</if>
+            <if test="sbapEpno != null">SBAP_EPNO = #{sbapEpno},</if>
+            <if test="sbapCfmtYn != null">SBAP_CFMT_YN = #{sbapCfmtYn},</if>
+            OPTR_ID = #{optrId},
+            OPRT_CHNL_CD = #{oprtChnlCd},
+            OPRT_ORZ_CD = #{oprtOrzCd},
+            OPRT_DTTM = SYSDATE
+        </trim>
+    </update>
+
+    <select id="findGA09N602" parameterType="com.miraeasset.biz.common.meta.vo.GA09N602VO"
+            resultType="com.miraeasset.biz.common.meta.vo.GA09N602VO">
+        SELECT *
+        FROM GA09N602
+        WHERE 1=1
+        <if test="aprvlMtNo != null">AND aprvlMtNo = #{aprvlMtNo}</if>
+        <if test="aprvRnk != null">AND APRV_RNK = #{aprvRnk}</if>
+        <if test="aprvWrrptTcd != null">AND APRV_WRRPT_TCD = #{aprvWrrptTcd}</if>
+        <if test="aprvUnitTcd != null">AND APRV_UNIT_TCD = #{aprvUnitTcd}</if>
+        <if test="aprvUnitGrpCd != null">AND APRV_UNIT_GRP_CD = #{aprvUnitGrpCd}</if>
+        <if test="aprvUnitHrOsdtCd != null">AND APRV_UNIT_HR_OSDT_CD = #{aprvUnitHrOsdtCd}</if>
+        <if test="aprvUnitDlVl != null">AND APRV_UNIT_DL_VL = #{aprvUnitDlVl}</if>
+        <if test="dcfcPcd != null">AND DCFC_PCD = #{dcfcPcd}</if>
+        <if test="useYn != null">AND USE_YN = #{useYn}</if>
+    </select>
+
+    <update id="saveGA09N602" parameterType="com.miraeasset.biz.common.meta.vo.GA09N602VO">
+        MERGE INTO GA09N602 A
+        USING DUAL ON (A.APRVL_MT_NO = #{aprvlMtNo} AND A.APRV_RNK = #{aprvRnk})
+        WHEN MATCHED THEN
+        UPDATE
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="aprvWrrptTcd != null">AND APRV_WRRPT_TCD = #{aprvWrrptTcd},</if>
+            <if test="aprvUnitTcd != null">AND APRV_UNIT_TCD = #{aprvUnitTcd},</if>
+            <if test="aprvUnitGrpCd != null">AND APRV_UNIT_GRP_CD = #{aprvUnitGrpCd},</if>
+            <if test="aprvUnitHrOsdtCd != null">AND APRV_UNIT_HR_OSDT_CD = #{aprvUnitHrOsdtCd},</if>
+            <if test="aprvUnitDlVl != null">AND APRV_UNIT_DL_VL = #{aprvUnitDlVl},</if>
+            <if test="dcfcPcd != null">AND DCFC_PCD = #{dcfcPcd},</if>
+            <if test="useYn != null">AND USE_YN = #{useYn},</if>
+            OPTR_ID = #{optrId},
+            OPRT_CHNL_CD = #{oprtChnlCd},
+            OPRT_ORZ_CD = #{oprtOrzCd},
+            OPRT_DTTM = SYSDATE
+        </trim>
+    </update>
+</mapper>

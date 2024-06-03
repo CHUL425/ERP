@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="common_mapper">
+
+    <select id="selectOneCB01N112ByHrNewOrzCd" parameterType="String" resultType="com.miraeasset.biz.common.meta.vo.CB01N112VO">
+        /* common_mapper.selectOneCB01N112ByHrNewOrzCd */
+        SELECT *
+          FROM CB01N112
+         WHERE HR_NEW_ORZ_CD = #{hrNewOrzCd}
+    </select>
+
+    <select id="selectOneCB01N210ByOrzCd" parameterType="String" resultType="com.miraeasset.biz.common.meta.vo.CB01N210VO">
+        /* common_mapper.selectOneCB01N210ByOrzCd */
+        SELECT *
+          FROM CB01N210
+         WHERE ORZ_CD = #{orzCd}
+    </select>
+
+    <select id="selectOneCB01N310ByEpno" parameterType="String" resultType="com.miraeasset.biz.common.meta.vo.CB01N310VO">
+        /* common_mapper.selectOneCB01N310ByEpno */
+        SELECT n310.*
+             , c111.CD_STD_NM AS HR_OSDT_CD_NM
+          FROM CB01N310 n310
+          LEFT OUTER JOIN CB01C111 c111 ON (c111.HR_CMN_CD_KND_NO = 'HRM_007' AND c111.HR_CMN_CD = n310.HR_OSDT_CD)
+         WHERE n310.EPNO = #{epno}
+    </select>
+
+</mapper>
+
+

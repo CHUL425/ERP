@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rent_mapper">
+	<select id="selectList00GA01N001" parameterType="com.miraeasset.biz.rent.vo.RENT00In00VO" resultType="com.miraeasset.biz.rent.vo.RENT00Out00VO">
+		/* RENT00V0.selectList00GA01N001 : 렌탈관리조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+		    SELECT A.EXCC_YM       /* 정산년월 */
+		         , A.RENT_CNTC_NO  /* 임대계약번호 - 계약번호 */
+		         , A.EQMT_TCD      /* 장비구분코드 */
+		         , C.CMN_CD_VL_DEF_CN  AS EQMT_TCD_NM /* 장비구분명 */
+		         , A.DELP_CD       /* 거래처코드 - 관리업체코드 */
+		         , '코웨이' AS DELP_CD_NM /* 거래처명 - 관리업체명 */
+		         , A.USE_ORZ_CD    /* 사용조직코드 - 부점코드 */
+		         , B.ORZ_NM        /* 조직명 - 부점명 */
+		         , A.GDS_NM        /* 제품명 */
+		         , A.MLY_RENTC     /* 월간임대료 - 렌탈료 */
+		         , A.IST_DT        /* 설치일자 */
+		         , A.DUTY_USE_DT   /* 의무사용일자 */
+		         , A.IST_PLC_NM    /* 설치장소명 */
+		         , A.IST_PLC_DL_NM /* 설치장소상세명 */
+		         , A.OPTR_ID       /* 조작자ID */
+		         , A.OPRT_CHNL_CD  /* 조작채널코드 */
+		         , A.OPRT_ORZ_CD   /* 조작조직코드 */
+		         , A.OPRT_IP_ADR   /* 조작IP주소 */
+		         , A.OPRT_DTTM     /* 조작일시 */
+		         , ROWNUM          AS RNUM
+		         , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+		      FROM GA01N001 A /* 임대관리 */
+		         , CB01N210 B /* 조직 */
+		         , GA09C302 C /* 총무_공통코드값(장비구분) */
+		     WHERE 1=1
+		       AND A.USE_ORZ_CD = B.ORZ_CD(+)
+		       AND A.EQMT_TCD   = C.CMN_CD_VL
+		       AND C.CD_KND_NO  = 'RENT_EQMT_TCD'
+		       AND A.EXCC_YM    = SUBSTR(#{exccYm}, 0, 6)
+		       AND A.EQMT_TCD   = NVL(#{eqmtTcd}, A.EQMT_TCD)
+		       AND B.ORZ_NM     LIKE NVL(#{orzNm}, B.ORZ_NM) || '%'
+		       AND A.DELP_CD    = NVL(#{delpCd}, A.DELP_CD)
+		       AND A.RENT_CNTC_NO LIKE NVL(#{rentCntcNo}, A.RENT_CNTC_NO) || '%'
+		       
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>       
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+		
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+	
+	<select id="selectList01GA01N001" parameterType="com.miraeasset.biz.rent.vo.RENT00In00VO" resultType="com.miraeasset.biz.rent.vo.RENT01Out00VO">
+		/* RENT00V0.selectList01GA01N001 : 렌탈관리요약정보조회 */
+		SELECT NVL(SUM(A.RENTC), 0)   AS TOTAL_RENTC /* 총 렌탈료 */
+		     , NVL(SUM(A.RENTC01), 0) AS RENTC01     /* 정수기 */
+		     , NVL(SUM(A.RENTC02), 0) AS RENTC02     /* 공기청정기 */
+		     , NVL(SUM(A.RENTC03), 0) AS RENTC03     /* 비데 */
+		     , NVL(SUM(A.RENTC04), 0) AS RENTC04     /* 클린워셔 */ 
+		  FROM (
+		        SELECT EXCC_YM
+		             , NVL(RENTC, 0) AS RENTC
+		             , CASE WHEN EQMT_TCD = '01' THEN NVL(RENTC, 0) END AS RENTC01
+		             , CASE WHEN EQMT_TCD = '02' THEN NVL(RENTC, 0) END AS RENTC02
+		             , CASE WHEN EQMT_TCD = '03' THEN NVL(RENTC, 0) END AS RENTC03
+		             , CASE WHEN EQMT_TCD = '04' THEN NVL(RENTC, 0) END AS RENTC04
+		          FROM (
+		                SELECT A.EXCC_YM
+		                     , A.EQMT_TCD
+		                     , NVL(SUM(A.MLY_RENTC), 0) AS RENTC
+		                  FROM GA01N001 A /* 임대관리 */
+		                     , CB01N210 B /* 조직 */
+		                 WHERE 1=1
+		                   AND A.USE_ORZ_CD = B.ORZ_CD(+)
+		                   AND A.EXCC_YM    = SUBSTR(#{exccYm}, 0, 6)
+				           AND A.EQMT_TCD   = NVL(#{eqmtTcd}, A.EQMT_TCD)
+				           AND B.ORZ_NM     LIKE NVL(#{orzNm}, B.ORZ_NM) || '%'
+				           AND A.DELP_CD    = NVL(#{delpCd}, A.DELP_CD)
+				           AND A.RENT_CNTC_NO LIKE NVL(#{rentCntcNo}, A.RENT_CNTC_NO) || '%'
+		                 GROUP BY A.EXCC_YM, A.EQMT_TCD
+		                )
+		        ) A
+		  WHERE 1=1
+		  GROUP BY EXCC_YM
+	</select>
+	
+	<select id="selectList02GA01N001" parameterType="com.miraeasset.biz.rent.vo.RENT02In00VO" resultType="com.miraeasset.biz.rent.vo.RENT02Out00VO">
+		/* RENT00V0.selectList02GA01N001 : 연간렌탈료 */
+		SELECT * FROM (
+		SELECT * FROM (
+		SELECT COUNT(1) OVER()    AS AL_CNT       /* 전체건수 */
+		     , A.EXCC_YM          AS EXCC_YM      /* 정산년월 */ 
+		     , A.EQMT_TCD         AS EQMT_TCD     /* 장비구분코드 */
+		     , D.CMN_CD_VL_DEF_CN AS EQMT_TCD_NM  /* 장비구분명 */
+		     , A.USE_ORZ_CD       AS USE_ORZ_CD   /* 사용조직코드 - 부점코드 */
+			 , C.ORZ_NM           AS ORZ_NM       /* 조직명 - 부점명 */
+		     , A.RENT_CNTC_NO     AS RENT_CNTC_NO /* 임대계약번호 - 계약번호 */
+		     , GDS_NM             AS GDS_NM       /* 제품명 */
+		     , DECODE(B.RNUM, 1, B.MLY_RENTC, '')  AS VAL01
+		     , DECODE(B.RNUM, 2, B.MLY_RENTC, '')  AS VAL02
+		     , DECODE(B.RNUM, 3, B.MLY_RENTC, '')  AS VAL03
+		     , DECODE(B.RNUM, 4, B.MLY_RENTC, '')  AS VAL04
+		     , DECODE(B.RNUM, 5, B.MLY_RENTC, '')  AS VAL05
+		     , DECODE(B.RNUM, 6, B.MLY_RENTC, '')  AS VAL06
+		     , DECODE(B.RNUM, 7, B.MLY_RENTC, '')  AS VAL07
+		     , DECODE(B.RNUM, 8, B.MLY_RENTC, '')  AS VAL08
+		     , DECODE(B.RNUM, 9, B.MLY_RENTC, '')  AS VAL09
+		     , DECODE(B.RNUM, 10, B.MLY_RENTC, '') AS VAL10
+		     , DECODE(B.RNUM, 11, B.MLY_RENTC, '') AS VAL11
+		     , DECODE(B.RNUM, 12, B.MLY_RENTC, '') AS VAL12
+		     , ROWNUM AS RNUM
+		  FROM GA01N001 A /* 임대관리 */
+		     , (SELECT A.EXCC_YM
+		             , RENT_CNTC_NO
+		             , SUM(MLY_RENTC) AS MLY_RENTC
+		             , MAX(RNUM) AS RNUM
+		          FROM GA01N001 A
+		             , (SELECT SUBSTR(#{basYm}, 0, 4) || LV AS EXCC_YM
+		                     , ROWNUM AS RNUM
+		                  FROM (SELECT LPAD(LEVEL, 2, '0') LV
+		                          FROM DUAL CONNECT BY LEVEL <![CDATA[<]]>= 12
+		                        ) 
+		                ) B
+		         WHERE 1=1
+		           AND A.EXCC_YM    = B.EXCC_YM
+		           AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		         GROUP BY A.EXCC_YM, RENT_CNTC_NO 
+		         ) B
+		     , CB01N210 C /* 조직 */
+		     , GA09C302 D /* 총무_공통코드값(장비구분) */
+		 WHERE 1=1
+		   AND A.EXCC_YM      = B.EXCC_YM(+)
+		   AND A.RENT_CNTC_NO = B.RENT_CNTC_NO(+)
+		   AND A.USE_ORZ_CD   = C.ORZ_CD(+)
+		   AND A.EQMT_TCD     = D.CMN_CD_VL
+		   AND D.CD_KND_NO    = 'RENT_EQMT_TCD'
+		   AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		   -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>       
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+		
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+	
+	<select id="selectList03GA01N001" parameterType="com.miraeasset.biz.rent.vo.RENT02In00VO" resultType="com.miraeasset.biz.rent.vo.RENT03Out00VO">
+		/* RENT00V0.selectList03GA01N001 : 연간렌탈료요약정보 */
+		SELECT MAX(AL_CNT) AS AL_CNT
+		     , SUM(VAL01)  AS VAL01 
+		     , SUM(VAL02)  AS VAL02 
+		     , SUM(VAL03)  AS VAL03 
+		     , SUM(VAL04)  AS VAL04 
+		     , SUM(VAL05)  AS VAL05 
+		     , SUM(VAL06)  AS VAL06 
+		     , SUM(VAL07)  AS VAL07 
+		     , SUM(VAL08)  AS VAL08 
+		     , SUM(VAL09)  AS VAL09 
+		     , SUM(VAL10)  AS VAL10 
+		     , SUM(VAL11)  AS VAL11 
+		     , SUM(VAL12)  AS VAL12 
+		  FROM (
+		        SELECT COUNT(1) OVER()    AS AL_CNT       /* 전체건수 */
+		             , DECODE(B.RNUM, 1, B.MLY_RENTC, '')  AS VAL01
+		             , DECODE(B.RNUM, 2, B.MLY_RENTC, '')  AS VAL02
+		             , DECODE(B.RNUM, 3, B.MLY_RENTC, '')  AS VAL03
+		             , DECODE(B.RNUM, 4, B.MLY_RENTC, '')  AS VAL04
+		             , DECODE(B.RNUM, 5, B.MLY_RENTC, '')  AS VAL05
+		             , DECODE(B.RNUM, 6, B.MLY_RENTC, '')  AS VAL06
+		             , DECODE(B.RNUM, 7, B.MLY_RENTC, '')  AS VAL07
+		             , DECODE(B.RNUM, 8, B.MLY_RENTC, '')  AS VAL08
+		             , DECODE(B.RNUM, 9, B.MLY_RENTC, '')  AS VAL09
+		             , DECODE(B.RNUM, 10, B.MLY_RENTC, '') AS VAL10
+		             , DECODE(B.RNUM, 11, B.MLY_RENTC, '') AS VAL11
+		             , DECODE(B.RNUM, 12, B.MLY_RENTC, '') AS VAL12
+		          FROM GA01N001 A /* 임대관리 */
+		             , (SELECT A.EXCC_YM
+		                     , RENT_CNTC_NO
+		                     , SUM(MLY_RENTC) AS MLY_RENTC
+		                     , MAX(RNUM) AS RNUM
+		                  FROM GA01N001 A
+		                     , (SELECT SUBSTR(#{basYm}, 0, 4) || LV AS EXCC_YM
+		                             , ROWNUM AS RNUM
+		                          FROM (SELECT LPAD(LEVEL, 2, '0') LV
+		                                  FROM DUAL CONNECT BY LEVEL <![CDATA[<]]>= 12
+		                                ) 
+		                        ) B
+		                 WHERE 1=1
+		                   AND A.EXCC_YM    = B.EXCC_YM
+		                   AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		                 GROUP BY A.EXCC_YM, RENT_CNTC_NO 
+		                 ) B
+		             , CB01N210 C /* 조직 */
+		             , GA09C302 D /* 총무_공통코드값(장비구분) */
+		         WHERE 1=1
+		           AND A.EXCC_YM      = B.EXCC_YM(+)
+		           AND A.RENT_CNTC_NO = B.RENT_CNTC_NO(+)
+		           AND A.USE_ORZ_CD   = C.ORZ_CD(+)
+		           AND A.EQMT_TCD     = D.CMN_CD_VL
+		           AND D.CD_KND_NO    = 'RENT_EQMT_TCD'
+		           AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		        )
+	</select>
+	
+	<select id="selectList04GA01N001" parameterType="com.miraeasset.biz.rent.vo.RENT04In00VO" resultType="com.miraeasset.biz.rent.vo.RENT04Out00VO">
+		/* RENT00V0.selectList04GA01N001 : 렌탈제품조회(신청지점의 렌탈관리 조회) */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT ROWNUM AS RNUM     
+			     , COUNT(1) OVER()    AS AL_CNT        /* 전체건수 */  
+			     , '0'                AS CHK_YN        /* 체크여부 */
+			     , A.USE_ORZ_CD       AS ORZ_CD        /* 사용조직코드 */
+			     , B.ORZ_NM           AS ORZ_NM        /* 조직명 */
+			     , A.EQMT_TCD         AS EQMT_TCD      /* 장비구분코드 */
+			     , C.CMN_CD_VL_DEF_CN AS EQMT_TCD_NM   /* 장비구분코드명 */ 
+			     , A.RENT_CNTC_NO     AS RENT_CNTC_NO  /* 임대계약번호 */
+			     , A.GDS_NM           AS GDS_NM        /* 제품명 */
+			     , A.IST_PLC_NM       AS IST_PLC_NM    /* 설치장소명 */ 
+			     , A.IST_PLC_DL_NM    AS IST_PLC_DL_NM /* 설치장소상세명 */
+			     , A.OPTR_ID          AS OPTR_ID       /* 조작자ID */
+			     , A.OPRT_CHNL_CD     AS OPRT_CHNL_CD  /* 조작채널코드 */
+			     , A.OPRT_ORZ_CD      AS OPRT_ORZ_CD   /* 조작조직코드 */
+			     , A.OPRT_IP_ADR      AS OPRT_IP_ADR   /* 조작IP주소 */
+			     , A.OPRT_DTTM        AS OPRT_DTTM     /* 조작일시 */
+			  FROM GA01N001 A -- 임대관리
+			     , CB01N210 B -- 공통코드
+			     , GA09C302 C -- 장비구분
+			 WHERE 1=1
+			   AND A.USE_ORZ_CD = B.ORZ_CD(+)
+			   AND A.EQMT_TCD   = C.CMN_CD_VL(+)
+			   AND C.CD_KND_NO  = 'RENT_EQMT_TCD' -- 임시 
+			   AND A.USE_ORZ_CD = #{orzCd}
+			   AND A.EQMT_TCD   = NVL(#{eqmtTcd}, A.EQMT_TCD)
+			   
+			-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+			<if test='pageSize == null or pageSize == 0 '>
+				  ) Z 
+				  ) ZZ 		
+			</if>
+			<if test='pageSize > 0'>
+				  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+				  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+			</if>		  
+			-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	
+	</select>
+	
+</mapper>

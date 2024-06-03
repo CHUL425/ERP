@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cmbs_mapper">
+	<select id="select00AT01C001List" parameterType="com.miraeasset.biz.common.cm.bs.vo.CMBS1000V0In00VO" resultType="com.miraeasset.biz.common.cm.bs.vo.CMBS1000V0Out00VO">
+		/* CMBS1000V0.select00AT01C001List : 계정과목코드조회 팝업 */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT '0'             AS CHK_YN      /* 체크여부 */      
+			     , ACSJ_CD         AS ACSJ_CD     /* 계정과목코드 */
+			     , ACSJ_CD_NM      AS ACSJ_CD_NM  /* 계정과목명 */
+			     , HRK_ACSJ_CD     AS HRK_ACSJ_CD /* 상위계정과목코드 */
+			     , ACSJ_GCD        AS ACSJ_GCD    /* 계정과목등급코드 */ 
+			     , FBLT_YN         AS FBLT_YN     /* 기표가능여부 */
+			     , ACTG_BAS_CD     AS ACTG_BAS_CD /* 회계기준코드 */
+			     , COUNT(1) OVER() AS TOT_CNT     /* 총건수 */
+		         , ROW_NUMBER() OVER(ORDER BY ACSJ_CD, ROWNUM DESC) AS RNUM
+			  FROM (SELECT *
+			          FROM AT01C001 
+			         WHERE 1=1
+			           AND ACSJ_CD     LIKE '527%'
+			           AND ACTG_BAS_CD = 'G009'
+			           AND ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+			        )
+			 WHERE 1=1
+			   AND (   (ACSJ_CD    LIKE '%' || NVL(#{acsjCd}, ACSJ_CD)    || '%') /* 계정과목코드 */
+			        OR (ACSJ_CD_NM LIKE '%' || NVL(#{acsjCd}, ACSJ_CD_NM) || '%') /* 계정과목명 */
+			        )
+			   AND ACSJ_GCD    = NVL(#{acsjGcd}, ACSJ_GCD)
+			 ORDER BY ACSJ_CD 
+		     
+		    -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		
+		<if test='pageSize == null or pageSize == 0 '>
+		    ) Z 
+		    ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+		    ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+		    ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		    -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+</mapper>

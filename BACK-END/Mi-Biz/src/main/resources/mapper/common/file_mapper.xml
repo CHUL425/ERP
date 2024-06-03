@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="file_mapper">
+
+	<select id="select_file_guid" resultType="String" >
+		SELECT SYS_GUID() AS ATC_FILE_GUID FROM DUAL
+	</select>
+	
+	<select id="selectNewFileNo" resultType="String" >
+			/* 파일번호 (FILE_NO) : YYYYMMDD + 일련번호3자리) */
+				SELECT CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM000') 
+				            ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM000') 
+				        END FILE_NO 
+				  FROM GA09C302			        	        
+				 WHERE CD_KND_NO = 'CHAEBUN'
+				   AND CMN_CD_VL = 'FILE'
+				   AND ROWNUM    = 1
+	</select>
+	
+	<update id="updateFileChaebun" parameterType="String" >
+		/* updateFileChaebun : 파일채번 수정 */
+		UPDATE GA09C302 -- 총무공통코드값
+		   SET CD_DESC   =  #{fileNo }
+	     WHERE CD_KND_NO =  'CHAEBUN'
+		   AND CMN_CD_VL =  'FILE'
+	</update>
+	
+	<select id="selectFile" parameterType="com.miraeasset.biz.common.vo.FileVO" resultType="com.miraeasset.biz.common.vo.FileVO" >
+		/* 파일정보 조회 */
+		SELECT *
+		  FROM GA09N411
+		 WHERE 1=1
+		   AND FILE_NO = #{fileNo} 
+	</select>
+		
+	<select id="selectNewFileDlNo" parameterType="com.miraeasset.biz.common.vo.FileVO" resultType="String" >
+		/* 파일상세번호  */
+		SELECT NVL(MAX(TO_NUMBER(FILE_DL_NO)),0) + 1 AS NEW_FILE_DL_NO
+		FROM GA09N411
+		WHERE FILE_NO = #{fileNo}
+	</select>
+	
+	<update id="updateGA09N411" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" >
+			/* 파일생성  */
+				MERGE INTO GA09N411 T1                                                                                        
+				USING DUAL ON (   T1.FILE_NO    = #{fileNo}
+				              AND T1.FILE_DL_NO = #{fileDlNo} 
+				              ) 
+				                  
+				WHEN MATCHED THEN                                                                                         
+				UPDATE SET                                                                                                
+				  T1.FILE_KCD         = #{fileKcd        }
+				, T1.FILE_NM          = #{fileNm         }
+				, T1.FILE_SIZE        = #{fileSize       }
+				, T1.ATC_FILE_PATH_NM = #{atcFilePathNm  }
+				, T1.ATC_FILE_PHYS_NM = #{atcFilePhysNm  }
+				, T1.USE_YN           = #{useYn          }
+				, T1.OPTR_ID          = #{optrId         }
+				, T1.OPRT_CHNL_CD     = #{oprtChnlCd     }
+				, T1.OPRT_ORZ_CD      = #{oprtOrzCd      }
+				, T1.OPRT_IP_ADR      = #{oprtIpAdr      }
+				, T1.OPRT_DTTM        = SYSDATE                                                                                
+				
+				WHEN NOT MATCHED THEN                                                                                     
+				INSERT (                                                                                                  
+				  T1.FILE_NO         
+				, T1.FILE_DL_NO      
+				, T1.FILE_KCD        
+				, T1.FILE_NM         
+				, T1.FILE_SIZE       
+				, T1.ATC_FILE_PATH_NM
+				, T1.ATC_FILE_PHYS_NM
+				, T1.USE_YN          
+				, T1.OPTR_ID         
+				, T1.OPRT_CHNL_CD    
+				, T1.OPRT_ORZ_CD     
+				, T1.OPRT_IP_ADR     
+				, T1.OPRT_DTTM       
+				)                               
+				VALUES 
+				(                                                                                                  
+				  #{fileNo         }
+				, #{fileDlNo       }
+				, #{fileKcd        }
+				, #{fileNm         }
+				, #{fileSize       }
+				, #{atcFilePathNm  }
+				, #{atcFilePhysNm  }
+				, #{useYn          }
+				, #{optrId         }
+				, #{oprtChnlCd     }
+				, #{oprtOrzCd      }
+				, #{oprtIpAdr      }
+				, SYSDATE                                         
+				)    
+	</update>		
+	
+	<update id="updateImgGA09N411" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" >
+			/* 파일생성  */
+				MERGE INTO GA09N411 T1                                                                                        
+				USING DUAL ON (   T1.FILE_NO    = #{fileNo}
+				              AND T1.FILE_DL_NO = #{fileDlNo} 
+				              ) 
+				                  
+				WHEN MATCHED THEN                                                                                         
+				UPDATE SET                                                                                                
+				  T1.FILE_KCD         = #{fileKcd        }
+				, T1.FILE_NM          = #{fileNm         }
+				, T1.ATC_FILE_IMG     = #{atcFileImg     }
+				, T1.FILE_SIZE        = #{fileSize       }
+				, T1.ATC_FILE_PATH_NM = #{atcFilePathNm  }
+				, T1.ATC_FILE_PHYS_NM = #{atcFilePhysNm  }
+				, T1.USE_YN           = #{useYn          }
+				, T1.OPTR_ID          = #{optrId         }
+				, T1.OPRT_CHNL_CD     = #{oprtChnlCd     }
+				, T1.OPRT_ORZ_CD      = #{oprtOrzCd      }
+				, T1.OPRT_IP_ADR      = #{oprtIpAdr      }
+				, T1.OPRT_DTTM        = SYSDATE                                                                                
+				
+				WHEN NOT MATCHED THEN                                                                                     
+				INSERT (                                                                                                  
+				  T1.FILE_NO         
+				, T1.FILE_DL_NO      
+				, T1.FILE_KCD        
+				, T1.FILE_NM    
+				, T1.ATC_FILE_IMG     
+				, T1.FILE_SIZE       
+				, T1.ATC_FILE_PATH_NM
+				, T1.ATC_FILE_PHYS_NM
+				, T1.USE_YN          
+				, T1.OPTR_ID         
+				, T1.OPRT_CHNL_CD    
+				, T1.OPRT_ORZ_CD     
+				, T1.OPRT_IP_ADR     
+				, T1.OPRT_DTTM       
+				)                               
+				VALUES 
+				(                                                                                                  
+				  #{fileNo         }
+				, #{fileDlNo       }
+				, #{fileKcd        }
+				, #{fileNm         }
+				, #{atcFileImg     }
+				, #{fileSize       }
+				, #{atcFilePathNm  }
+				, #{atcFilePhysNm  }
+				, #{useYn          }
+				, #{optrId         }
+				, #{oprtChnlCd     }
+				, #{oprtOrzCd      }
+				, #{oprtIpAdr      }
+				, SYSDATE                                         
+				)    
+	</update>			
+	
+	<update id="updateImgFile" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" >
+		UPDATE GA09N411
+		   SET ATC_FILE_IMG = #{atcFileImg}
+		 WHERE FILE_NO     = #{fileNo} 
+		   AND FILE_DL_NO  = #{fileDlNo} 
+	</update>
+	
+	<update id="updateDelGA09N411" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" >
+			UPDATE GA09N411	-- 첨부파일상세관리테이블
+			   SET USE_YN      = '0'  
+			 WHERE FILE_NO     = #{fileNo} 
+			   AND FILE_DL_NO  = #{fileDlNo}   
+	</update>	
+
+	<select id="selectGA09N411PK" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N411VO">
+		/* selectGA09N411PK = 파일정보상세 */
+
+		SELECT FILE_NO
+		     , FILE_DL_NO
+		     , FILE_KCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'FILE_KCD' AND CMN_CD_VL = TRIM(T1.FILE_KCD) AND ROWNUM = 1 ) AS FILE_KCD_NM  
+		     , FILE_NM
+		     , FILE_SIZE
+		     , ATC_FILE_IMG
+		     , ATC_FILE_PATH_NM
+		     , ATC_FILE_PHYS_NM
+		     , USE_YN
+		  FROM GA09N411	T1 -- 첨부파일상세관리테이블     
+		 WHERE FILE_NO     = #{fileNo} 
+		   AND FILE_DL_NO  = #{fileDlNo}
+	</select>	
+	
+	<select id="selectListGA09N411" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N411VO">
+		/* selectListGA09N411 = 파일목록조회 */
+
+		SELECT FILE_NO
+		     , FILE_DL_NO
+		     , FILE_KCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'FILE_KCD' AND CMN_CD_VL = TRIM(T1.FILE_KCD) AND ROWNUM = 1 ) AS FILE_KCD_NM  
+		     , FILE_NM
+		     , FILE_SIZE
+		     , ATC_FILE_IMG
+		     , ATC_FILE_PATH_NM
+		     , ATC_FILE_PHYS_NM
+		     , USE_YN
+		  FROM GA09N411	T1 -- 첨부파일상세관리테이블     
+		 WHERE FILE_NO      = #{fileNo} 
+		   AND FILE_DL_NO   LIKE '%' || TRIM( #{fileDlNo}  )  || '%' /* 파일상세번호 */  
+		   AND USE_YN       = '1'
+	</select>	
+	
+	<select id="selectListGA09N411ByName" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N411VO">
+		/* selectListGA09N411ByName = 파일목록조회_이름검색 */
+
+		SELECT FILE_NO
+		     , FILE_DL_NO
+		     , FILE_KCD
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'FILE_KCD' AND CMN_CD_VL = TRIM(T1.FILE_KCD) AND ROWNUM = 1 ) AS FILE_KCD_NM  
+		     , FILE_NM
+		     , FILE_SIZE
+		     , ATC_FILE_IMG
+		     , ATC_FILE_PATH_NM
+		     , ATC_FILE_PHYS_NM
+		     , USE_YN
+		  FROM GA09N411	T1 -- 첨부파일상세관리테이블     
+		 WHERE FILE_NM   LIKE '%' || TRIM( #{fileNm}  )  || '%' /* 파일명 */  
+		   AND USE_YN       = '1'
+		 ORDER BY FILE_NM, FILE_NO
+	</select>
+
+	<select id="selectOneAT09N411" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N411VO">
+		/* selectOneAT09N411 : 파일정보상세_ERP */
+		SELECT FILE_NO
+			 , FILE_DL_NO
+			 , NULL AS FILE_KCD
+			 , NULL AS FILE_KCD_NM
+			 , FILE_NM
+			 , FILE_SIZE
+			 , ATC_FILE_IMG
+			 , ATC_FILE_PATH_NM
+			 , ATC_FILE_PHYS_NM
+			 , USE_YN
+		  FROM AT09N411	T1 -- 첨부파일상세관리테이블
+		 WHERE FILE_NO      = #{fileNo}
+		   AND FILE_DL_NO   LIKE '%' || TRIM( #{fileDlNo}  )  || '%' /* 파일상세번호 */
+		   AND USE_YN       = '1'
+	</select>
+
+	<select id="selectListAT09N411" parameterType="com.miraeasset.biz.common.meta.vo.GA09N411VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N411VO">
+		/* selectListAT09N411 : 파일목록조회_ERP */
+		SELECT 'ERP_' || FILE_NO AS FILE_NO
+			 , FILE_DL_NO
+			 , NULL AS FILE_KCD
+			 , NULL AS FILE_KCD_NM
+			 , FILE_NM
+			 , FILE_SIZE
+			 , ATC_FILE_IMG
+			 , ATC_FILE_PATH_NM
+			 , ATC_FILE_PHYS_NM
+			 , USE_YN
+		  FROM AT09N411	T1 -- 첨부파일상세관리테이블
+		 WHERE FILE_NO      = REPLACE(#{fileNo}, 'ERP_', '')
+		   AND FILE_DL_NO   LIKE '%' || TRIM( #{fileDlNo}  )  || '%' /* 파일상세번호 */
+		   AND USE_YN       = '1'
+	</select>
+
+</mapper>
+
+

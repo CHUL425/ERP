@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="bngn_mapper">
+	
+	<select id="selectListGA09N421" parameterType="com.miraeasset.biz.bn.gn.vo.BNGN1000U0In00VO" resultType="com.miraeasset.biz.bn.gn.vo.BNGN1000U0Out00VO">
+		/* BNGN1000U0.selectListGA09N421 = 공지 목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (	
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.PSTG_FXD_YN DESC, T1.MADE_DT DESC , T1.SRNO , ROWNUM DESC) AS RNUM                  
+				     , COUNT(1) OVER()  AS AL_CNT             /* 전체건수      */    
+				     , T1.MADE_DT
+				     , T1.SRNO
+				     , T1.CMKL_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CMKL_TCD' AND CMN_CD_VL = TRIM(T1.CMKL_TCD) AND ROWNUM = 1 ) AS CMKL_TCD_NM  
+				     , T1.PSTG_FXD_YN
+				     , T1.MADE_EPNO
+				     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.MADE_EPNO AND ROWNUM = 1 ) AS MADE_EP_NM   
+				     , T1.TTL_NM
+				     , T1.CMKL_PTCR_CN
+				     , T1.PSTUP_STRT_DT
+				     , T1.PSTUP_END_DT
+				     , T1.FILE_NO
+				     
+				     , T1.CS_SPT_TML_IPRT_YN
+				     , T1.WM_TML_IPRT_YN
+				     , T1.BRMG_IPRT_YN
+				     , T1.BR_IPRT_YN
+				     , T1.TML_IPRT_YN
+				     , T1.HQMG_IPRT_YN
+				     , T1.HO_IPRT_YN		
+				     
+				     , NVL(T1.QRY_CNT,0) AS QRY_CNT
+				     , T1.DEL_YN
+				 FROM GA09N421	T1 -- 공지사항
+				WHERE 1=1
+				  AND T1.TTL_NM   LIKE '%' || TRIM( #{ttlNm}  )  || '%' /* 제목명 */  
+				  AND T1.MADE_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}   /* 조회기간*/
+				  AND T1.CMKL_TCD = TRIM( #{cmklTcd} )                  /*공지구분코드        */ 
+				  AND T1.DEL_YN = '0'
+				ORDER BY T1.PSTG_FXD_YN DESC, T1.MADE_DT DESC, T1.SRNO DESC   							
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>		
+
+	<select id="selectGA09N421PK" parameterType="com.miraeasset.biz.bn.gn.vo.BNGN1000U0In01VO" resultType="com.miraeasset.biz.bn.gn.vo.BNGN1000U0Out01VO">
+		/* BNGN1000U0.selectGA09N421PK = 공지 상세조회(PK) */
+				SELECT T1.MADE_DT
+				     , T1.SRNO
+				     , T1.CMKL_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CMKL_TCD' AND CMN_CD_VL = TRIM(T1.CMKL_TCD) AND ROWNUM = 1 ) AS CMKL_TCD_NM  
+				     , T1.PSTG_FXD_YN
+				     , T1.MADE_EPNO
+				     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.MADE_EPNO AND ROWNUM = 1 ) AS MADE_EP_NM   
+				     , T1.TTL_NM
+				     , T1.CMKL_PTCR_CN
+				     , T1.PSTUP_STRT_DT
+				     , T1.PSTUP_END_DT
+				     , T1.FILE_NO
+				     
+				     , T1.CS_SPT_TML_IPRT_YN
+				     , T1.WM_TML_IPRT_YN
+				     , T1.BRMG_IPRT_YN
+				     , T1.BR_IPRT_YN
+				     , T1.TML_IPRT_YN
+				     , T1.HQMG_IPRT_YN
+				     , T1.HO_IPRT_YN				     
+				     
+				     , NVL(T1.QRY_CNT,0) AS QRY_CNT
+				     , T1.DEL_YN
+				 FROM GA09N421	T1 -- 공지사항
+				WHERE 1=1
+				  AND T1.MADE_DT = #{madeDt} 
+				  AND T1.SRNO    = #{srno} 
+	</select>	
+		
+	<update id="updateGA09N421" parameterType="com.miraeasset.biz.common.meta.vo.GA09N421VO" >
+		/* BNGN1000U0.updateGA09N421 = 공지 수정(PK) */	
+			MERGE INTO GA09N421 T1                                                                                        
+			USING DUAL ON (   T1.MADE_DT    = #{madeDt}
+			              AND T1.SRNO       = #{srno  } 
+			              ) 
+			      
+			WHEN MATCHED THEN                                                                                         
+			UPDATE SET                                                                                                
+		 	  T1.CMKL_TCD               = #{cmklTcd         }
+			, T1.PSTG_FXD_YN            = #{pstgFxdYn       }
+			, T1.MADE_EPNO              = #{madeEpno        }
+			, T1.TTL_NM                 = #{ttlNm           }
+			, T1.CMKL_PTCR_CN           = #{cmklPtcrCn      }
+			, T1.PSTUP_STRT_DT          = #{pstupStrtDt     }
+			, T1.PSTUP_END_DT           = #{pstupEndDt      }
+			, T1.FILE_NO                = #{fileNo          }
+			
+			, T1.CS_SPT_TML_IPRT_YN     = #{csSptTmlIprtYn  }   
+			, T1.WM_TML_IPRT_YN         = #{wmTmlIprtYn     }   
+			, T1.BRMG_IPRT_YN           = #{brmgIprtYn      }   
+			, T1.BR_IPRT_YN             = #{brIprtYn        }   
+			, T1.TML_IPRT_YN            = #{tmlIprtYn       }   
+			, T1.HQMG_IPRT_YN           = #{hqmgIprtYn      }   
+			, T1.HO_IPRT_YN				= #{hoIprtYn		}  
+
+			, T1.QRY_CNT                = #{qryCnt          }
+			, T1.DEL_YN                 = #{delYn           }
+			, T1.OPTR_ID                = #{optrId          }
+			, T1.OPRT_CHNL_CD           = #{oprtChnlCd      }
+			, T1.OPRT_ORZ_CD            = #{oprtOrzCd       }
+			, T1.OPRT_IP_ADR            = #{oprtIpAdr       }
+			, T1.OPRT_DTTM              = SYSDATE				
+			                 
+			WHEN NOT MATCHED THEN                                                                                     
+			INSERT (                                                                                                  
+			  T1.MADE_DT            
+			, T1.SRNO               
+			, T1.CMKL_TCD           
+			, T1.PSTG_FXD_YN        
+			, T1.MADE_EPNO          
+			, T1.TTL_NM             
+			, T1.CMKL_PTCR_CN       
+			, T1.PSTUP_STRT_DT      
+			, T1.PSTUP_END_DT       
+			, T1.FILE_NO         
+			   
+			, T1.CS_SPT_TML_IPRT_YN
+			, T1.WM_TML_IPRT_YN   
+			, T1.BRMG_IPRT_YN     
+			, T1.BR_IPRT_YN       
+			, T1.TML_IPRT_YN      
+			, T1.HQMG_IPRT_YN     
+			, T1.HO_IPRT_YN				
+			 
+			, T1.QRY_CNT            
+			, T1.DEL_YN             
+			, T1.OPTR_ID            
+			, T1.OPRT_CHNL_CD       
+			, T1.OPRT_ORZ_CD        
+			, T1.OPRT_IP_ADR        
+			, T1.OPRT_DTTM          
+			)                               
+			VALUES 
+			(                                                                                                  
+			  #{madeDt          }    
+			, #{srno            }    
+			, #{cmklTcd         }    
+			, #{pstgFxdYn       }    
+			, #{madeEpno        }    
+			, #{ttlNm           }    
+			, #{cmklPtcrCn      }    
+			, #{pstupStrtDt     }    
+			, #{pstupEndDt      }    
+			, #{fileNo          }    
+			
+			, #{csSptTmlIprtYn  }      
+			, #{wmTmlIprtYn     }   
+			, #{brmgIprtYn      }   
+			, #{brIprtYn        }   
+			, #{tmlIprtYn       }   
+			, #{hqmgIprtYn      }   
+			, #{hoIprtYn		}  
+			    
+			, #{qryCnt          }    
+			, #{delYn           }    
+			, #{optrId          }    
+			, #{oprtChnlCd      }    
+			, #{oprtOrzCd       }    
+			, #{oprtIpAdr       }    
+			, SYSDATE                
+			)   			
+	</update>	
+	
+	<update id="updateDelGA09N421" parameterType="com.miraeasset.biz.common.meta.vo.GA09N421VO" >
+		/* BNGN1000U0.updateDelGA09N421 = 공지사항 삭제 */	
+	
+			UPDATE GA09N421	-- 공지사항
+			   SET DEL_YN        = #{delYn      }   /*삭제여부    */    
+			     , OPTR_ID       = #{optrId     } 
+			     , OPRT_CHNL_CD  = #{oprtChnlCd } 
+			     , OPRT_ORZ_CD   = #{oprtOrzCd  } 
+			     , OPRT_IP_ADR   = #{oprtIpAdr  } 
+			     , OPRT_DTTM     = SYSDATE					   
+			 WHERE MADE_DT       = #{madeDt   }   /*작성일자*/
+			   AND SRNO          = #{srno     }   /*일련번호*/       
+   
+	</update>	
+	
+	<update id="updateQryCnt" parameterType="com.miraeasset.biz.common.meta.vo.GA09N421VO" >
+		/* BNGN1000U0.updateQryCnt = 공지사항 조회수증가 */	
+	
+			UPDATE GA09N421	-- 공지사항
+			   SET QRY_CNT       = NVL(QRY_CNT,0) + 1   /*조회수 증가    */    
+			 WHERE MADE_DT       = #{madeDt   }   /*작성일자*/
+			   AND SRNO          = #{srno     }   /*일련번호*/       
+   
+	</update>		
+
+	<select id="selectNewSrno" parameterType="com.miraeasset.biz.common.meta.vo.GA09N421VO" resultType="java.math.BigDecimal" >
+			/* 공지사항 일련번호 채번  */
+				SELECT NVL(MAX(SRNO),0) + 1 AS NEW_SRNO
+				  FROM GA09N421
+				 --WHERE ROWNUM  = 1
+	</select>	
+	
+
+</mapper>

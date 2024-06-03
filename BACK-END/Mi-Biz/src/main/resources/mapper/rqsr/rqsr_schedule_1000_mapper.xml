@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rqsr_schedule_1000_mapper">
+
+    <select id="findTargetRctNoList" parameterType="String" resultType="String">
+        /* rqsr_schedule_1000_mapper.findTargetRctNoList : 발송 대상 RQS_NO 획득 */
+        SELECT DISTINCT A.RCT_NO
+          FROM GA01N505 A /* 인감신청_인감증명서신청 */
+             , GA01N101 B /* 통합신청_신청관리       */
+             , GA01N510 C /* 인감신청_인감증명서관리 */
+         WHERE A.RCT_NO                = B.RCT_NO
+           AND A.SEAL_CTFW_RQS_SQNC_NO = C.SEAL_CTFW_RQS_SQNC_NO
+           AND B.RQS_SCD               = '40' /* 인감증명서 처리완료 */
+           AND C.SEAL_CTFW_TCD         = '10' /* 인감증명서          */
+           AND C.OUTQ_DT               = #{targetDate}
+    </select>
+
+    <select id="findTargetRctNoListOver" parameterType="String" resultType="String">
+        /* rqsr_schedule_1000_mapper.findTargetRctNoList : 발송 대상 RQS_NO 획득 */
+        SELECT DISTINCT A.RCT_NO
+        FROM GA01N505 A /* 인감신청_인감증명서신청 */
+           , GA01N101 B /* 통합신청_신청관리       */
+           , GA01N510 C /* 인감신청_인감증명서관리 */
+        WHERE A.RCT_NO                = B.RCT_NO
+          AND A.SEAL_CTFW_RQS_SQNC_NO = C.SEAL_CTFW_RQS_SQNC_NO
+          AND B.RQS_SCD               = '40' /* 인감증명서 처리완료 */
+          AND C.SEAL_CTFW_TCD         = '10' /* 인감증명서          */
+          AND C.OUTQ_DT               <![CDATA[ <= ]]> #{targetDate}
+    </select>
+
+    <select id="findRqsInfoByRctNo" parameterType="String" resultType="com.miraeasset.biz.rq.sr.vo.RQSRSchedule1000U0Out00VO">
+        /* rqsr_schedule_1000_mapper.findRqsInfoByRctNo : RQS_NO를 통해 통합신청정보 획득 */
+        SELECT A.RCT_NO
+             , A.RQS_ORZ_CD
+             , A.RQS_EPNO
+             , B.EP_NM AS RQS_EP_NM
+             , A.RQS_TTL_NM
+          FROM GA01N101 A
+             , CB01N310 B
+         WHERE A.RQS_EPNO = B.EPNO
+           AND A.RCT_NO   = #{rctNo}
+    </select>
+
+    <select id="findRptvEpInfoByOrzCd" parameterType="String" resultType="com.miraeasset.biz.rq.sr.vo.RQSRSchedule1000U1Out00VO">
+        /* rqsr_schedule_1000_mapper.findRptvEpInfoByOrzCd : ORZ_CD를 통해 팀장정보 획득 */
+        SELECT A.ORZ_CD
+             , A.ORZ_NM
+             , B.EPNO
+             , B.EP_NM
+        FROM CB01N210 A
+           , CB01N310 B
+        WHERE A.ORZ_RPTV_EPNO = B.EPNO
+          AND A.ORZ_CD        = #{orzCd}
+    </select>
+
+</mapper>

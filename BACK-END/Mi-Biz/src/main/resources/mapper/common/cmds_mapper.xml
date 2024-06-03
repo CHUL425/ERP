@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cmds_mapper">
+	<select id="select00AT09N401List" parameterType="com.miraeasset.biz.common.cm.ds.vo.CMDS1000V0In00VO" resultType="com.miraeasset.biz.common.cm.ds.vo.CMDS1000V0Out00VO">
+		/* CMDS1000V0.select00AT09N401List : 기안문서조회 팝업 */
+		WITH ORZ_TAB AS (SELECT A.DRFT_ORZ_CD
+		                   FROM (SELECT SYS_CONNECT_BY_PATH(A.ORZ_CD,'>') AS ALL_ORZ_CD
+		                              , A.ORZ_CD AS DRFT_ORZ_CD
+                                      , A.ORZ_NM AS DRFT_ORZ_NM
+		                           FROM CB01N210 A
+		                          WHERE 1=1
+		                          START WITH HRK_ORZ_CD IS NULL
+		                        CONNECT BY PRIOR A.ORZ_CD = A.HRK_ORZ_CD
+		                        ) A
+		                  WHERE (   (REGEXP_LIKE(A.ALL_ORZ_CD, NVL(#{drftOrzCd}, A.DRFT_ORZ_CD)))
+                                 OR (A.DRFT_ORZ_NM LIKE '%' || NVL(#{drftOrzCd}, A.DRFT_ORZ_NM) || '%' )
+                                 )
+		                )
+		SELECT * FROM (
+		SELECT * FROM (
+		    SELECT COUNT(1) OVER()    AS TOT_CNT      /* 총건수 */
+		         , ROW_NUMBER() OVER(ORDER BY A.REGI_ORZ_CD, A.DRFT_DOC_NO, ROWNUM DESC) AS RNUM
+		         , A.REGI_ORZ_CD     AS DRFT_ORZ_CD     /* 기안조직코드 */
+		         , B.ORZ_NM          AS DRFT_ORZ_NM     /* 기안조직명 */   
+		         , A.DRFT_DOC_NO     AS DRFT_DOC_NO     /* 기안문서번호 */
+		         , A.DOC_NO_NM       AS DOC_NO_NM       /* 문서번호명 */
+		         , A.DRFT_DOC_TTL_NM AS DRFT_DOC_TTL_NM /* 기안문서제목명 */
+		         , A.REGI_EPNO       AS DRFTR_EPNO      /* 기안자사원번호 */
+		         , C.EP_NM           AS DRFTR_EP_NM     /* 기안자사원명 */
+		         , TO_CHAR(A.REGI_DTTM, 'YYYYMMDD')  AS DRFT_DT
+		         , TO_CHAR(A.APRV_DTTM , 'YYYYMMDD') AS APRV_DT
+		         , A.OPTR_ID       /* 조작자ID */
+		 		 , A.OPRT_CHNL_CD  /* 조작채널코드 */
+		  		 , A.OPRT_ORZ_CD   /* 조작조직코드 */
+				 , A.OPRT_IP_ADR   /* 조작IP주소 */
+		 		 , A.OPRT_DTTM     /* 조작일시 */ 
+		      FROM AT09N401 A /* 기안문서 */
+		         , CB01N210 B /* 조직 */
+		         , CB01N310 C /* 사원 */
+		     WHERE 1=1
+		       AND (   A.REGI_ORZ_CD IN (SELECT DRFT_ORZ_CD FROM ORZ_TAB ) /* 기안팀점코드 */
+-- 		            OR A.DRFT_DOC_NO IN (SELECT DRFT_DOC_NO
+-- 		                                   FROM AT09N403
+-- 		                                  WHERE RQM_RV_ORZ_CD IN (SELECT DRFT_ORZ_CD FROM ORZ_TAB)
+-- 		                                 )
+		            )
+		       AND A.REGI_ORZ_CD = B.ORZ_CD                               
+		       AND A.REGI_EPNO   = C.EPNO
+		       AND (   (A.REGI_EPNO LIKE '%' || NVL(#{regiEpno}, A.REGI_EPNO) || '%') /* 등록자사원번호 */
+		            OR (C.EP_NM     LIKE '%' || NVL(#{regiEpno}, C.EP_NM    ) || '%') /* 등록자사원명 */
+		            )
+		       AND TO_CHAR(A.REGI_DTTM, 'YYYYMMDD') BETWEEN #{aprvStrtDt} AND #{aprvEndDt}
+		       AND (   (A.DOC_NO_NM       LIKE '%' || NVL(#{drftDocNo}, A.DOC_NO_NM      ) || '%') /* 문서번호명 */
+		            OR (A.DRFT_DOC_TTL_NM LIKE '%' || NVL(#{drftDocNo}, A.DRFT_DOC_TTL_NM) || '%') /* 기안문서제목 */
+		            )
+		       AND ASCII(A.DOC_NO_NM) <![CDATA[ <> ]]> '32'  /* 미완료 제외 */
+		     ORDER BY A.REGI_ORZ_CD, A.DRFT_DOC_NO 
+		    -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		
+		<if test='pageSize == null or pageSize == 0 '>
+		    ) Z 
+		    ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+		    ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+		    ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		    -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+	
+	<select id="select00AT09N401PK" parameterType="com.miraeasset.biz.common.meta.vo.GA01N303VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N303VO">
+		/* GA01N303VO.select00AT09N401PK : 기안문서조회(PK) */
+
+			SELECT DRFT_DOC_NO           /*기안문서번호          */
+			     , DRFT_DOC_TTL_NM       /*기안문서제목명        */
+			     , APRV_YN               /*결재여부              */
+			     , DOC_NO_NM             /*문서번호명            */
+			     , APRV_DTTM             /*결재일시              */
+			     , REGI_EPNO             /*등록사원번호          */
+			     , REGI_ORZ_CD           /*등록조직코드          */
+			     , REGI_DTTM             /*등록일시              */
+			     , RSLN_CNT              /*결의건수              */
+			     , CNCL_YN               /*취소여부              */
+			     , CNCL_DT               /*취소일자              */
+			     , CNCL_RSN_CN           /*취소사유내용          */
+			     , JBF_DRFT_DOC_NO       /*직전기안문서번호      */
+			     , OPTR_ID               /*조작자ID              */
+			     , OPRT_CHNL_CD          /*조작채널코드          */
+			     , OPRT_ORZ_CD           /*조작조직코드          */
+			     , OPRT_IP_ADR           /*조작IP주소            */
+			     , OPRT_DTTM             /*조작일시              */
+			     , DRFT_DOC_SNR_TCD      /*기안문서송수신구분코드*/
+			  FROM AT09N401 -- 기안문서     
+			 WHERE DRFT_DOC_NO = #{drftDocNo }  /*기안문서번호          */  
+			 
+	</select>
+	
+</mapper>

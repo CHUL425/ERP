@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gavm_mapper">
+	<select id="selectList00GA01N201" parameterType="com.miraeasset.biz.ga.vm.vo.GAVM1000U0In00VO" resultType="com.miraeasset.biz.ga.vm.vo.GAVM1000U0Out00VO">
+		/* GAVM1000U0.selectList00GA01N201 : 임대차량정보관리 조회 */
+		/* [20231030] 암호화컬럼 관련 수정(USER_NM, TR_OTPT_NM) */
+			SELECT * FROM (
+			SELECT * FROM (
+				SELECT B.VHC_NO           AS VHC_NO           /* 차량번호 */
+				     , B.VHC_KND_NM       AS VHC_KND_NM       /* 차량종류명 */
+				     , B.USER_NM_ECP_VL          AS USER_NM          /* 사용자명 - 이용자명 */
+				     , B.BLNG_ORZ_CD      AS BLNG_ORZ_CD      /* 소속조직코드 */
+				     , C.ORZ_NM           AS BLNG_ORZ_NM      /* 소속조직명 */
+				     , B.PST_NM           AS PST_NM           /* 직위명 */
+				     , B.TR_OTPT_NM_ECP_VL       AS TR_OTPT_NM       /* 거래상대방명 -업체명 */
+				     , A.LS_OP_DT         AS LS_OP_DT         /* 리스개시일자 */
+				     , A.LS_END_DT        AS LS_END_DT        /* 리스종료일자 */
+				     , A.MN_PY_DD         AS MN_PY_DD         /* 월지급일 */
+				     , TO_CHAR(TO_DATE(A.LS_OP_DT) - TO_DATE(A.LS_END_DT)) * -1 AS LS_TERM_MMCNT    /* 리스기간개월수 */
+				     , A.SURT_EXP_PY_LS_A AS SURT_EXP_PY_LS_A /* 지급리스료(VAT제외) -렌트요금 */
+				     , A.LS_A_VAT         AS LS_A_VAT         /* 리스금액부가가치세 */
+				     , D.REFL_CARD_ECP_VL AS REFL_CARD        /* 주유카드 */
+				     , ROWNUM             AS RNUM
+					 , COUNT(1) OVER()    AS AL_CNT           /* 전체건수 */
+				  FROM (SELECT A.LS_CNTC_NO             AS LS_CNTC_NO
+				             , A.LS_CNTC_ADTN_SRNO AS LS_CNTC_ADTN_SRNO
+				             , A.LS_OP_DT          AS LS_OP_DT         /* 리스개시일자 */
+				             , A.LS_END_DT         AS LS_END_DT        /* 리스종료일자 */
+				             , A.MN_PY_DD          AS MN_PY_DD         /* 월지급일 */
+				             , A.SURT_EXP_PY_LS_A  AS SURT_EXP_PY_LS_A /* 지급리스료(VAT제외) -렌트요금 */
+				             , A.LS_A_VAT          AS LS_A_VAT         /* 리스금액부가가치세 */
+				          FROM AT08N100 A /* 계약관리 */
+				             , (
+                                SELECT LS_CNTC_NO
+                                     , MAX(LS_CNTC_ADTN_SRNO) AS LS_CNTC_ADTN_SRNO
+                                  FROM AT08N100
+                                 WHERE LS_END_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}
+                                 GROUP BY LS_CNTC_NO 
+                               ) B
+				         WHERE A.LS_CNTC_NO        = B.LS_CNTC_NO
+                           AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+                           AND A.LST_CNTC_YN  = '1'
+                           AND A.CNTC_CCLC_TCD  = '01'
+                           AND A.LS_END_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}
+				        ) A /* 계약관리 */
+				     , AT08N103 B /* 계약관리_차량 */
+				     , CB01N210 C /* 조직 */
+				     , (SELECT A.VHC_NO           AS VHC_NO
+		                     , A.REFL_CARD_ECP_VL AS REFL_CARD_ECP_VL
+		                     , A.PCLR_PTCR_CN     AS PCLR_PTCR_CN
+		                  FROM GA01N201 A
+		                     , (SELECT MAX(SRNO) AS SRNO
+		                             , VHC_NO AS VHC_NO
+		                          FROM GA01N201
+		                         WHERE DEL_YN  = '0'
+		                         GROUP BY VHC_NO
+		                        ) B
+		                 WHERE A.SRNO   = B.SRNO
+		                   AND A.VHC_NO = B.VHC_NO
+		                   AND A.DEL_YN  = '0' 
+		                ) D /* 업체관리 */
+				 WHERE 1=1
+				   AND A.LS_CNTC_NO        = B.LS_CNTC_NO
+				   AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+				   AND B.BLNG_ORZ_CD       = C.ORZ_CD(+)
+				   AND B.VHC_NO            = D.VHC_NO(+)
+<!--				   <if test='entpNm != null and entpNm != ""'>-->
+<!--				   AND B.TR_OTPT_NM LIKE '%'|| #{entpNm} ||'%'-->
+<!--				   </if>-->
+<!--				   <if test='userNm != null and userNm != ""'>-->
+<!--				   AND B.USER_NM    LIKE '%'|| #{userNm}||'%'-->
+<!--				   </if>-->
+				   AND (    (B.BLNG_ORZ_CD = #{orzNm})
+				         OR (C.ORZ_NM LIKE '%'|| #{orzNm} ||'%') 
+				        )
+				   AND TRIM(B.VHC_KND_NM) =  TRIM(NVL(#{vhcKndNm}, B.VHC_KND_NM))
+				   AND B.VHC_NO     LIKE '%'|| #{vhcNo} ||'%'
+				   
+			-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+<!--			<if test='pageSize == null or pageSize == 0 '>       -->
+<!--			) Z-->
+<!--			) ZZ-->
+<!--			</if>-->
+<!--			<if test='pageSize > 0'>-->
+<!--			) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})-->
+<!--			) ZZ WHERE RNUM > (#{pageIndex})-->
+<!--			</if>-->
+
+			) Z
+			) ZZ
+			-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'   
+	</select>
+	
+	<select id="selectList01GA01N201" parameterType="com.miraeasset.biz.ga.vm.vo.GAVM1000U0In01VO" resultType="com.miraeasset.biz.ga.vm.vo.GAVM1000U0Out01VO">
+	/* GAVM1000U0.selectList01GA01N201 : 임대차량정보관리 합계 */
+		SELECT COUNT(B.VHC_NO)         AS VHC_CNT /* 총차량 */
+		     , SUM(A.SURT_EXP_PY_LS_A) AS AL_SMTL /* 전체합계 */
+		  FROM (SELECT A.LS_CNTC_NO             AS LS_CNTC_NO
+		             , A.LS_CNTC_ADTN_SRNO AS LS_CNTC_ADTN_SRNO
+		             , A.LS_OP_DT          AS LS_OP_DT         /* 리스개시일자 */
+		             , A.LS_END_DT         AS LS_END_DT        /* 리스종료일자 */
+		             , A.MN_PY_DD          AS MN_PY_DD         /* 월지급일 */
+		             , A.SURT_EXP_PY_LS_A  AS SURT_EXP_PY_LS_A /* 지급리스료(VAT제외) -렌트요금 */
+		             , A.LS_A_VAT          AS LS_A_VAT         /* 리스금액부가가치세 */
+		          FROM AT08N100 A /* 계약관리 */
+		             , (
+                        SELECT LS_CNTC_NO
+                             , MAX(LS_CNTC_ADTN_SRNO) AS LS_CNTC_ADTN_SRNO
+                          FROM AT08N100
+                         WHERE LS_END_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}
+                         GROUP BY LS_CNTC_NO 
+                       ) B
+		         WHERE A.LS_CNTC_NO        = B.LS_CNTC_NO
+                   AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+                   AND A.LST_CNTC_YN  = '1'
+                   AND A.CNTC_CCLC_TCD  = '01'
+		           AND A.LS_END_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}
+		        ) A /* 계약관리 */
+		     , AT08N103 B /* 계약관리_차량 */
+		     , CB01N210 C /* 조직 */
+		     , (SELECT A.VHC_NO           AS VHC_NO
+                     , A.REFL_CARD_ECP_VL AS REFL_CARD_ECP_VL
+                     , A.PCLR_PTCR_CN     AS PCLR_PTCR_CN
+                  FROM GA01N201 A
+                     , (SELECT MAX(SRNO) AS SRNO
+                             , VHC_NO AS VHC_NO
+                          FROM GA01N201
+                         WHERE DEL_YN  = '0'
+                         GROUP BY VHC_NO
+                        ) B
+                 WHERE A.SRNO   = B.SRNO
+                   AND A.VHC_NO = B.VHC_NO
+                   AND A.DEL_YN  = '0' 
+                ) D /* 업체관리 */
+		 WHERE 1=1
+		   AND A.LS_CNTC_NO        = B.LS_CNTC_NO
+		   AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+		   AND B.BLNG_ORZ_CD       = C.ORZ_CD(+)
+		   AND B.VHC_NO            = D.VHC_NO(+)
+		   <if test='entpNm != null and entpNm != ""'>
+		   AND B.TR_OTPT_NM LIKE '%'|| #{entpNm} ||'%'
+		   </if>
+		   <if test='userNm != null and userNm != ""'>
+		   AND B.USER_NM    LIKE '%'|| #{userNm}||'%'
+		   </if>
+		   AND (    (B.BLNG_ORZ_CD = #{orzNm})
+		         OR (C.ORZ_NM LIKE '%'|| #{orzNm} ||'%') 
+		        )
+		   AND TRIM(B.VHC_KND_NM) LIKE '%'|| TRIM(#{vhcKndNm}) ||'%'
+		   AND B.VHC_NO     LIKE '%'|| #{vhcNo} ||'%'
+	</select>
+	
+	<select id="selectList02GA01N201" parameterType="com.miraeasset.biz.ga.vm.vo.GAVM1010U0In00VO" resultType="com.miraeasset.biz.ga.vm.vo.GAVM1010U0Out00VO">
+	/* GAVM1010U0.selectList02GA01N201 : 임대차량정보관리 = 중도해지위약금 조회 */
+		SELECT CNTC_DYS               AS CNTC_DYS /* 계약일수 */
+		     , RMND_DYS               AS RMND_DYS /* 잔여일수 */
+		     , RENTC                  AS DT_RENTC /* 일렌트료 */
+		     , RMND_DYS * RENTC * 0.1 AS MCLC_BPRM_A /* 중도해지위약금 = 잔여일수 * 일렌트료 * 10% */ 
+		  FROM (
+		        SELECT TO_CHAR(TO_DATE(A.LS_OP_DT) - TO_DATE(A.LS_END_DT)) * -1  AS CNTC_DYS /* 계약일수 */
+		             , TO_CHAR(TO_DATE(#{cclcFrcsDt}) - TO_DATE(A.LS_END_DT)) * -1 AS RMND_DYS /* 잔여일수 */
+		             , TRUNC((A.SURT_EXP_PY_LS_A * 12) / 365) AS RENTC /* 임대료 = 부가세제외지급리스금액 * 12 / 365 */ 
+		          FROM (SELECT A.LS_CNTC_NO             AS LS_CNTC_NO
+		                     , A.LS_CNTC_ADTN_SRNO AS LS_CNTC_ADTN_SRNO
+		                     , A.LS_OP_DT          AS LS_OP_DT         /* 리스개시일자 */
+		                     , A.LS_END_DT         AS LS_END_DT        /* 리스종료일자 */
+		                     , A.MN_PY_DD          AS MN_PY_DD         /* 월지급일 */
+		                     , A.SURT_EXP_PY_LS_A  AS SURT_EXP_PY_LS_A /* 지급리스료(VAT제외) -렌트요금 */
+		                     , A.LS_A_VAT          AS LS_A_VAT         /* 리스금액부가가치세 */
+		                  FROM AT08N100 A /* 계약관리 */
+		                  	 , (
+		                        SELECT LS_CNTC_NO
+		                             , MAX(LS_CNTC_ADTN_SRNO) AS LS_CNTC_ADTN_SRNO
+		                          FROM AT08N100
+		                         WHERE LS_END_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}
+		                         GROUP BY LS_CNTC_NO 
+		                       ) B
+		                 WHERE A.LS_CNTC_NO        = B.LS_CNTC_NO
+                           AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+		                   AND A.LS_OP_DT  = #{qryStrtDt}
+		                   AND A.LS_END_DT = #{qryEndDt}
+		                ) A /* 계약관리 */
+		             , AT08N103 B /* 계약관리_차량 */
+		         WHERE 1=1
+		           AND A.LS_CNTC_NO        = B.LS_CNTC_NO
+		           AND A.LS_CNTC_ADTN_SRNO = B.LS_CNTC_ADTN_SRNO
+		           AND B.VHC_NO    = #{vhcNo}
+		        )
+	</select>
+	
+	<select id="selectList03GA01N201" parameterType="com.miraeasset.biz.ga.vm.vo.GAVM1010U0In01VO" resultType="com.miraeasset.biz.ga.vm.vo.GAVM1010U0Out01VO">
+	/* GAVM1010U0.selectList03GA01N201 : 임대차량정보관리 = 차량정보변경 조회 */
+		SELECT  'R'              AS FLG              /* 플래그 */
+		      , PRC_DT           AS PRC_DT           /* 처리일자 */
+		      , SRNO	         AS SRNO             /* 일련번호 */ 
+		      , REFL_CARD_ECP_VL AS REFL_CARD_ECP_VL /* 주유카드암호화값 */
+		      , PCLR_PTCR_CN     AS PCLR_PTCR_CN     /* 특이사항내용 */ 
+		   FROM GA01N201
+		  WHERE 1=1
+		    AND DEL_YN = '0'
+		    AND VHC_NO = #{vhcNo}
+	</select>
+	
+	<insert id="insert03GA01N201" parameterType="com.miraeasset.biz.ga.vm.vo.GAVM1010U0In02VO">
+	/* GAVM1010U0.insert03GA01N201 : 임대차량정보관리 = 차량정보변경 등록 */
+		 INSERT INTO GA01N201
+			     ( PRC_DT
+			     , SRNO
+			     , VHC_NO
+			     , REFL_CARD_ECP_VL
+			     , PCLR_PTCR_CN
+			     , DEL_YN
+			     , OPTR_ID
+			     , OPRT_CHNL_CD
+			     , OPRT_ORZ_CD
+			     , OPRT_IP_ADR
+			     , OPRT_DTTM)
+			VALUES
+			     ( #{prcDt}
+			     , #{srno}
+			     , #{vhcNo}
+			     , #{reflCardEcpVl}
+			     , #{pclrPtcrCn}
+			     , '0'
+			     , #{optrId}
+			     , #{oprtChnlCd}
+			     , #{oprtOrzCd}
+			     , #{oprtIpAdr}
+			     , SYSDATE
+			     )
+	</insert>
+	
+	<update id="update03GA01N201" parameterType="com.miraeasset.biz.ga.vm.vo.GAVM1010U0In03VO">
+	/* GAVM1010U0.update03GA01N201 : 임대차량정보관리 = 차량정보변경 삭제 */
+		UPDATE GA01N201
+   	       SET DEL_YN  = '1'
+   	         , OPTR_ID      = #{optrId}
+			 , OPRT_CHNL_CD = #{oprtChnlCd}
+			 , OPRT_ORZ_CD  = #{oprtOrzCd}
+			 , OPRT_IP_ADR  = #{oprtIpAdr}
+			 , OPRT_DTTM    = SYSDATE
+		 WHERE 1=1
+		   AND PRC_DT = #{prcDt}
+		   AND SRNO   = #{srno}
+		   AND VHC_NO = #{vhcNo}	
+	</update>
+	
+</mapper>

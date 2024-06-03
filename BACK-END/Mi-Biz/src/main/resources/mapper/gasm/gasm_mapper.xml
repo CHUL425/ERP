@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gasm_mapper">
+	
+	<select id="selectListGA01N305" parameterType="com.miraeasset.biz.ga.sm.vo.GASM1000U0In00VO" resultType="com.miraeasset.biz.ga.sm.vo.GASM1000U0Out00VO">
+		/* GASM1000U0.selectListGA01N305 = RE100 목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (	
+							
+				SELECT 
+				       ROW_NUMBER() OVER(ORDER BY T1.CNRT_MT_NO , ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+				     , T1.CNRT_MT_NO
+				     , T1.DELP_CD
+				     , T2.DELP_NM
+				     , T1.CNTC_MTHD_CN 
+				     , TO_CHAR(ESG_CNTC_CAPA, 'FM999,999,999,999,999,999,990.00') AS CNTC_CAPA
+				     , TO_CHAR(T1.CNTC_BPR, 'FM999,999,990.00') AS CNTC_BPR
+				     , T1.CNTC_STRT_DT
+				     , T1.CNTC_END_DT
+				     , T1.NTE_CN
+				     , T1.DEL_YN
+                     , ( SELECT COUNT(1) AS CNT FROM GA01N306 WHERE CNRT_MT_NO = T1.CNRT_MT_NO AND CNRT_KCD = '02' ) AS DRFT_DOC_CNT
+				  FROM GA01N305	T1 -- RE100계약관리
+				     , AT05C010 T2 -- 거래처 
+				 WHERE 1=1
+                   AND T1.CNTC_STRT_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+				   AND T1.DEL_YN = '0'
+				   AND T2.DELP_CD (+)= T1.DELP_CD
+				 ORDER BY T1.CNRT_MT_NO
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>		
+	
+	
+	<select id="selectListGA01N306" parameterType="com.miraeasset.biz.common.meta.vo.GA01N306VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N306VO">
+		/* GACM1000U0.selectListGA01N306 = 계약서별기안문서 목록조회 */	
+			SELECT A.CNRT_MT_NO 
+			     , A.DRFT_DOC_NO  
+			     , B.DRFT_DOC_TTL_NM
+			  FROM GA01N306	A -- 계약서별기안문서
+			     , AT09N401 B -- 기안문서
+			 WHERE 1=1
+			   AND A.CNRT_MT_NO = #{cnrtMtNo} /* 계약서관리번호   */
+			   AND A.CNRT_KCD   = '02' /* 계약서종류코드  01:계약서관리 02:RE100 */
+			   AND B.DRFT_DOC_NO (+)= A.DRFT_DOC_NO
+			 ORDER BY A.CNRT_MT_NO 	          	
+	</select> 
+	
+	
+	<select id="selectGA01N305PK" parameterType="com.miraeasset.biz.ga.sm.vo.GASM1000U0In01VO" resultType="com.miraeasset.biz.ga.sm.vo.GASM1000U0Out01VO">
+		/* GASM1000U0.selectGA01N305PK = RE100 상세조회(PK) */
+
+		SELECT 
+		       T1.CNRT_MT_NO 
+		     , T1.DELP_CD
+		     , T2.DELP_NM
+		     , T1.CNTC_MTHD_CN 
+		     , TO_CHAR(ESG_CNTC_CAPA, 'FM999,999,999,999,999,999,990.00') AS CNTC_CAPA
+		     , TO_CHAR(T1.CNTC_BPR, 'FM999,999,990.00') AS CNTC_BPR
+		     , T1.CNTC_STRT_DT
+		     , T1.CNTC_END_DT
+		     , T1.NTE_CN
+		     , T1.DEL_YN
+		  FROM GA01N305	T1 -- RE100계약관리
+		     , AT05C010 T2 -- 거래처 
+		 WHERE T1.CNRT_MT_NO = #{cnrtMtNo}
+		   AND T2.DELP_CD  (+)= T1.DELP_CD
+		   
+	</select>	
+	
+	<select id="selectGA01N305PKNew" parameterType="com.miraeasset.biz.ga.sm.vo.GASM1000U0In01VO" resultType="com.miraeasset.biz.ga.sm.vo.GASM1000U0Out02VO">
+		/* GASM1000U0.selectGA01N305PKNew = RE100 상세조회(PK)-NUMBER */
+
+		SELECT 
+		       T1.CNRT_MT_NO 
+		     , T1.DELP_CD
+		     , T2.DELP_NM
+		     , T1.CNTC_MTHD_CN 
+		     , ESG_CNTC_CAPA AS CNTC_CAPA
+			 , T1.CNTC_BPR
+		     , T1.CNTC_STRT_DT
+		     , T1.CNTC_END_DT
+		     , T1.NTE_CN
+		     , T1.DEL_YN
+		  FROM GA01N305	T1 -- RE100계약관리
+		     , AT05C010 T2 -- 거래처 
+		 WHERE T1.CNRT_MT_NO = #{cnrtMtNo}
+		   AND T2.DELP_CD  (+)= T1.DELP_CD
+		   
+	</select>	
+	
+	<select id="selectAllCapa" resultType="BigDecimal">
+		/* GASM1000U0.selectAllCapa = RE100 전력계약용량 */
+
+		SELECT 
+		       NVL(SUM(ESG_CNTC_CAPA),0) AS ALL_CNTC_CAPA
+		  FROM GA01N305	T1 -- RE100계약관리
+		 WHERE TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN T1.CNTC_STRT_DT AND T1.CNTC_END_DT  
+		   AND DEL_YN = '0'
+	</select>		
+	
+	<insert id="insertGA01N305" parameterType="com.miraeasset.biz.common.meta.vo.GA01N305VO" >
+		/* GASM1000U0.insertGA01N305 = RE100계약관리 신규등록 */	
+			INSERT INTO GA01N305	-- RE100계약관리
+			( 
+			  CNRT_MT_NO       /*계약서관리번호 */
+			, DELP_CD          /*거래처코드  */
+			, ESG_CNTC_CAPA    /*계약용량    */
+			, CNTC_MTHD_CN     /*계약방법내용*/
+			, CNTC_BPR         /*계약기준가  */
+			, CNTC_STRT_DT     /*계약시작일자*/
+			, CNTC_END_DT      /*계약종료일자*/
+			, NTE_CN           /*비고내용    */
+			, DEL_YN           /*삭제여부    */
+			, OPTR_ID          /*조작자ID    */
+			, OPRT_CHNL_CD     /*조작채널코드*/
+			, OPRT_ORZ_CD      /*조작조직코드*/
+			, OPRT_IP_ADR      /*조작IP주소  */
+			, OPRT_DTTM	       /*조작일시    */
+			)
+			VALUES
+			(
+			  #{cnrtMtNo   }   /*계약서관리번호*/ 
+			, #{delpCd     }   /*거래처코드  */
+			, #{cntcCapa   }   /*계약용량    */
+			, #{cntcMthdCn }   /*계약방법내용*/
+			, #{cntcBpr    }   /*계약기준가  */
+			, #{cntcStrtDt }   /*계약시작일자*/
+			, #{cntcEndDt  }   /*계약종료일자*/
+			, #{nteCn      }   /*비고내용    */
+			, #{delYn      }   /*삭제여부    */
+			, #{optrId     }   /*조작자ID    */
+			, #{oprtChnlCd }   /*조작채널코드*/
+			, #{oprtOrzCd  }   /*조작조직코드*/
+			, #{oprtIpAdr  }   /*조작IP주소  */
+			, SYSDATE          /*조작일시    */
+			)
+	</insert>	
+	
+	<update id="updateGA01N305" parameterType="com.miraeasset.biz.common.meta.vo.GA01N305VO" >
+		/* GASM1000U0.updateGA01N305 = RE100계약관리 수정(PK) */	
+	
+			UPDATE GA01N305	-- RE100계약관리
+			   SET ESG_CNTC_CAPA = #{cntcCapa   }   /*계약용량    */    
+			     , CNTC_MTHD_CN  = #{cntcMthdCn }   /*계약방법내용*/    
+			     , CNTC_BPR      = #{cntcBpr    }   /*계약기준가  */    
+			     , CNTC_STRT_DT  = #{cntcStrtDt }   /*계약시작일자*/    
+			     , CNTC_END_DT   = #{cntcEndDt  }   /*계약종료일자*/    
+			     , NTE_CN        = #{nteCn      }   /*비고내용  */    
+			     , DELP_CD       = #{delpCd     }   /*거래처코드 */    
+			     , OPTR_ID       = #{optrId     } 
+			     , OPRT_CHNL_CD  = #{oprtChnlCd } 
+			     , OPRT_ORZ_CD   = #{oprtOrzCd  } 
+			     , OPRT_IP_ADR   = #{oprtIpAdr  } 
+			     , OPRT_DTTM     = SYSDATE			     
+			 WHERE CNRT_MT_NO    = #{cnrtMtNo   }   /*계약서관리번호*/    
+   
+	</update>		
+	
+	<update id="updateDelGA01N305" parameterType="com.miraeasset.biz.common.meta.vo.GA01N305VO" >
+		/* GASM1000U0.updateDelGA01N305 = RE100계약관리 삭제 */	
+	
+			UPDATE GA01N305	-- RE100계약관리
+			   SET DEL_YN        = #{delYn      }   /*삭제여부    */    
+			     , OPTR_ID       = #{optrId     } 
+			     , OPRT_CHNL_CD  = #{oprtChnlCd } 
+			     , OPRT_ORZ_CD   = #{oprtOrzCd  } 
+			     , OPRT_IP_ADR   = #{oprtIpAdr  } 
+			     , OPRT_DTTM     = SYSDATE					   
+			 WHERE CNRT_MT_NO    = #{cnrtMtNo   }   /*계약서관리번호*/       
+   
+	</update>		
+				
+</mapper>

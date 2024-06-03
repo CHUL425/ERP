@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="budget_5320_mapper">
+
+	<select id="selectList00AT05N129" parameterType="com.miraeasset.biz.budget.vo.BGT5320In00VO" resultType="com.miraeasset.biz.budget.vo.BGT53200Out00VO">
+		/* ATBS5320V0.selectList00AT05N129 : 예산팀점별 예실대비표조회 */
+		SELECT BDGT_ACSJ_CD                                                AS BDGT_ACSJ_CD     /* 예산계정과목코드 */
+				, BDGT_ACSJ_CD_NM                                             AS BDGT_ACSJ_CD_NM  /* 예산계정과목코드명 */
+				, BDGT_CTRL_YN                                                AS BDGT_CTRL_YN     /* 예산통제여부 */
+				, BDGT_FMTN_A                                                 AS BDGT_FMTN_A      /* 예산편성금액 */
+				, BSS_ASN_A                                                   AS BAS_ASSN_P       /* 기초배정금액 */
+				, ADJT_A                                                      AS ADJT_A           /* 조정금액 */
+				, ONLY_A                                                      AS ONLY_A           /* 전용금액 */
+				, AD_ASN_A                                                    AS AD_ASN_A         /* 추가배정금액 */
+				, BDGT_CUTB_A                                                 AS BDGT_CUTB_A      /* 예산삭감금액 */
+				, VAN_P                                                       AS VAN_P            /* 조기금액 */
+				, TRNS_P                                                      AS TRNS_P           /* 이월금액 */
+				, ALT_A                                                       AS ALT_A            /* 대체금액 */
+				, BSS_ASN_A + ADJT_A                                          AS ADJT_BGT_P       /* 조정예산금액 */
+				, RSLN_RSTS_A                                                 AS RSLN_RSTS_A      /* 결의실적금액 */
+				, RSLN_APV_A                                                  AS RSLN_APV_A       /* 결의승인금액 */
+				, BSS_ASN_A + ADJT_A - RSLN_RSTS_A                            AS DCS_RMP          /* 결의잔액 */
+				, BSS_ASN_A + ADJT_A - RSLN_APV_A                             AS ADMS_RMP         /* 승인잔액 */
+				, NVL(ROUND(RSLN_RSTS_A / NULLIF(BSS_ASN_A + ADJT_A,0) * 100,2),0)   AS DCS_EXER         /* 결의집행율 */
+				, NVL(ROUND(RSLN_APV_A / NULLIF(BSS_ASN_A + ADJT_A,0) * 100,2),0)    AS ADMS_EXER        /* 승인집행율 */
+				, NVL(ROUND(RSLN_APV_A / NULLIF(BDGT_FMTN_A,0) * 100,2),0)           AS FMTN_ADMS_EXER   /* 편성대비승인집행율 */
+				, NVL(ROUND(RSLN_APV_A / NULLIF(BSS_ASN_A  ,0) * 100,2),0)           AS ANS_ADMS_EXER    /* 배정대비승인집행율 */
+				FROM (
+				SELECT A.BDGT_ACSJ_CD                                                                  AS BDGT_ACSJ_CD     /* 예산계정과목코드 */
+				, A.BDGT_ACSJ_CD_NM                                                               AS BDGT_ACSJ_CD_NM  /* 예산계정과목코드명 */
+				, A.BDGT_CTRL_YN                                                                  AS BDGT_CTRL_YN     /* 예산통제여부 */
+				, NVL(SUM(B.BDGT_FMTN_A),0)                                                       AS BDGT_FMTN_A      /* 예산편성금액 */
+				, NVL(SUM(B.BSS_ASN_A),0)                                                         AS BSS_ASN_A        /* 기초배정금액 */
+				, SUM(NVL(B.ERLR_INA     ,0) + NVL(B.CROV_INA   ,0) + NVL(B.ONLY_INA ,0)
+				+ NVL(B.ALT_INA      ,0) + NVL(B.AD_ASN_A   ,0)
+				- NVL(B.ERLR_DCRA    ,0) - NVL(B.CROV_DCRA  ,0) - NVL(B.ONLY_DCRA,0)
+				- NVL(B.ALT_DCRA     ,0) - NVL(B.BDGT_CUTB_A,0))                              AS ADJT_A           /* 조정금액 */
+				, SUM(NVL(B.ONLY_INA     ,0) - NVL(B.ONLY_DCRA  ,0))                              AS ONLY_A           /* 전용금액 */
+				, SUM(NVL(B.AD_ASN_A     ,0))                                                     AS AD_ASN_A         /* 추가배정금액 */
+				, SUM(NVL(B.BDGT_CUTB_A  ,0))                                                     AS BDGT_CUTB_A      /* 예산삭감금액 */
+				, SUM(NVL(B.ERLR_INA     ,0) - NVL(B.ERLR_DCRA,0))                                AS VAN_P            /* 조기금액 */
+				, SUM(NVL(B.CROV_INA     ,0) - NVL(B.CROV_DCRA,0))                                AS TRNS_P           /* 이월금액 */
+				, SUM(NVL(B.ALT_INA      ,0) - NVL(B.ALT_DCRA ,0))                                AS ALT_A            /* 대체금액 */
+				, NVL(SUM(B.RSLN_RSTS_A) ,0)                                                      AS RSLN_RSTS_A      /* 결의실적금액 */
+				, NVL(SUM(B.RSLN_APV_A)  ,0)                                                      AS RSLN_APV_A       /* 결의승인금액 */
+				FROM AT05C001 A /* 예산계정과목코드 */
+				   , AT05N129 B /* 예산대장 */
+				WHERE A.BDGT_ACSJ_CD = B.BDGT_ACSJ_CD
+				AND A.BDGT_TCD     = '01' /* 경비예산 */
+				AND B.BDGT_ORZ_CD IN (
+				SELECT ACTG_ORZ_CD
+				FROM AT09N111 /* 회계팀점코드 */
+				WHERE CO_CD = '005'   /* 회사코드 */
+				CONNECT BY PRIOR ACTG_ORZ_CD = HRK_ORZ_CD
+				START WITH ACTG_ORZ_CD = #{bdgtOrzCd}
+				)
+				AND B.SESN_TCD  = #{sesnTcd}
+				<if test='qryTp == "1"'>/* 년월조회 */
+					<if test='bdgtYm != null and bdgtYm != ""'>
+						<if test='accmYn == "0"'>
+							AND B.BDGT_YM = #{bdgtYm}  /* 예산년월 */
+						</if>
+						<if test='accmYn == "1"'>
+							AND B.BDGT_YM BETWEEN SUBSTR(#{bdgtYm},1,4) || '01' AND #{bdgtYm}    /* 예산년월 */
+						</if>
+					</if>
+				</if>
+				<if test='qryTp == "2"'>/* 기간조회 */
+					AND B.BDGT_YM BETWEEN #{bdgtYmFr} || '01' AND #{bdgtYmTo}    /* 예산년월 */
+				</if>
+				AND (  NVL(B.BSS_ASN_A  ,0) != 0 OR NVL(B.ERLR_INA   ,0) != 0 OR NVL(B.CROV_INA  ,0) != 0
+				OR NVL(B.ONLY_INA   ,0) != 0 OR NVL(B.ALT_INA    ,0) != 0
+				OR NVL(B.AD_ASN_A   ,0) != 0 OR NVL(B.ERLR_DCRA  ,0) != 0 OR NVL(B.CROV_DCRA ,0) != 0
+				OR NVL(B.ONLY_DCRA  ,0) != 0 OR NVL(B.ALT_DCRA   ,0) != 0
+				OR NVL(B.BDGT_CUTB_A,0) != 0 OR NVL(B.RSLN_RSTS_A,0) != 0 OR NVL(B.RSLN_APV_A,0) != 0 OR NVL(B.BDGT_FMTN_A,0) != 0
+				)
+				GROUP BY A.BDGT_ACSJ_CD, A.BDGT_ACSJ_CD_NM, A.BDGT_CTRL_YN
+				) A
+				ORDER BY BDGT_ACSJ_CD
+	</select>
+
+
+</mapper>
+
+

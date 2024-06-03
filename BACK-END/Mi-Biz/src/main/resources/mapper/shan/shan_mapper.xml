@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="shan_mapper">
+
+	<select id="selectShanCfmtList" parameterType="com.miraeasset.biz.sh.an.vo.SHAN3000U0In00VO" resultType="com.miraeasset.biz.sh.an.vo.SHAN3000U0Out00VO">
+		/* SHAN3000U0.selectShanCfmtList = 안전보건공지 확인 전체조회 */
+	    SELECT A.MADE_DT
+			 , A.SRNO
+			 , A.CMKL_TCD
+	         , A.TTL_NM
+	         , A.PSTUP_STRT_DT
+	         , A.PSTUP_END_DT
+	         , (CASE WHEN B.CFMT_YN='1' THEN 'Y' ELSE '' END) AS CFMT_YN
+	         , B.CFMT_DT
+	      FROM GA09N421 A
+	      LEFT OUTER JOIN GA09N422 B 
+	                   ON A.MADE_DT = B.MADE_DT
+	                  AND A.SRNO = B.SRNO
+	                  AND A.CMKL_TCD = B.CMKL_TCD
+	                  AND B.CFMT_EPNO = #{epno}
+	     WHERE A.CMKL_TCD = #{cmklTcd}
+	       AND A.DEL_YN = '0'
+	       AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN A.PSTUP_STRT_DT AND A.PSTUP_END_DT
+	       AND A.TTL_NM LIKE '%'||#{ttlNm}||'%' 
+	       AND EXISTS ( SELECT 1 
+	                      FROM CB01N310
+	                     WHERE EPNO = #{epno}
+	                       AND HR_OSDT_CD IN (select CMN_CD_VL from GA09C302 WHERE CD_KND_NO = 'SH_AN_OSDT_CD')
+	                       AND HR_HLDO_CD = 'A'   /* 관리자*/
+						   AND EP_IDFY_TCD  IN ('01','02') /* 직원, 20240503 임시직원코드추가 */
+						 UNION 
+						SELECT 1 
+						  FROM CB01N312
+						 WHERE EPNO = #{epno}
+						   AND ADJB_REGI_DT <![CDATA[ <= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+						   AND ADJB_END_DT  <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+						   AND ADJB_HR_OSDT_CD IN (select CMN_CD_VL from GA09C302 WHERE CD_KND_NO = 'SH_AN_OSDT_CD')
+	                  )
+	     ORDER BY A.SRNO DESC
+	</select>	
+	
+	<select id="selectShanCfmtDlCn" parameterType="com.miraeasset.biz.sh.an.vo.SHAN3000U0In01VO" resultType="com.miraeasset.biz.sh.an.vo.SHAN3000U0Out01VO">
+		/* SHAN3000U0.selectShanCfmtDlCn = 안전보건공지 확인 상세조회(확인용) */
+	    SELECT A.MADE_DT
+			 , A.SRNO
+			 , A.CMKL_TCD
+	         , A.TTL_NM
+	         , A.CMKL_PTCR_CN
+	         , A.FILE_NO
+	         , A.BLBD_IMG_FILE_NO
+	         , A.MADE_EPNO
+             , E.EP_NM AS MADE_EPNM
+	      FROM GA09N421 A
+	      LEFT OUTER JOIN CB01N310 E ON A.MADE_EPNO=E.EPNO
+	     WHERE A.MADE_DT  = #{madeDt}
+	       AND A.SRNO     = #{srno}
+	       AND A.CMKL_TCD = #{cmklTcd}
+	       AND A.DEL_YN = '0'
+	       <if test='epno != null and epno != ""' >
+	       /* epno 입력시  안전보건공지_확인 화면용*/
+	       /* epno 미입력시 안전보건공지_상세 화면용*/
+	       AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN A.PSTUP_STRT_DT AND A.PSTUP_END_DT
+	       </if>
+	</select>	
+	
+	<insert id="insertShanCfmtDlCn" parameterType="com.miraeasset.biz.sh.an.vo.SHAN3000U0In02VO" >
+		/* SHAN3000U0.insertShanCfmtDlCn = 안전보건공지 확인처리 */	
+		INSERT INTO GA09N422
+		    ( MADE_DT
+			, SRNO
+			, CMKL_TCD
+			, CFMT_YN
+			, CFMT_EPNO
+			, CFMT_DT
+			, OPTR_ID
+			, OPRT_CHNL_CD
+			, OPRT_ORZ_CD
+			, OPRT_IP_ADR
+			, OPRT_DTTM
+		   )
+		   VALUES 
+		   (                                                                                                  
+			  #{madeDt          }
+			, #{srno            }
+			, #{cmklTcd         }
+			, #{cfmtYn          } 
+			, #{cfmtEpno} 
+			, TO_CHAR(SYSDATE, 'YYYYMMDD') 
+			, #{optrId          }    
+			, #{oprtChnlCd      }    
+			, #{oprtOrzCd       }    
+			, #{oprtIpAdr       }    
+			, SYSDATE                
+			) 
+	</insert>
+	
+	<update id="insertGA09N421Sh" parameterType="com.miraeasset.biz.common.meta.vo.GA09N421VO" >
+		/* SHAN1000U0.insertGA09N421Sh = 공지 신규등록 */	
+			INSERT INTO GA09N421 
+			( MADE_DT            
+			, SRNO               
+			, CMKL_TCD           
+			, PSTG_FXD_YN        
+			, MADE_EPNO          
+			, TTL_NM             
+			, CMKL_PTCR_CN       
+			, PSTUP_STRT_DT      
+			, PSTUP_END_DT       
+			, FILE_NO            
+			, BLBD_IMG_FILE_NO   
+			, QRY_CNT            
+			, DEL_YN             
+			, OPTR_ID            
+			, OPRT_CHNL_CD       
+			, OPRT_ORZ_CD        
+			, OPRT_IP_ADR        
+			, OPRT_DTTM          
+			)                      
+			VALUES 
+			(                                                                                                  
+			  #{madeDt          }    
+			, #{srno            }    
+			, #{cmklTcd         }    
+			, #{pstgFxdYn       }    
+			, #{madeEpno        }    
+			, #{ttlNm           }    
+			, #{cmklPtcrCn      }    
+			, #{pstupStrtDt     }    
+			, #{pstupEndDt      }    
+			, #{fileNo          }    
+			, #{blbdImgFileNo   } 
+			, #{qryCnt          }    
+			, #{delYn           }    
+			, #{optrId          }    
+			, #{oprtChnlCd      }    
+			, #{oprtOrzCd       }    
+			, #{oprtIpAdr       }    
+			, SYSDATE                
+			)
+	</update>
+	
+	<sql id="selectShanPsttList_WITH">
+		WITH TAB1 AS (
+	        SELECT *
+	         FROM (
+	            SELECT ROWNUM AS RNUM
+	                , MAX(ROWNUM) OVER ()  AS MAXROW
+	                , COL_NM, COL_VAL
+	             FROM (
+	                    SELECT  HR_LEVL1_ORZ_CD
+	                          , HR_LEVL2_ORZ_CD
+	                          , HR_LEVL3_ORZ_CD 
+	                          , HR_LEVL4_ORZ_CD 
+	                          , HR_LEVL5_ORZ_CD
+	                          , HR_LEVL6_ORZ_CD
+	                          , HR_LEVL7_ORZ_CD
+	                          , HR_LEVL8_ORZ_CD
+	                          , HR_LEVL9_ORZ_CD
+	                    FROM INNOV2.CB01N112  
+	                    WHERE HR_NEW_ORZ_CD = (SELECT NVL(HR_ORZ_CD,HR_NEW_ORZ_CD)  AS HR_ORZ_CD
+                                                FROM CB01N310 
+                                               WHERE EPNO = (SELECT ORZ_RPTV_EPNO FROM CB01N210 WHERE ORZ_CD=#{cfmtEpBlngOrzCd})
+                                              )   
+	                      AND LKOU_DT>TO_CHAR(SYSDATE, 'YYYYMMDD')  
+	              ) 
+	              UNPIVOT 
+	              (
+	              COL_VAL FOR COL_NM IN (HR_LEVL1_ORZ_CD,HR_LEVL2_ORZ_CD,HR_LEVL3_ORZ_CD,HR_LEVL4_ORZ_CD,HR_LEVL5_ORZ_CD,HR_LEVL6_ORZ_CD,HR_LEVL7_ORZ_CD,HR_LEVL8_ORZ_CD,HR_LEVL9_ORZ_CD)
+	              )
+	           )  
+	          WHERE RNUM = MAXROW
+          )
+          , TAB2 AS (
+                SELECT DISTINCT A.ORZ_CD 
+                FROM INNOV2.CB01N112 A
+                   , TAB1 B
+                WHERE ( B.RNUM = 1 AND A.HR_LEVL1_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 2 AND A.HR_LEVL2_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 3 AND A.HR_LEVL3_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 4 AND A.HR_LEVL4_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 5 AND A.HR_LEVL5_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 6 AND A.HR_LEVL6_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 7 AND A.HR_LEVL7_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 8 AND A.HR_LEVL8_ORZ_CD = B.COL_VAL
+                     OR B.RNUM = 9 AND A.HR_LEVL9_ORZ_CD = B.COL_VAL
+                     )
+                 AND LKOU_DT>TO_CHAR(SYSDATE, 'YYYYMMDD')
+         )
+	</sql>
+	
+	<sql id="selectShanPsttList_SELECT">
+		SELECT 
+	          A.MADE_DT
+	        , A.SRNO
+	        , A.CMKL_TCD
+	        , A.TTL_NM
+	        , B.ORZ_CD
+	        , B.ORZ_NM
+	        , B.HR_OSDT_CD
+	        , B.HR_OSDT_NM
+	        , B.EPNO  AS CFMT_EPNO
+	        , B.EP_NM AS CFMT_EPNM
+	        , C.CFMT_DT
+	        , DECODE(C.CFMT_YN,'1','Y','') AS CFMT_YN
+	    FROM (SELECT 'A' AS DIV
+	                , A.MADE_DT
+	                , A.SRNO
+	                , A.CMKL_TCD
+	                , A.TTL_NM
+	             FROM GA09N421 A 
+	            WHERE A.CMKL_TCD = #{cmklTcd}
+	              AND A.DEL_YN = '0'
+	          ) A  /*A.안전공지 전체건*/
+	    LEFT OUTER JOIN (
+	                SELECT DISTINCT 'A' AS DIV
+	                     , A.EPNO
+	                     , A.EP_NM
+                         , NVL(B.CMN_CD_VL, H.CMN_CD_VL) AS HR_OSDT_CD
+                         , (CASE WHEN B.CMN_CD_VL IS NOT NULL THEN C.CD_STD_NM ELSE I.CD_STD_NM END) AS HR_OSDT_NM
+                         , (CASE WHEN B.CMN_CD_VL IS NOT NULL THEN D.ORZ_CD    ELSE J.ORZ_CD    END) AS ORZ_CD
+                         , (CASE WHEN B.CMN_CD_VL IS NOT NULL THEN D.ORZ_NM    ELSE J.ORZ_NM    END) AS ORZ_NM
+	                FROM  CB01N310 A      
+	                LEFT OUTER JOIN GA09C302 B ON B.CD_KND_NO = 'SH_AN_OSDT_CD' AND A.HR_OSDT_CD = B.CMN_CD_VL
+	                LEFT OUTER JOIN CB01C111 C ON A.HR_OSDT_CD = C.HR_CMN_CD AND C.HR_CMN_CD_KND_NO='HRM_007' 
+	                LEFT OUTER JOIN CB01N210 D ON A.BLNG_ORZ_CD = D.ORZ_CD AND D.ORZ_USE_YN = '1'
+	                LEFT OUTER JOIN CB01N312 G
+                                 ON G.EPNO = A.EPNO
+                                AND G.ADJB_REGI_DT <![CDATA[ <= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+                                AND G.ADJB_END_DT  <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+                    LEFT OUTER JOIN GA09C302 H
+                                 ON H.CD_KND_NO = 'SH_AN_OSDT_CD' 
+                                AND H.CMN_CD_VL = G.ADJB_HR_OSDT_CD
+                    LEFT OUTER JOIN CB01C111 I ON G.ADJB_HR_OSDT_CD = I.HR_CMN_CD AND I.HR_CMN_CD_KND_NO='HRM_007' 
+	                LEFT OUTER JOIN CB01N210 J ON G.ORZ_CD = J.ORZ_CD AND J.ORZ_USE_YN = '1'
+	                WHERE A.HR_HLDO_CD = 'A'   /* 관리자*/
+	                  AND A.EP_IDFY_TCD  IN ('01','02') /* 직원 , 20240503 임시사원 02추가*/
+	                  AND (B.CMN_CD_VL IS NOT NULL OR H.CMN_CD_VL IS NOT NULL) /* 겸직 */
+	                  
+	                  <if test=' cfmtEpBlngOrzCd !=null and cfmtEpBlngOrzCd != "" '>
+	                  AND (CASE WHEN B.CMN_CD_VL IS NOT NULL THEN D.ORZ_CD ELSE J.ORZ_CD END) IN (SELECT ORZ_CD FROM TAB2) 
+	                  </if>
+	                  
+	          ) B /* B.대상 직책코드 전체건 */
+	          ON A.DIV = B.DIV 
+	      LEFT OUTER JOIN GA09N422 C /* C.확인내역 */
+	           ON A.MADE_DT = C.MADE_DT AND A.SRNO = C.SRNO AND A.CMKL_TCD = C.CMKL_TCD AND B.EPNO=C.CFMT_EPNO
+		  WHERE 1=1
+		  
+	       <if test='ttlNm != null and ttlNm != ""' >
+	       AND A.TTL_NM LIKE '%'|| #{ttlNm} ||'%'
+	       </if>
+	       
+	       <if test='cfmtEpno != null and cfmtEpno != ""' >
+	       AND B.EPNO = #{cfmtEpno}
+	       </if>
+	       
+	</sql>
+	
+	<select id="selectShanPsttList_CNT" parameterType="com.miraeasset.biz.sh.an.vo.SHAN2000U0In00VO" resultType="com.miraeasset.biz.sh.an.vo.SHAN2000U0Out00VO">
+		/* SHAN2000U0.selectShanPsttList = 안전보건공지 현황 조회(전체건수) */
+			
+			<if test=' cfmtEpBlngOrzCd !=null and cfmtEpBlngOrzCd != "" '>
+				<include refid="selectShanPsttList_WITH" />
+			</if>
+		
+			SELECT COUNT(*) AS TOT_CNT 
+			  FROM( <include refid="selectShanPsttList_SELECT" /> )
+			WHERE 1=1
+			 
+			 <if test='cfmtYn != null and cfmtYn != "" and cfmtYn=="1" ' >
+	         AND CFMT_YN = 'Y'
+	         </if>
+	         <if test='cfmtYn != null and cfmtYn != "" and cfmtYn=="0" ' >
+	         AND CFMT_YN IS NULL
+	         </if>
+	         
+	</select>
+	
+	
+	<select id="selectShanPsttList" parameterType="com.miraeasset.biz.sh.an.vo.SHAN2000U0In00VO" resultType="com.miraeasset.biz.sh.an.vo.SHAN2000U0Out00VO">
+		/* SHAN2000U0.selectShanPsttList = 안전보건공지 현황 조회 */
+			
+			<if test=' cfmtEpBlngOrzCd !=null and cfmtEpBlngOrzCd != "" '>
+				<include refid="selectShanPsttList_WITH" />
+			</if>
+		
+			SELECT #{totCnt} AS TOT_CNT 
+		         , A.*
+		     FROM ( <include refid="selectShanPsttList_SELECT" /> ) A
+		    WHERE 1=1
+		    
+		     <if test='cfmtYn != null and cfmtYn != "" and cfmtYn=="1" ' >
+	         AND CFMT_YN = 'Y'
+	         </if>
+	         <if test='cfmtYn != null and cfmtYn != "" and cfmtYn=="0" ' >
+	         AND CFMT_YN IS NULL
+	         </if>
+	        
+	        ORDER BY A.SRNO DESC ,A.ORZ_CD ,A.CFMT_EPNO 
+	        OFFSET ( #{pageNum} - 1 ) * #{pageSize}  ROW FETCH NEXT #{pageSize} ROWS ONLY 
+	</select>
+	
+	<select id="selectListGA09N421Sh" parameterType="com.miraeasset.biz.sh.an.vo.SHAN1000U0In01VO" resultType="com.miraeasset.biz.sh.an.vo.SHAN1000U0Out01VO">
+		/* SHAN1000U0.selectListGA09N421Sh = 안전보건공지 조회 */
+		SELECT T1.MADE_DT
+		     , T1.SRNO
+		     , T1.CMKL_TCD
+			 , T1.TTL_NM
+		     , T1.PSTUP_STRT_DT
+		     , T1.PSTUP_END_DT
+		     , T1.MADE_EPNO
+		     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.MADE_EPNO AND ROWNUM = 1) AS MADE_EP_NM   
+		     , NVL(T1.QRY_CNT,0) AS QRY_CNT
+		 FROM GA09N421	T1 -- 공지사항
+		WHERE 1=1
+		  AND T1.TTL_NM   LIKE '%' || TRIM( #{ttlNm}  )  || '%' /* 제목명 */  
+		  AND T1.MADE_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}   /* 조회기간*/
+		  AND T1.CMKL_TCD = TRIM( #{cmklTcd} )                  /*공지구분코드*/ 
+		  AND T1.DEL_YN = '0'
+		ORDER BY T1.MADE_DT DESC, T1.SRNO DESC   
+		OFFSET ( #{pageNum} - 1 ) * #{pageSize}  ROW FETCH NEXT #{pageSize} ROWS ONLY
+	
+	</select>
+	
+	<select id="selectShanCfmtHst" parameterType="com.miraeasset.biz.sh.an.vo.SHAN3000U0In01VO" resultType="com.miraeasset.biz.sh.an.vo.SHAN1000U0Out02VO">
+		/* SHAN1000U0.selectShanCfmtHst = 확인이력존재여부 조회 */
+		SELECT MADE_DT,SRNO,CMKL_TCD
+		     , (CASE WHEN CNT>0 THEN 'Y' ELSE 'N' END) AS CFMT_HST_XIST_YN 
+		  FROM (
+				SELECT A.MADE_DT, A.SRNO, A.CMKL_TCD, COUNT(B.SRNO) AS CNT 
+				  FROM GA09N421 A
+				  LEFT OUTER JOIN GA09N422 B 
+                    ON A.MADE_DT = B.MADE_DT AND A.SRNO = B.SRNO AND A.CMKL_TCD = B.CMKL_TCD
+				 WHERE A.MADE_DT  = #{madeDt}
+				   AND A.SRNO     = #{srno}
+				   AND A.CMKL_TCD = #{cmklTcd}
+				GROUP BY A.MADE_DT, A.SRNO, A.CMKL_TCD
+				)
+	</select>
+	
+	<select id="selectShanInitPopup" parameterType="String" resultType="com.miraeasset.biz.sh.an.vo.SHAN1000U0Out03VO" >
+		/* SHAN1000U0.selectShanInitPopup = 안전보건공지 초기화면 팝업조회 */
+	    SELECT A.MADE_DT
+			 , A.SRNO
+			 , A.CMKL_TCD
+	         , A.TTL_NM
+	         , A.CMKL_PTCR_CN
+	         , A.PSTUP_STRT_DT
+	         , A.PSTUP_END_DT
+	         , C.ORZ_CD 
+	         , C.ORZ_NM 
+	      FROM GA09N421 A
+	      LEFT OUTER JOIN CB01N310 B ON B.EPNO=A.MADE_EPNO
+	      LEFT OUTER JOIN CB01N210 C ON B.BLNG_ORZ_CD = C.ORZ_CD
+          LEFT OUTER JOIN GA09N422 D 
+               ON A.MADE_DT = D.MADE_DT
+              AND A.SRNO = D.SRNO
+              AND A.CMKL_TCD = D.CMKL_TCD
+              AND D.CFMT_EPNO = #{epno}
+              LEFT OUTER JOIN CB01N310 E ON E.EPNO=#{epno}
+	      LEFT OUTER JOIN GA09C302 F 
+	           ON F.CD_KND_NO = 'SH_AN_OSDT_CD' 
+	          AND F.CMN_CD_VL = E.HR_OSDT_CD
+	      LEFT OUTER JOIN CB01N312 G
+	           ON G.EPNO = #{epno}
+	          AND G.ADJB_REGI_DT <![CDATA[ <= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+	          AND G.ADJB_END_DT  <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+	      LEFT OUTER JOIN GA09C302 H
+	           ON H.CD_KND_NO = 'SH_AN_OSDT_CD' 
+	          AND H.CMN_CD_VL = G.ADJB_HR_OSDT_CD
+	     WHERE A.DEL_YN = '0'
+	       AND A.CMKL_TCD = '03'
+	       AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN A.PSTUP_STRT_DT AND A.PSTUP_END_DT
+           AND D.SRNO IS NULL 
+           AND (F.CMN_CD_VL IS NOT NULL OR H.CMN_CD_VL IS NOT NULL)
+	       AND ROWNUM=1
+	</select>
+	
+</mapper>

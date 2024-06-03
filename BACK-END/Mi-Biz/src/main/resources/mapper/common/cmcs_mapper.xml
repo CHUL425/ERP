@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cmcs_mapper">
+	<select id="selectList00AT08N100" parameterType="com.miraeasset.biz.common.cm.cs.vo.CMCS1000V0In00VO" resultType="com.miraeasset.biz.common.cm.cs.vo.CMCS1000V0Out00VO">
+		/* CMCS1000V0.selectList00AT08N100 : 계약번호팝업리스트조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT T1.LS_CNTC_NO            /* 계약번호 */
+	             , T1.LS_CNTC_ADTN_SRNO     /* 계약부가번호 */
+	             , T1.CNTC_NM               /* 계약명 */
+	             , T1.ORZ_CD
+	             , (SELECT PRC_ORZ_NM FROM AT09N111 WHERE ACTG_ORZ_CD (+) = T1.ORZ_CD AND CO_CD (+) = '005' ) AS ORZ_NM
+	             , T1.CNTC_TCD
+	             , (SELECT CMN_CD_VL_DEF_CN  FROM AT09C302 WHERE CD_KND_NO(+) = 'CNTC_TCD' AND CMN_CD_VL(+) = T1.CNTC_TCD ) AS CNTC_TCD_NM
+	             , T1.USE_RGT_AST_TCD
+	             , (SELECT CMN_CD_VL_DEF_CN  FROM AT09C302 WHERE CD_KND_NO(+) = 'USE_RGT_AST_TCD' AND CMN_CD_VL(+) = T1.USE_RGT_AST_TCD ) AS USE_RGT_AST_TCD_NM
+	             , (SELECT CMN_CD_VL_DEF_CN  FROM AT09C302 WHERE CD_KND_NO(+) = 'APRV_SCD' AND CMN_CD_VL(+) = T1.APRV_SCD ) AS APRV_SCD_NM
+	             , T1.LST_CNTC_YN
+	             , T1.APRV_WRRPT_NO
+	             , T1.APRV_WRRPT_ORZ_CD
+	             , T1.APRV_SCD
+	             , T2.DRFT_DOC_NO AS DRFT_DOC_NO
+	             , CASE WHEN LENGTH(TRIM(T2.DRFT_DOC_NO)) > 0 THEN '[' || T2.DOC_NO_NM ||'] ' || T2.DRFT_DOC_TTL_NM ELSE '' END AS DRFT_DOC_NM
+	             , T1.CNTC_CCLC_TCD
+	             , (SELECT CMN_CD_VL_DEF_CN  FROM AT09C302 WHERE CD_KND_NO(+) = 'CNTC_CCLC_TCD' AND CMN_CD_VL(+) = T1.CNTC_CCLC_TCD ) AS CNTC_CCLC_TCD_NM
+	             , T3.LESOR_NM_ECP_VL
+                 , ROWNUM RNUM
+                 , COUNT(1) OVER() AS AL_CNT
+	          FROM AT08N100 T1/* 계약관리 */
+	             , AT09N401 T2/* 기안문서 */
+	             , AT08N101 T3/* 계약관리 부동산 */
+	         WHERE 1=1
+	           AND T1.DRFT_DOC_NO = T2.DRFT_DOC_NO(+)
+	           AND T1.LS_CNTC_NO = T3.LS_CNTC_NO(+)
+               AND T1.LS_CNTC_ADTN_SRNO  = T3.LS_CNTC_ADTN_SRNO(+)
+               <if test='lsCntcNo != null and lsCntcNo != ""' >
+	           		AND T1.LS_CNTC_NO  = #{lsCntcNo, jdbcType=VARCHAR}
+	           </if>
+	           <if test='lsCntcAdtnSrno != null and lsCntcAdtnSrno != 0' >
+	           		AND T1.LS_CNTC_ADTN_SRNO = #{lsCntcAdtnSrno, jdbcType=NUMERIC}
+	           </if>
+	           <if test='orzCd != null and orzCd != "" and orzCd != "000000" ' >
+	           		AND T1.ORZ_CD IN ( SELECT ACTG_ORZ_CD
+										 FROM ( SELECT ACTG_ORZ_CD
+										             , PRC_ORZ_NM
+										             , HRK_ORZ_CD
+										          FROM AT09N114
+										         WHERE CO_CD = '005'
+										           AND REVSN_CD =( SELECT REVSN_CD
+										                             FROM AT09N113
+										                            WHERE VER_STAT_PCD = '01'
+										                              AND CO_CD  = '005'
+										                              AND '99991231' BETWEEN STRT_DT AND END_DT )
+										        )
+									  CONNECT BY HRK_ORZ_CD = PRIOR ACTG_ORZ_CD
+										START WITH ACTG_ORZ_CD = #{orzCd, jdbcType=VARCHAR}
+	                                  )
+	           </if>
+	           <if test='cntcNm != null and cntcNm != ""' >
+	           		AND T1.CNTC_NM LIKE '%' || #{cntcNm, jdbcType=VARCHAR} ||'%'
+	           </if>
+	           <if test='cntcTcd != null and cntcTcd != "" and cntcTcd != "00" ' >
+	           		AND T1.CNTC_TCD = #{cntcTcd, jdbcType=VARCHAR}
+	           </if>
+	           <if test='useRgtAstTcd != null and useRgtAstTcd != "" and useRgtAstTcd != "00" ' >
+	           		AND T1.USE_RGT_AST_TCD = #{useRgtAstTcd, jdbcType=VARCHAR}
+	           </if>
+	           <if test='lstCntcYn != null and lstCntcYn != ""' >
+               		AND T1.LST_CNTC_YN = #{lstCntcYn, jdbcType=VARCHAR}
+               </if>
+               <if test='aprvScd != null and aprvScd != ""' >
+               		AND T1.APRV_SCD = #{aprvScd, jdbcType=VARCHAR}
+               </if>
+               <if test='drftDocNo != null and drftDocNo != ""' >
+               		AND T1.DRFT_DOC_NO = #{drftDocNo, jdbcType=VARCHAR}
+               </if>
+               <if test='cntcCclcTcd != null and cntcCclcTcd != "" and cntcCclcTcd != "00" ' >
+               		AND T1.CNTC_CCLC_TCD = #{cntcCclcTcd, jdbcType=VARCHAR}
+               </if>
+               <if test='lesorNmEcpVl != null and lesorNmEcpVl != ""' >
+               		AND T3.LESOR_NM_ECP_VL = #{lesorNmEcpVl, jdbcType=VARCHAR}  /* 임대인명암호화값*/
+               </if>
+	         ORDER BY LS_CNTC_NO, LS_CNTC_ADTN_SRNO
+		     
+		    -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		
+		<if test='pageSize == null or pageSize == 0 '>
+		    ) Z 
+		    ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+		    ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+		    ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		    -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+</mapper>

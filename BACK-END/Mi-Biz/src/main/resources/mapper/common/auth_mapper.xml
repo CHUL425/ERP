@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="auth_mapper">
+
+<!--	[20231024] 삭제 테이블 주석처리-->
+<!--    <select id="selectAuth00List" parameterType="com.miraeasset.biz.common.auth.vo.Auth00In00VO" resultType="com.miraeasset.biz.common.auth.vo.Auth00Out00VO">-->
+<!--			/* Auth00.selectAuth00List : 사용자의 화면별처리가능내역조회 */-->
+<!--			SELECT NOW_WRKP_ORZ_CD-->
+<!--			     , EPNO-->
+<!--			     , SCRN_NO -->
+<!--			     , MAX(PRC_ABL_YN) AS PRC_ABL_YN-->
+<!--			     , SCRN_NM-->
+<!--			     , MENU_ID-->
+<!--			     , URL_ADR -->
+<!--			  FROM (-->
+<!--			  -->
+<!--					SELECT T1.NOW_WRKP_ORZ_CD-->
+<!--					     , T1.EPNO-->
+<!--					     , T2.USER_GRP_CD-->
+<!--					     , T3.SCRN_NO -->
+<!--					     , T3.PRC_ABL_YN-->
+<!--					     , T4.SCRN_NM-->
+<!--					     , T4.MENU_ID-->
+<!--					     , T4.URL_ADR-->
+<!--					     , T4.SCRN_OPUT_SQN-->
+<!--					  FROM CB01N310 T1 &#45;&#45; 직원-->
+<!--					     , GA09N201 T2 &#45;&#45; 사원별사용자그룹-->
+<!--					     , GA09N205 T3 &#45;&#45; 사용자그룹별화면-->
+<!--					     , GA09N204 T4 &#45;&#45; 화면-->
+<!--					 WHERE T1.EPNO = 's1213617'-->
+<!--					   AND T2.EPNO = T1.EPNO-->
+<!--					   AND T3.USER_GRP_CD = T2.USER_GRP_CD-->
+<!--					   AND T3.USE_YN = '1'-->
+<!--					   AND T4.SCRN_NO = T3.SCRN_NO-->
+<!--					   AND T4.USE_YN = '1'-->
+<!--					UNION ALL-->
+<!--					SELECT T1.NOW_WRKP_ORZ_CD-->
+<!--					     , T1.EPNO-->
+<!--					     , T2.USER_GRP_CD-->
+<!--					     , T3.SCRN_NO -->
+<!--					     , T3.PRC_ABL_YN-->
+<!--					     , T4.SCRN_NM-->
+<!--					     , T4.MENU_ID-->
+<!--					     , T4.URL_ADR-->
+<!--					     , T4.SCRN_OPUT_SQN-->
+<!--					  FROM CB01N310 T1 &#45;&#45; 직원-->
+<!--					     , GA09N202	T2 &#45;&#45; 조직별사용자그룹-->
+<!--					     , GA09N205 T3 &#45;&#45; 사용자그룹별화면-->
+<!--					     , GA09N204 T4 &#45;&#45; 화면-->
+<!--					 WHERE T1.EPNO = #{epno}-->
+<!--					   AND T2.ORZ_CD = T1.NOW_WRKP_ORZ_CD-->
+<!--					   AND T3.USER_GRP_CD = T2.USER_GRP_CD-->
+<!--					   AND T3.USE_YN = '1'-->
+<!--					   AND T4.SCRN_NO = T3.SCRN_NO-->
+<!--					   AND T4.USE_YN = '1'-->
+<!--			 	)   -->
+<!--			GROUP BY NOW_WRKP_ORZ_CD-->
+<!--			     , EPNO-->
+<!--			     , SCRN_NO -->
+<!--			     , SCRN_NM-->
+<!--			     , MENU_ID-->
+<!--			     , URL_ADR -->
+<!--    </select>-->
+
+
+    <select id="selectListGA09N200" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N200In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N200Out00VO">
+			/* Auth.selectListGA09N200 : 사용자그룹 기본조회*/
+			SELECT * FROM (
+			SELECT * FROM (		
+			
+				SELECT   
+				       ROW_NUMBER() OVER(ORDER BY T1.USER_GRP_CD, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER() AS AL_CNT                         /* 전체건수               */  
+				         
+				     , USER_GRP_CD
+				     , GRP_NM
+				     , MT_GRP_YN
+				     , OPTR_ID
+				     , OPRT_CHNL_CD
+				     , OPRT_ORZ_CD
+				     , OPRT_IP_ADR
+				     , OPRT_DTTM
+				  FROM GA09N200 T1
+				 WHERE USER_GRP_CD LIKE '%' || TRIM( #{userGrpCd} )    || '%' /* 사용자그룹코드 */
+				   AND GRP_NM      LIKE '%' || TRIM( #{grpNm} )        || '%' /* 그룹명 */
+				   AND MT_GRP_YN   LIKE '%' || TRIM( #{mtGrpYn} )      || '%' /* 관리그룹여부 */
+				 ORDER BY T1.USER_GRP_CD
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 				   
+    </select>
+
+    <select id="selectListGA09N201" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N201In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N201Out00VO">
+			/* Auth.selectListGA09N201 : 사원별사용자그룹 기본조회*/
+			SELECT * FROM (
+			SELECT * FROM (		
+			
+				SELECT   
+				       ROW_NUMBER() OVER(ORDER BY T1.EPNO, T1.USER_GRP_CD, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER() AS AL_CNT                         /* 전체건수               */  
+				         
+					, EPNO
+					, USER_GRP_CD
+					, OPTR_ID
+					, OPRT_CHNL_CD
+					, OPRT_ORZ_CD
+					, OPRT_IP_ADR
+					, OPRT_DTTM         
+				  FROM GA09N201 T1
+				 WHERE EPNO          LIKE '%' || TRIM( #{epno} )       || '%' /* 사번 */
+				   AND USER_GRP_CD   LIKE '%' || TRIM( #{userGrpCd} )  || '%' /* 사용자그룹코드 */
+				 ORDER BY T1.EPNO, T1.USER_GRP_CD
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 				   
+    </select>
+
+<!--	[20231024] 삭제 테이블 주석처리-->
+<!--    <select id="selectListGA09N202" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N202In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N202Out00VO">-->
+<!--			/* Auth.selectListGA09N202 : 조직별사용자그룹 기본조회*/-->
+<!--			SELECT * FROM (-->
+<!--			SELECT * FROM (		-->
+<!--			-->
+<!--				SELECT   -->
+<!--				       ROW_NUMBER() OVER(ORDER BY T1.ORZ_CD, T1.USER_GRP_CD, ROWNUM DESC) AS RNUM     -->
+<!--				     , COUNT(1) OVER() AS AL_CNT                         /* 전체건수               */  -->
+<!--				         -->
+<!--					, ORZ_CD-->
+<!--					, USER_GRP_CD-->
+<!--					, OPTR_ID-->
+<!--					, OPRT_CHNL_CD-->
+<!--					, OPRT_ORZ_CD-->
+<!--					, OPRT_IP_ADR-->
+<!--					, OPRT_DTTM       -->
+<!--				  FROM GA09N202 T1-->
+<!--				 WHERE ORZ_CD        LIKE '%' || TRIM( #{orzCd} )      || '%' /* 조직코드 */-->
+<!--				   AND USER_GRP_CD   LIKE '%' || TRIM( #{userGrpCd} )  || '%' /* 사용자그룹코드 */-->
+<!--				 ORDER BY T1.ORZ_CD, T1.USER_GRP_CD-->
+
+<!--			  &#45;&#45; 'PAGING START' = 'PAGEINDEX, PAGESIZE'-->
+
+<!--		<if test='pageSize == null or pageSize == 0 '>-->
+<!--			  ) Z -->
+<!--			  ) ZZ 		-->
+<!--		</if>-->
+<!--		<if test='pageSize > 0'>-->
+<!--			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )-->
+<!--			  ) ZZ WHERE RNUM > ( #{pageIndex})			 -->
+<!--		</if>		  -->
+
+<!--			  &#45;&#45; 'PAGING END' = 'PAGEINDEX, PAGESIZE' 				   -->
+<!--    </select>-->
+
+
+    <select id="selectListGA09N205" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N205In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N205Out00VO">
+			/* Auth.selectListGA09N205 : 사용자그룹별화면 기본조회*/
+			SELECT * FROM (
+			SELECT * FROM (		
+			
+				SELECT   
+				       ROW_NUMBER() OVER(ORDER BY T1.USER_GRP_CD, T1.SCRN_NO, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER() AS AL_CNT                         /* 전체건수               */  
+				         
+					, USER_GRP_CD
+					, SCRN_NO
+					, USE_YN
+					, PRC_ABL_YN
+					, AUTH_SCP_CD
+					, OPTR_ID
+					, OPRT_CHNL_CD
+					, OPRT_ORZ_CD
+					, OPRT_IP_ADR
+					, OPRT_DTTM   
+				  FROM GA09N205 T1
+				 WHERE USER_GRP_CD  LIKE '%' || TRIM( #{userGrpCd} )   || '%' /* 사용자그룹코드 */
+				   AND SCRN_NO      LIKE '%' || TRIM( #{scrnNo} )      || '%' /* 화면번호 */
+				   AND PRC_ABL_YN   LIKE '%' || TRIM( #{prcAblYn} )    || '%' /* 처리가능여부 */
+				   AND USE_YN       LIKE '%' || TRIM( #{useYn} )       || '%' /* 사용여부 */
+				 ORDER BY T1.USER_GRP_CD, T1.SCRN_NO
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 				   
+    </select>
+
+<!--	[20231024] 삭제 테이블 주석처리-->
+<!--    <select id="selectList00GA09N203" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N203In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N203Out00VO">-->
+<!--    	/* Auth.selectList00GA09N203 : 권한별 상위메뉴리스트 조회 */-->
+<!--		SELECT A.MENU_ID        /* 메뉴ID */-->
+<!--		     , A.MENU_NM        /* 메뉴명 */-->
+<!--		     , A.HRK_MENU_ID    /* 상위메뉴ID */-->
+<!--		     , A.URL_ADR        /* URL주소 */-->
+<!--		     , A.USE_YN         /* 사용여부 */-->
+<!--		     , A.SCRN_OPUT_SQN  /* 화면출력순서 */-->
+<!--		     , A.OPTR_ID        /* 조작자ID */-->
+<!--		     , A.OPRT_CHNL_CD   /* 조작채널코드 */-->
+<!--		     , A.OPRT_ORZ_CD    /* 조작조직코드 */-->
+<!--		     , A.OPRT_IP_ADR    /* 조작IP주소 */-->
+<!--		     , A.OPRT_DTTM      /* 조작일시 */-->
+<!--		  FROM GA09N203 A-->
+<!--		     , (-->
+<!--		        SELECT T5.HRK_MENU_ID-->
+<!--		          FROM CB01N310 T1 &#45;&#45; 직원-->
+<!--		             , GA09N201 T2 &#45;&#45; 사원별사용자그룹-->
+<!--		             , GA09N205 T3 &#45;&#45; 사용자그룹별화면-->
+<!--		             , GA09N204 T4 &#45;&#45; 화면-->
+<!--		             , GA09N203 T5 &#45;&#45; 메뉴-->
+<!--		         WHERE T1.EPNO = #{epno}-->
+<!--		           AND T2.EPNO = T1.EPNO-->
+<!--		           AND T3.USER_GRP_CD = T2.USER_GRP_CD-->
+<!--		           AND T3.USE_YN = '1'-->
+<!--		           AND T4.SCRN_NO = T3.SCRN_NO-->
+<!--		           AND T4.USE_YN = '1'-->
+<!--		           AND T4.MENU_ID = T5.MENU_ID-->
+<!--		         UNION -->
+<!--		        SELECT T5.HRK_MENU_ID-->
+<!--		          FROM CB01N310 T1 &#45;&#45; 직원-->
+<!--		             , GA09N202	T2 &#45;&#45; 조직별사용자그룹-->
+<!--		             , GA09N205 T3 &#45;&#45; 사용자그룹별화면-->
+<!--		             , GA09N204 T4 &#45;&#45; 화면-->
+<!--		             , GA09N203 T5 &#45;&#45; 메뉴-->
+<!--		         WHERE T1.EPNO = #{epno}-->
+<!--		           AND T2.ORZ_CD = T1.NOW_WRKP_ORZ_CD-->
+<!--		           AND T3.USER_GRP_CD = T2.USER_GRP_CD-->
+<!--		           AND T3.USE_YN = '1'-->
+<!--		           AND T4.SCRN_NO = T3.SCRN_NO-->
+<!--		           AND T4.USE_YN = '1'-->
+<!--		           AND T4.MENU_ID = T5.MENU_ID-->
+<!--		        ) B-->
+<!--		  WHERE 1=1-->
+<!--		    AND A.USE_YN = '1'-->
+<!--		    AND A.HRK_MENU_ID IS NULL-->
+<!--		    AND A.MENU_ID = B.HRK_MENU_ID -->
+<!--    </select>-->
+
+<!--	[20231024] 삭제 테이블 주석처리-->
+<!--    <select id="selectList00GA09N204" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N204In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N204Out00VO">-->
+<!--    	/* Auth.selectList00GA09N204 : 권한별 메뉴리스트 조회 */-->
+<!--		SELECT HRK_MENU_ID     AS HRK_MENU_ID /* 상위메뉴ID */-->
+<!--		     , MAX(MENU_NM)    AS HRK_MENU_NM /* 상위메뉴명 */-->
+<!--		     , MENU_ID         AS MENU_ID     /* 메뉴ID */-->
+<!--		     , SCRN_NO         AS SCRN_NO     /* 화면번호 */ -->
+<!--		     , MAX(SCRN_NM)    AS SCRN_NM     /* 화면명 */-->
+<!--		     , MAX(URL_ADR)    AS URL_ADR     /* URL주소 */-->
+<!--		     , MAX(PRC_ABL_YN) AS PRC_ABL_YN  /* 처리가능여부 */-->
+<!--		      FROM (-->
+<!--		            SELECT T5.HRK_MENU_ID-->
+<!--		                 , T5.MENU_NM-->
+<!--		                 , T4.MENU_ID-->
+<!--		                 , T4.SCRN_NO-->
+<!--		                 , T4.SCRN_NM-->
+<!--		                 , T4.URL_ADR -->
+<!--		                 , T3.PRC_ABL_YN-->
+<!--		              FROM CB01N310 T1 &#45;&#45; 직원-->
+<!--		                 , GA09N201 T2 &#45;&#45; 사원별사용자그룹-->
+<!--		                 , GA09N205 T3 &#45;&#45; 사용자그룹별화면-->
+<!--		                 , GA09N204 T4 &#45;&#45; 화면-->
+<!--		                 , GA09N203 T5 &#45;&#45; 메뉴-->
+<!--		             WHERE T1.EPNO = #{epno}-->
+<!--		               AND T2.EPNO = T1.EPNO-->
+<!--		               AND T3.USER_GRP_CD = T2.USER_GRP_CD-->
+<!--		               AND T3.USE_YN = '1'-->
+<!--		               AND T4.SCRN_NO = T3.SCRN_NO-->
+<!--		               AND T4.USE_YN = '1'-->
+<!--		               AND T4.MENU_ID = T5.MENU_ID-->
+<!--		             UNION ALL-->
+<!--		            SELECT T5.HRK_MENU_ID-->
+<!--		                 , T5.MENU_NM-->
+<!--		                 , T4.MENU_ID-->
+<!--		                 , T4.SCRN_NO-->
+<!--		                 , T4.SCRN_NM-->
+<!--		                 , T4.URL_ADR -->
+<!--		                 , T3.PRC_ABL_YN-->
+<!--		              FROM CB01N310 T1 &#45;&#45; 직원-->
+<!--		                 , GA09N202	T2 &#45;&#45; 조직별사용자그룹-->
+<!--		                 , GA09N205 T3 &#45;&#45; 사용자그룹별화면-->
+<!--		                 , GA09N204 T4 &#45;&#45; 화면-->
+<!--		                 , GA09N203 T5 &#45;&#45; 메뉴-->
+<!--		             WHERE T1.EPNO = #{epno}-->
+<!--		               AND T2.ORZ_CD = T1.NOW_WRKP_ORZ_CD-->
+<!--		               AND T3.USER_GRP_CD = T2.USER_GRP_CD-->
+<!--		               AND T3.USE_YN = '1'-->
+<!--		               AND T4.SCRN_NO = T3.SCRN_NO-->
+<!--		               AND T4.USE_YN = '1' -->
+<!--		               AND T4.MENU_ID = T5.MENU_ID-->
+<!--		            )-->
+<!--		      WHERE 1=1-->
+<!--		        AND HRK_MENU_ID = #{hrkMenuId}-->
+<!--		      GROUP BY HRK_MENU_ID-->
+<!--		             , MENU_ID-->
+<!--		             , SCRN_NO-->
+<!--		      ORDER BY HRK_MENU_ID-->
+<!--		             , MENU_ID-->
+<!--		             , SCRN_NO-->
+<!--    </select>-->
+    
+    <select id="selectList00GA09N207" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N207In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N207Out00VO">
+		/* User00.selectList00GA09N207 : 즐겨찾기조회 */
+		SELECT A.PSIT_MENU_ID  /* 포털사이트메뉴ID */
+		     , B.SCRN_NM  	   /* 화면명 */
+		     , A.SORT_SQN 	   /* 정렬순서 */
+		     , B.SCRN_PCD  	   /* 화면유형코드 */
+		     , B.URL_ADR  	   /* URL주소 */
+		  FROM GA09N207 A /* 즐겨찾기 */
+		     , GA09N204 B /* 화면 */
+		 WHERE 1=1
+		   AND A.PSIT_MENU_ID = B.PSIT_MENU_ID
+		   AND A.EPNO    = #{epno}
+		   AND B.USE_YN  = '1'
+		 ORDER BY SORT_SQN
+	</select>
+	
+	<insert id="insert00GA09N207" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N207In00VO">
+		/* User00.insert00GA09N207 : 즐겨찾기등록 */
+		<selectKey keyProperty="sortSqn" resultType="java.lang.Long" order="BEFORE">
+			SELECT SORT_SQN
+			  FROM (
+			  		SELECT MAX(NVL(SORT_SQN, 0)) + 1 AS SORT_SQN
+					  FROM GA09N207
+					 WHERE EPNO = #{epno}
+					 UNION ALL 
+				    SELECT 1 AS SORT_SQN
+					  FROM DUAL
+					 WHERE NOT EXISTS (
+					                    SELECT SORT_SQN
+					                      FROM GA09N207
+					                     WHERE EPNO = #{epno}
+					                    )
+			        )
+			 WHERE SORT_SQN IS NOT NULL        
+		</selectKey>
+		
+		MERGE INTO GA09N207
+		USING DUAL
+		   ON (    EPNO         = #{epno}
+		       AND PSIT_MENU_ID = #{psitMenuId}  
+		       )
+		WHEN NOT MATCHED THEN
+		INSERT
+		     ( EPNO              /* 사원번호 */
+		     , PSIT_MENU_ID      /* 포털사이트메뉴ID  */
+		     , SORT_SQN          /* 정렬순서 */
+		     , OPTR_ID           /* 조작자사번 */
+		     , OPRT_CHNL_CD      /* 조작채널코드 */
+		     , OPRT_ORZ_CD       /* 조작조직코드 */
+		     , OPRT_IP_ADR       /* 조작IP주소 */
+		     , OPRT_DTTM         /* 조작시각 */ 
+		     )
+		VALUES
+		     (  #{epno}
+		      , #{psitMenuId}
+		      , TO_NUMBER(#{sortSqn}) /* 정렬순서(임시) */
+		      , #{optrId}
+		      , #{oprtChnlCd}
+		      , #{oprtOrzCd}
+		      , #{oprtIpAdr}
+		      , SYSDATE
+		      )
+	</insert>
+	
+	<delete id="delete00GA09N207" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N207In00VO">
+		/* User00.delete00GA09N207 : 즐겨찾기삭제 */
+		DELETE FROM GA09N207
+		 WHERE 1=1
+		   AND EPNO          = #{epno}
+   		   AND PSIT_MENU_ID  = #{psitMenuId}
+	</delete>
+	
+	<select id="selectSrch" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N208In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N208Out00VO">
+		/* User00.selectSrch : 검색 조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT SCRN_NM
+			     , TAG
+			     , PSIT_MENU_ID
+			     , (EDS + JWS) / 2 AS chk
+			  FROM (
+			        SELECT SCRN_NM
+			             , TAG
+			             , PSIT_MENU_ID
+			             , UTL_MATCH.edit_distance_similarity(TAG, NVL(#{schw}, '')) AS EDS
+			             , UTL_MATCH.jaro_winkler_similarity(TAG, NVL(#{schw}, '')) AS JWS
+			          FROM (
+			                SELECT MAX(B.SCRN_NM) AS SCRN_NM
+			                     , LISTAGG(TRIM(A.SCRN_SRCH_KWRD_VL),',') WITHIN GROUP (ORDER BY A.SCRN_SRCH_KWRD_VL ) AS TAG
+			                     , A.PSIT_MENU_ID
+			                  FROM GA09N208 A	/* 화면_검색키워드 */ 
+			                     , GA09N204 B
+			                 WHERE A.PSIT_MENU_ID = B.PSIT_MENU_ID(+)
+			                 <if test='schw != null and schw != ""'>    
+			                   AND (
+			                            A.SCRN_SRCH_KWRD_VL LIKE '%'|| #{schw} ||'%'
+			                         OR B.SCRN_NM           LIKE '%'|| #{schw} ||'%'
+			                        )
+			                 </if>
+			                 <if test='schw == null or schw == ""'>
+			                   AND ROWNUM = 0
+			                 </if>
+			                 GROUP BY A.PSIT_MENU_ID
+			                )
+			        )
+			  ORDER BY 4 desc
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'	  
+	</select>
+	
+	<select id="selectIprtList" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N502In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N502Out00VO">
+		/* User00.selectIprtList : 알림벨 리스트 조회 */
+		<![CDATA[
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT NVL(B.AL_CNT, 0) AS AL_CNT
+			     , NVL(B.READ_CNT, 0) AS READ_CNT  
+			     , RNUM
+			     , MSG_SND_SRNO
+			     , IPRT_MSG_CD
+			     , MSG_SND_CN
+			     , IPRT_RV_DTTM
+			     , CASE WHEN CFMT_YN = '0' THEN 'N'
+                   ELSE 'Y' END AS CFMT_YN
+			  FROM (
+			        SELECT COUNT(1) OVER()                                          AS AL_CNT /* 전체건수 */
+			             , ROW_NUMBER() OVER(ORDER BY A.MSG_SND_SRNO , ROWNUM DESC) AS RNUM
+			             , A.MSG_SND_SRNO
+			             , A.IPRT_MSG_CD 
+			             , REPLACE(A.MSG_SND_CN, '[Mi-support]<br>', '') AS MSG_SND_CN
+			             , TO_CHAR(TO_DATE(A.SMS_SND_DT || A.SMS_SND_TMD, 'YYYYMMDD HH24:MI:SS'), 'YYYY.MM.DD HH24:MI:SS') AS IPRT_RV_DTTM
+			             , NVL(A.CFMT_YN, '0') AS CFMT_YN
+			             , A.SMS_SND_DT
+			             , A.SMS_SND_TMD
+			          FROM GA09N502 A
+			         WHERE A.EPNO         = #{epno} 
+			           AND SMS_SND_DT BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+			         ) A
+			  LEFT OUTER JOIN
+			  (SELECT NVL(SUM(AL_CNT), 0) - NVL(SUM(READ_CNT), 0) AS AL_CNT
+		            , NVL(SUM(READ_CNT), 0) AS READ_CNT
+				 FROM (    
+						SELECT COUNT(1) AS AL_CNT
+						     , CASE WHEN CFMT_YN = '1' THEN COUNT(CFMT_YN) 
+						        END AS READ_CNT
+						     , '1' AS GRP
+						  FROM GA09N502
+						 WHERE EPNO = #{epno}
+						   AND SMS_SND_DT BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+						 GROUP BY EPNO, CFMT_YN 
+				) GROUP BY GRP) B ON (1=1)
+			 ORDER BY A.SMS_SND_DT DESC
+			        , A.SMS_SND_TMD DESC
+			 	  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		]]>
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'	  
+	</select>
+	
+	<select id="selectIprtReadStat" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N502In00VO" resultType="com.miraeasset.biz.common.auth.vo.AuthGA09N502Out00VO">
+		/* User00.selectIprtReadStat : 알림읽음상태 조회 */
+		SELECT NVL(SUM(AL_CNT), 0) - NVL(SUM(READ_CNT), 0) AS AL_CNT
+		     , NVL(SUM(READ_CNT), 0) AS READ_CNT
+		  FROM (    
+				SELECT COUNT(1) AS AL_CNT
+				     , CASE WHEN CFMT_YN = '1' THEN COUNT(CFMT_YN) 
+				        END AS READ_CNT
+				     , '1' AS GRP
+				  FROM GA09N502
+				 WHERE EPNO = #{epno}
+				   AND SMS_SND_DT BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+				 GROUP BY EPNO, CFMT_YN 
+		) GROUP BY GRP
+		
+	</select>
+	
+	<update id="updateIprtReadYn" parameterType="com.miraeasset.biz.common.auth.vo.AuthGA09N502In00VO">
+		/* User00.updateIprtReadYn : 알림벨 읽기여부 업데이트 */
+		UPDATE GA09N502 
+		   SET CFMT_YN      = '1'
+		     , OPTR_ID      = #{optrId}
+			 , OPRT_CHNL_CD = #{oprtChnlCd}
+			 , OPRT_ORZ_CD  = #{oprtOrzCd}
+			 , OPRT_IP_ADR  = #{oprtIpAdr}
+		     , OPRT_DTTM    = SYSDATE
+		 WHERE MSG_SND_SRNO = NVL(#{msgSndSrno}, MSG_SND_SRNO)
+		   AND EPNO         = #{epno}
+	</update>		
+</mapper>
+
+

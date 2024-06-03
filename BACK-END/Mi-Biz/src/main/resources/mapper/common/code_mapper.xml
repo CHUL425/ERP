@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="code_mapper">
+
+    <select id="selectCode00List" parameterType="com.miraeasset.biz.common.code.vo.Code00In00VO" resultType="com.miraeasset.biz.common.code.vo.Code00Out00VO">
+			/* Code00.selectCode00List : 공통코드정보조회 */
+			SELECT * FROM (
+			SELECT * FROM (		
+			SELECT   
+			       ROW_NUMBER() OVER(ORDER BY T1.CMN_CD, ROWNUM DESC) AS RNUM     
+			     , COUNT(1) OVER()                  AS AL_CNT                               /* 전체건수      */     
+			     , T1.CMN_CD                        AS CMN_CD                               /* T1.공통코드 */
+			     , T1.CMN_CD_NM                     AS CMN_CD_NM                            /* T1.공통코드명 */
+			     , T1.CMN_CD_VL_LEN                 AS CMN_CD_VL_LEN                        /* T1.공통코드값길이 */
+			     , (CASE WHEN T1.USE_STRT_DT <![CDATA[ < ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd') AND            /* T1.사용시작일자 */
+			                  T1.USE_END_DT  <![CDATA[ > ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd')                /* T1.사용종료일자 */
+			             THEN '1'
+			             ELSE '0'
+			        END)                            AS CMN_CD_USE_TP                        /* [출력]공통코드사용구분 */
+			     , T1.HRK_CMN_CD                    AS HRK_CMN_CD                           /* T1.상위공통코드 */
+			     , T2.CMN_CD_NM                     AS HRK_CMN_CD_NM                        /* T2.공통코드명(상위) */
+			     , T2.CMN_CD_VL_LEN                 AS HRK_CMN_CD_VL_LEN                    /* T2.공통코드값길이(상위) */
+			     , (CASE WHEN T2.USE_STRT_DT <![CDATA[ < ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd') AND            /* T2.사용시작일자(상위) */
+			                  T2.USE_END_DT  <![CDATA[ > ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd')                /* T2.사용종료일자(상위) */
+			             THEN '1'
+			             ELSE '0'
+			        END)                            AS HRK_CMN_CD_USE_TP                    /* [출력]상위공통코드사용구분 */
+			  FROM CB03C110 T1                                                              /* 공통코드 */
+			     , CB03C110 T2                                                              /* 공통코드[상위] */
+			 WHERE T1.HRK_CMN_CD    = T2.CMN_CD(+)                                          /* T1.상위공통코드, T2.공통코드 */
+			   AND T1.CMN_CD     LIKE '%' || NVL(TRIM( #{cmnCd} ), '%') || '%'                 /* T1.공통코드, [입력]공통코드 */
+			   AND T1.CMN_CD_NM  LIKE '%' || NVL(TRIM( #{cmnCdNm}  ), '%') || '%'              /* T1.공통코드명, [입력]공통코드명 */
+			 ORDER BY T1.CMN_CD    
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 			  
+    </select>
+
+
+    <select id="selectCode01List" parameterType="com.miraeasset.biz.common.code.vo.Code01In00VO" resultType="com.miraeasset.biz.common.code.vo.Code01Out00VO">
+			/* Code00.selectCode01List : 공통코드정보조회 */
+			SELECT * FROM (
+			SELECT * FROM (		
+			SELECT   
+			       ROW_NUMBER() OVER(ORDER BY V1.CMN_CD_VL, ROWNUM DESC) AS RNUM     
+			     , COUNT(1) OVER() AS AL_CNT                         /* 전체건수               */  
+			     , V1.CMN_CD                        AS CMN_CD                                   /* V1.공통코드 */                        
+			     , V1.CMN_CD_NM                     AS CMN_CD_NM                                /* V1.공통코드명 */                      
+			     , V1.CMN_CD_VL                     AS CMN_CD_VL                                /* V1.공통코드값 */                      
+			     , V1.CMN_CD_VL_NM                  AS CMN_CD_VL_NM                             /* V1.공통코드값명 */                    
+			     , V1.CMN_CD_VL_STD_NM              AS CMN_CD_VL_STD_NM                         /* V1.공통코드값표준명 */                
+			     , V1.CMN_CD_VL_ENG_NM              AS CMN_CD_VL_ENG_NM                         /* V1.공통코드값영문명 */                
+			     , V1.CMN_CD_VL_EABRV_NM            AS CMN_CD_VL_EABRV_NM                       /* V1.공통코드값영문약어명 */            
+			     , V1.USER_DEF_VL1                  AS USER_DEF_VL1                             /* V1.사용자정의값1 */                   
+			     , V1.USER_DEF_VL2                  AS USER_DEF_VL2                             /* V1.사용자정의값2 */                   
+			     , V1.CMN_CD_VL_USE_TP              AS CMN_CD_VL_USE_TP                         /* V1.공통코드값사용구분 */              
+			     , V1.HRK_CMN_CD                    AS HRK_CMN_CD                               /* V1.상위공통코드 */                    
+			     , V1.HRK_CMN_CD_NM                 AS HRK_CMN_CD_NM                            /* V1.상위공통코드명 */                  
+			     , V1.HRK_CMN_CD_VL                 AS HRK_CMN_CD_VL                            /* V1.상위공통코드값 */                  
+			     , T1.CMN_CD_VL_NM                  AS HRK_CMN_CD_VL_NM                         /* T1.공통코드값명(상위) */              
+			     , T1.CMN_CD_VL_STD_NM              AS HRK_CMN_CD_VL_STD_NM                     /* T1.공통코드값표준명(상위) */          
+			     , T1.CMN_CD_VL_ENG_NM              AS HRK_CMN_CD_VL_ENG_NM                     /* T1.공통코드값영문명(상위) */          
+			     , T1.CMN_CD_VL_EABRV_NM            AS HRK_CMN_CD_VL_EABRV_NM                   /* T1.공통코드값영문약어명(상위) */      
+			     , T1.USER_DEF_VL1                  AS HRK_USER_DEF_VL1                         /* T1.사용자정의값1(상위) */             
+			     , T1.USER_DEF_VL2                  AS HRK_USER_DEF_VL2                         /* T1.사용자정의값2(상위) */             
+			     , (CASE WHEN T1.USE_STRT_DT <![CDATA[ < ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd') AND                /* T1.사용시작일자 */                    
+			                  T1.USE_END_DT  <![CDATA[ > ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd')                    /* T1.사용종료일자 */                    
+			             THEN '1'                                                                                                        
+			             ELSE '0'                                                                                                        
+			        END)                            AS HRK_CMN_CD_VL_USE_TP                     /* [출력]상위공통코드값사용구분 */       
+			  FROM (SELECT T1.CMN_CD                                                            /* T1.공통코드 */                        
+			             , T2.CMN_CD_NM                                                         /* T2.공통코드명 */                      
+			             , T1.CMN_CD_VL                                                         /* T1.공통코드값 */                      
+			             , T1.CMN_CD_VL_NM                                                      /* T1.공통코드값명 */                    
+			             , T1.CMN_CD_VL_STD_NM                                                  /* T1.공통코드값표준명 */                
+			             , T1.CMN_CD_VL_ENG_NM                                                  /* T1.공통코드값영문명 */                
+			             , T1.CMN_CD_VL_EABRV_NM                                                /* T1.공통코드값영문약어명 */            
+			             , T1.USER_DEF_VL1                                                      /* T1.사용자정의값1 */                   
+			             , T1.USER_DEF_VL2                                                      /* T1.사용자정의값2 */                   
+			             , (CASE WHEN T1.USE_STRT_DT <![CDATA[ < ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd') AND        /* T1.사용시작일자 */                    
+			                          T1.USE_END_DT  <![CDATA[ > ]]>= TO_CHAR(SYSDATE, 'yyyyMMdd')            /* T1.사용종료일자 */                    
+			                     THEN '1'                                                                                                
+			                     ELSE '0'                                                                                                
+			                END)                    AS CMN_CD_VL_USE_TP                         /* [출력]공통코드값사용구분 */           
+			             , T1.CMN_CD_CLSF_VL                                                    /* T1.공통코드분류값 */                  
+			             , T2.HRK_CMN_CD                                                        /* T2.상위공통코드 */                    
+			             , T3.CMN_CD_NM             AS HRK_CMN_CD_NM                            /* T3.공통코드명(상위) */                
+			             , T1.HRK_CMN_CD_VL                                                     /* T1.상위공통코드값 */                  
+			          FROM CB03C111 T1                                                          /* 공통코드값 */                         
+			             , CB03C110 T2                                                          /* 공통코드 */                           
+			             , CB03C110 T3                                                          /* 공통코드(상위) */                     
+			         WHERE T1.CMN_CD                = T2.CMN_CD                                 /* T1.공통코드, T2.공통코드 */           
+			           AND T2.HRK_CMN_CD            = T3.CMN_CD(+)                              /* T2.상위공통코드, T3.공통코드 */       
+			       ) V1                                                                                                                  
+			     , CB03C111 T1                                                                  /* 공통코드값(상위) */             
+     			     
+			 WHERE V1.HRK_CMN_CD       = T1.CMN_CD(+)                                           /* V1.상위공통코드, T1.공통코드 */
+			   AND V1.HRK_CMN_CD_VL    = T1.CMN_CD_VL(+)                                        /* V1.상위공통코드값, T1.공통코드값 */
+			   AND V1.CMN_CD           = #{cmnCd}                                                /* V1.공통코드, [입력]공통코드 */
+			   AND (   (    NVL( #{cmnCdClsfId} , '00')  = '00' )
+			        OR (    NVL( #{cmnCdClsfId} , '00') <![CDATA[ <> ]]> '00'
+			            AND SUBSTR(V1.CMN_CD_CLSF_VL, TO_NUMBER(NVL( #{cmnCdClsfId}  , '00')), 1)
+			                                            = '1'  )
+			       )
+			   AND V1.CMN_CD_VL     LIKE '%' || NVL(TRIM( #{cmnCdVl} ), '%') || '%'               /* V1.공통코드값, [입력]공통코드값 */
+			   AND V1.CMN_CD_VL_NM  LIKE '%' || NVL(TRIM( #{cmnCdVlNm}  ), '%') || '%'            /* V1.공통코드값명, [입력]공통코드값명 */
+			 ORDER BY V1.CMN_CD_VL                                                              /* V1.공통코드값 */
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 			  
+    </select>
+
+
+    <select id="selectGaCode00List" parameterType="com.miraeasset.biz.common.code.vo.GaCode00In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode00Out00VO">
+			/* Code00.selectGaCode00List : 총무공통코드정보조회 */
+			SELECT * FROM (
+			SELECT * FROM (		
+
+				SELECT   
+				       ROW_NUMBER() OVER(ORDER BY T1.CD_KND_NM, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()                  AS AL_CNT                               /* 전체건수      */     
+				     , CD_KND_NO /* 코드종류번호 */
+				     , CD_KND_NM /* 코드종류명 */
+				     , CMN_CD_DEF_CN /* 공통코드정의내용 */
+				     , USE_YN /* 사용여부 */
+				 FROM GA09C301 T1
+				 WHERE 1=1
+				  AND T1.USE_YN = '1' 
+			      AND T1.CD_KND_NO  LIKE '%'|| NVL(TRIM( #{cdKndNo} ), '%') ||'%'
+			      AND T1.CD_KND_NM  LIKE '%'|| NVL(TRIM( #{cdKndNm} ), '%') ||'%'
+				 
+				 ORDER BY T1.CD_KND_NM    
+ 
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 			  
+    </select>
+    
+    <select id="selectGaCode01List" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode01Out00VO">
+			/* Code00.selectGaCode01List : 총무공통코드값정보조회 */
+			SELECT * FROM (
+			SELECT * FROM (		
+
+				SELECT   
+				       ROW_NUMBER() OVER(ORDER BY T1.CD_KND_NO, T1.SORT_SQN, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()                  AS AL_CNT                               /* 전체건수      */     
+				     , CD_KND_NO /* 코드종류번호 */
+				     , CMN_CD_VL /* 공통코드값 */
+				     , CMN_CD_VL_DEF_CN /* 공통코드값정의내용 */
+				     , CD_DESC /* 코드설명 */
+				     , USE_YN /* 사용여부 */
+				     , SORT_SQN /* 정렬순서 */
+				 FROM GA09C302 T1
+				 WHERE CD_KND_NO LIKE '%' || NVL(TRIM( #{cdKndNo} ), '') || '%'
+				   AND T1.USE_YN = '1' 
+				<if test='cmnCdVl != null and cmnCdVl != ""'>
+					AND CMN_CD_VL LIKE NVL(TRIM( #{cmnCdVl} ), '') || '%'
+				</if>
+				
+				<if test='userDefVl1 != null and userDefVl1 != ""'>
+					AND USER_DEF_VL1 LIKE '%' || NVL(TRIM( #{userDefVl1} ), '') || '%'
+				</if>
+				<if test='userDefVl2 != null and userDefVl2 != ""'>
+					AND USER_DEF_VL2 LIKE '%' || NVL(TRIM( #{userDefVl2} ), '') || '%'
+				</if>
+
+				 ORDER BY CD_KND_NO,SORT_SQN
+ 
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+			  
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 			  
+    </select>    
+	
+	<select id="selectTeamCode00List" parameterType="com.miraeasset.biz.common.code.vo.TeamCode00In00VO" resultType="com.miraeasset.biz.common.code.vo.TeamCode00Out00VO">
+	/* Code00.selectTeamCode00List : 팀점코드팝업조회 */
+	SELECT * FROM (
+	SELECT * FROM (
+  		SELECT ROW_NUMBER() OVER(ORDER BY A.ORZ_CD, ROWNUM DESC) AS RNUM
+  		     , A.ORZ_CD
+         	 , A.ORZ_NM
+        	 , A.HRK_ORZ_CD
+        	 , A.HRK_ORZ_NM
+        	 , B.BLD_TCD
+        	 , (SELECT CMN_CD_VL_NM
+                  FROM CB03C111
+                 WHERE 1=1
+                   AND CMN_CD = 'BLD_TCD'
+                   AND CMN_CD_VL = B.BLD_TCD
+                ) AS BLD_TCD_NM
+             , B.BLDFLR_NO
+  		     , A.HOBR_TCD
+        	 , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+        	 , #{pageIndex}    AS PAGE_NO
+          FROM (SELECT A.ORZ_CD
+          		     , A.ORZ_NM
+          			 , A.HRK_ORZ_CD
+                     , NVL(B.ORZ_NM, '') AS HRK_ORZ_NM           /* T3.조직명(상위조직명)   */
+                     , (SELECT HOBR_TCD FROM CB01N210 WHERE ORZ_CD = A.LNK_MT_ORZ_CD) AS HOBR_TCD /* 본지점구분 */
+                  FROM CB01N210 A /* 조직 */
+                     , CB01N210 B
+                 WHERE 1=1
+                   AND A.HRK_ORZ_CD  = B.ORZ_CD(+)
+                   <if test=' orzUseYn == "0" '>
+                       AND A.ORZ_USE_YN = '1'   /* [20240311] 폐쇄조직 미포함 */
+                   </if>
+                   AND (    /* [20231025] WM조직 제외 */ /* [20231115] WM조직 제외 취소 */
+                            -- (A.HOBR_TCD = '01' AND A.ORZ_CD NOT LIKE 'W%')
+                            (A.HOBR_TCD = '01' AND 1=1)
+                         OR (A.HOBR_TCD = '02' AND 1=1)
+                         OR (A.HOBR_TCD = '03' AND 1=1)
+                        )
+                 START WITH A.HRK_ORZ_CD IS NULL
+               CONNECT BY PRIOR A.ORZ_CD = A.HRK_ORZ_CD         
+                ) A
+             , SA09N110 B /* 주간업무_사무실위치_관리 - 2023.08.11 건물정보추가 */   
+         WHERE 1=1
+           AND A.ORZ_CD = B.ORZ_CD(+)
+           AND (
+	            (TRIM(A.ORZ_CD) LIKE '%' || NVL(TRIM(#{orzNm}), TRIM(A.ORZ_CD)) || '%'
+	             OR TRIM(A.ORZ_NM) LIKE '%' || NVL(TRIM(#{orzNm}), TRIM(A.ORZ_NM)) || '%')
+	            ) 
+         ORDER BY A.ORZ_CD 
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>   
+        ) Z
+        ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+	    -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+	
+	<select id="selectTeamCode01List" parameterType="com.miraeasset.biz.common.code.vo.TeamCode01In00VO" resultType="com.miraeasset.biz.common.code.vo.TeamCode01Out00VO">
+	/* Code00.selectTeamCode01List : 팀점코드팝업조회(검색일자) - 사용안함 */
+	SELECT * FROM (
+	SELECT * FROM (
+		SELECT ROW_NUMBER() OVER(ORDER BY A.ORZ_CD, ROWNUM DESC) AS RNUM
+		     , A.ORZ_CD
+	         , A.ORZ_NM
+	         , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+	      FROM CB01N210 A /* 조직 */
+	     WHERE 1=1
+	       AND A.REGI_DT <![CDATA[ < ]]>= #{basDt}
+	       AND (
+	            (TRIM(A.ORZ_CD) LIKE '%' || NVL(TRIM(#{orzNm}), TRIM(A.ORZ_CD)) || '%'
+	             OR TRIM(A.ORZ_NM) LIKE '%' || NVL(TRIM(#{orzNm}), TRIM(A.ORZ_NM)) || '%')
+	            )
+	     ORDER BY A.ORZ_CD
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>   
+        ) Z
+        ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+	    -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'     
+	</select>
+	
+	<select id="selectUserCode00List" parameterType="com.miraeasset.biz.common.code.vo.UserCode00In00VO" resultType="com.miraeasset.biz.common.code.vo.UserCode00Out00VO">
+	/* Code00.selectUserCode00List : 사원코드팝업조회(임시) */	
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT ROW_NUMBER() OVER(ORDER BY A.BLNG_ORZ_CD, A.EPNO, ROWNUM DESC) AS RNUM 
+			     , A.BLNG_ORZ_CD AS ORZ_CD /* 팀점코드 */
+	             , B.ORZ_ABRV_NM AS ORZ_NM /* 팀점명 */
+	             , A.EPNO        AS EPNO   /* 사원코드 */
+	             , A.EP_NM       AS EP_NM  /* 사원명 */
+	             , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+			  FROM CB01N310 A /* 사원 */
+	             , CB01N210 B /* 조직 */
+	             , CB01C111 C /* 인사공통코드 */
+			 WHERE 1=1
+			   AND A.BLNG_ORZ_CD       = B.ORZ_CD(+)
+			   AND 'CB_001'            = C.HR_CMN_CD_KND_NO (+) /* 인사재직코드 */
+               AND TRIM(A.HR_HLDO_CD)  = C.HR_CMN_CD (+)
+		       AND TRIM(A.HR_HLDO_CD) = 'A' /* 재직만 조회 */
+			   <if test="epNm != null and epNm != ''">
+  		       AND (A.EPNO LIKE '%' || #{epNm, jdbcType=VARCHAR} || '%' OR A.EP_NM LIKE '%' || #{epNm, jdbcType=VARCHAR} || '%'
+                OR  A.BLNG_ORZ_CD LIKE '%' || #{epNm, jdbcType=VARCHAR} || '%' OR B.ORZ_ABRV_NM LIKE '%' || #{epNm, jdbcType=VARCHAR} || '%' )
+               </if>
+			 ORDER BY A.BLNG_ORZ_CD, A.EPNO
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'	
+		<if test='pageSize == null or pageSize == 0 '>
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>			
+		) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+		) ZZ WHERE RNUM > ( #{pageIndex})
+		</if>
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+	
+    <select id="selectChaebun" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode01Out00VO">
+			/* Code00.selectChaebun : 업무별 채번 */
+			/* 접수번호채번 -> 해당일자(YYYYMMDD)-신청구분2자리-일련번호4자리 */
+			/* 결재상신번호채번 -> 해당일자(YYYYMMDD) 일련번호3자리 */
+				SELECT CASE WHEN CMN_CD_VL = 'APRV' 
+				                 THEN ( CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM00000000') 
+				                             ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM00000000') 
+				                         END  
+				                      )
+				            WHEN CMN_CD_VL = 'CNRT01' 
+				                 THEN ( CASE WHEN SUBSTR(CD_DESC,2,2) = TO_CHAR(SYSDATE,'YY') THEN SUBSTR(CD_DESC,1,3) || TO_CHAR( (SUBSTR(CD_DESC,4) + 1),'FM000') 
+				                             ELSE 'C' || TO_CHAR(SYSDATE,'YY') || TO_CHAR( 1,'FM000') 
+				                         END  
+				                      )
+				            WHEN CMN_CD_VL = 'CNRT02' 
+				                 THEN ( CASE WHEN SUBSTR(CD_DESC,2,2) = TO_CHAR(SYSDATE,'YY') THEN SUBSTR(CD_DESC,1,3) || TO_CHAR( (SUBSTR(CD_DESC,4) + 1),'FM000') 
+				                             ELSE 'S' || TO_CHAR(SYSDATE,'YY') || TO_CHAR( 1,'FM000') 
+				                         END  
+				                      )
+				            -- GA01N501.SEAL_MT_NO : 인감관리번호 
+				            WHEN CMN_CD_VL = 'SEAL_MT_NO' 
+				                 THEN ( CASE WHEN SUBSTR(CD_DESC,3,2) = TO_CHAR(SYSDATE,'YY') THEN SUBSTR(CD_DESC,1,4) || TO_CHAR( (SUBSTR(CD_DESC,5) + 1),'FM000') 
+				                             ELSE 'SM' || TO_CHAR(SYSDATE,'YY') || TO_CHAR( 1,'FM000') 
+				                         END  
+				                      )				                      
+				                      
+				            WHEN CMN_CD_VL = 'VHCSRNO'
+				                 THEN ( CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM0000') 
+				                             ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM0000') 
+				                         END  
+				                      )                                 
+				            ELSE ( CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || '-' || CMN_CD_VL || '-' || TO_CHAR( (SUBSTR(CD_DESC,13) + 1),'FM0000') 
+				                        ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || '-' || CMN_CD_VL || '-' || TO_CHAR( 1,'FM0000') 
+				                    END  
+				                 )
+				        END AS NEW_NO		
+				  FROM GA09C302			        	        
+				 WHERE CD_KND_NO =  #{cdKndNo}
+				   AND CMN_CD_VL =  #{cmnCdVl}
+				   AND ROWNUM = 1
+    </select>
+    
+    <update id="prbzSrnoGnoCrn" parameterType="com.miraeasset.biz.common.code.vo.GaSrno00In00VO" >
+    	/* Code00.prbzSrnoGnoCrn : 업무별 일련번호 채번 생성 */
+		<selectKey keyProperty="rpbzGnoSrno" resultType="java.lang.String" order="BEFORE">
+			SELECT
+				CASE
+
+				<choose>
+					<when test=' cmnCdVl == "MSG_SND_SRNO" '>
+					WHEN CMN_CD_VL = 'MSG_SND_SRNO' THEN
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM000000000000')
+						ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM000000000000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "APRV" '>
+					WHEN CMN_CD_VL = 'APRV' THEN
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM00000000')
+						ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM00000000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "CNRT01" '>
+					WHEN CMN_CD_VL = 'CNRT01' THEN
+					(
+						CASE WHEN SUBSTR(CD_DESC,2,2) = TO_CHAR(SYSDATE,'YY') THEN SUBSTR(CD_DESC,1,3) || TO_CHAR( (SUBSTR(CD_DESC,4) + 1),'FM000')
+						ELSE 'C' || TO_CHAR(SYSDATE,'YY') || TO_CHAR( 1,'FM000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "CNRT02" '>
+					WHEN CMN_CD_VL = 'CNRT02' THEN
+					(
+						CASE WHEN SUBSTR(CD_DESC,2,2) = TO_CHAR(SYSDATE,'YY') THEN SUBSTR(CD_DESC,1,3) || TO_CHAR( (SUBSTR(CD_DESC,4) + 1),'FM000')
+						ELSE 'S' || TO_CHAR(SYSDATE,'YY') || TO_CHAR( 1,'FM000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "VHCSRNO" '>
+					WHEN CMN_CD_VL = 'VHCSRNO' THEN
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM0000')
+						ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM0000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "SEAL_RQS_SALG" '>
+					WHEN CMN_CD_VL = 'SEAL_RQS_SALG' THEN  /* 인감날인신청 */
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) || TO_CHAR( (SUBSTR(CD_DESC,9) + 1),'FM0000000')
+						ELSE TO_CHAR(SYSDATE,'YYYYMMDD') || TO_CHAR( 1,'FM0000000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "SEAL_RQS_CERT" '>
+					WHEN CMN_CD_VL = 'SEAL_RQS_CERT' THEN  /* 등기부등본 */
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) ||'20'|| TO_CHAR( (SUBSTR(CD_DESC,11) + 1),'FM00000000')
+						ELSE TO_CHAR(SYSDATE,'YYYYMMDD') ||'20'|| TO_CHAR( 1,'FM00000000')
+						END
+					)
+					</when>
+					<when test=' cmnCdVl == "SEAL_RQS_SEAL" '>
+					WHEN CMN_CD_VL = 'SEAL_RQS_SEAL' THEN  /* 인감증명서 */
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN SUBSTR(CD_DESC,0,8) ||'10'|| TO_CHAR( (SUBSTR(CD_DESC,11) + 1),'FM00000000')
+						ELSE TO_CHAR(SYSDATE,'YYYYMMDD') ||'10'|| TO_CHAR( 1,'FM00000000')
+						END
+					)
+					</when>
+					<otherwise>
+					WHEN CD_KND_NO = 'SAL_MT_NO' AND CMN_CD_VL = #{cmnCdVl} THEN
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,3) = #{cmnCdVl} THEN SUBSTR(CD_DESC,0,3) || TO_CHAR( (SUBSTR(CD_DESC, 4) + 1),'FM0000')
+						ELSE #{cmnCdVl} || TO_CHAR( 1,'FM0000')
+						END
+					)
+					</otherwise>
+				</choose>
+
+				ELSE
+					(
+						CASE WHEN SUBSTR(CD_DESC,0,8) = TO_CHAR(SYSDATE,'YYYYMMDD') THEN
+							SUBSTR(CD_DESC,0,8) || '-' || CMN_CD_VL || '-' || TO_CHAR( (SUBSTR(CD_DESC,13) + 1),'FM00000000')
+						ELSE
+							TO_CHAR(SYSDATE,'YYYYMMDD') || '-' || CMN_CD_VL || '-' || TO_CHAR( 1,'FM00000000')
+						END
+					)
+				END
+			  FROM GA09C302
+			 WHERE CD_KND_NO = #{cdKndNo}
+			   AND CMN_CD_VL = #{cmnCdVl}
+		</selectKey>
+
+		UPDATE GA09C302
+		   SET CD_DESC = #{rpbzGnoSrno}
+		 WHERE CD_KND_NO = #{cdKndNo} AND CMN_CD_VL = #{cmnCdVl}
+
+    </update>
+    
+    <select id="selectPrbzSrnoGno" parameterType="com.miraeasset.biz.common.code.vo.GaSrno00In00VO" resultType="com.miraeasset.biz.common.code.vo.GaSrno00Out00VO">
+    	/* Code00.selectPrbzSrnoGno : 업무별 일련번호 채번 조회 */
+    		SELECT *
+    		  FROM DUAL 
+    </select>
+    
+    <select id="selectBzMtCode" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode01Out00VO">
+			/* Code00.selectBzMtCode : 업무별관리항목 코드조회 */
+			SELECT CD_KND_NO
+			     , CMN_CD_VL
+			     , CMN_CD_VL_DEF_CN
+			     , CD_DESC AS BZ_MT_CD_VL
+			     
+			  FROM GA09C302	-- 공통코드값			        	        
+			 WHERE CD_KND_NO =  #{cdKndNo}
+			   AND CMN_CD_VL =  #{cmnCdVl}
+			   AND ROWNUM = 1
+    </select>    
+    
+	<update id="updateChaebun" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" >
+		/* Code00.updateChaebun : 업무별 채번수정 */
+		UPDATE GA09C302 -- 총무공통코드값
+		   SET CD_DESC   =  #{newNo }
+	     WHERE CD_KND_NO =  #{cdKndNo}
+		   AND CMN_CD_VL =  #{cmnCdVl}
+	</update>
+	
+	<update id="updateBzMtCode" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" >
+		/* Code00.updateBzMtCode : 업무별 관리코드 수정 */
+		UPDATE GA09C302 -- 총무공통코드값
+		   SET CD_DESC   =  #{bzMtCdVl}
+	     WHERE CD_KND_NO =  #{cdKndNo}
+		   AND CMN_CD_VL =  #{cmnCdVl}
+	</update>
+
+	<select id="selectAtCode00List" parameterType="com.miraeasset.biz.common.code.vo.GaCode00In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode00Out00VO">
+		/* Code00.selectAtCode00List : 회계공통코드정보조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+
+		SELECT
+		ROW_NUMBER() OVER(ORDER BY T1.CD_KND_NM, ROWNUM DESC) AS RNUM
+		, COUNT(1) OVER()                  AS AL_CNT                               /* 전체건수      */
+		, CD_KND_NO /* 코드종류번호 */
+		, CD_KND_NM /* 코드종류명 */
+		, CMN_CD_DEF_CN /* 공통코드정의내용 */
+		, USE_YN /* 사용여부 */
+		FROM AT09C301 T1
+		WHERE 1=1
+		AND T1.CD_KND_NO  LIKE '%'|| NVL(TRIM( #{cdKndNo} ), '%') ||'%'
+		AND T1.CD_KND_NM  LIKE '%'|| NVL(TRIM( #{cdKndNm} ), '%') ||'%'
+
+		ORDER BY T1.CD_KND_NM
+
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			) Z
+			) ZZ
+		</if>
+		<if test='pageSize > 0'>
+			) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			) ZZ WHERE RNUM > ( #{pageIndex})
+		</if>
+
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+
+	<select id="selectAtCode01List" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode01Out00VO">
+		/* Code00.selectAtCode01List : 회계공통코드값정보조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+
+		SELECT
+		ROW_NUMBER() OVER(ORDER BY T1.CD_KND_NO, ROWNUM DESC) AS RNUM
+		, COUNT(1) OVER()                  AS AL_CNT                               /* 전체건수      */
+		, CD_KND_NO /* 코드종류번호 */
+		, CMN_CD_VL /* 공통코드값 */
+		, CMN_CD_VL_DEF_CN /* 공통코드값정의내용 */
+		, CD_DESC /* 코드설명 */
+		, USE_YN /* 사용여부 */
+		FROM AT09C302 T1
+		WHERE CD_KND_NO LIKE '%' || NVL(TRIM( #{cdKndNo} ), '') || '%'
+
+		<if test='cmnCdVl != null and cmnCdVl != ""'>
+			AND CMN_CD_VL LIKE NVL(TRIM( #{cmnCdVl} ), '') || '%'
+		</if>
+		<if test='cdDesc != null and cdDesc != ""'>
+			AND CD_DESC   LIKE NVL(TRIM( #{cdDesc} ), '') || '%'
+		</if>
+
+		ORDER BY CD_KND_NO
+
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			) Z
+			) ZZ
+		</if>
+		<if test='pageSize > 0'>
+			) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			) ZZ WHERE RNUM > ( #{pageIndex})
+		</if>
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+
+
+
+	<select id="selectMsgEnrollNotiTxt" parameterType="Map" resultType="Map">
+		/* code_mapper.selectMsgEnrollNotiTxt : 알림 메시지 전송 Msg 조회 */
+		SELECT
+			a.RQS_EPNO AS "rqsEpno"
+		,	n310.EP_NM || ' ' || NVL(c1Sdt.CD_STD_NM, c1Pst.CD_STD_NM) AS "epNmSt"
+		,	n310.EP_NM AS "epNm"
+		,	n310.HR_PST_CD AS "hrPstCd"
+		,	n310.HR_OSDT_CD AS "hrOsdtCd"
+		,	c1Pst.CD_STD_NM AS "hrPstNm"
+		,	c1Sdt.CD_STD_NM AS "hrOsdtNm"
+		,	a.RQS_ORZ_CD AS "rqsOrzCd"
+		,	msgMenu.USER_DEF_VL1 AS "menuNm"
+		,	u2.CMN_CD_VL_DEF_CN AS "enrollCategory"
+		,	u1.CMN_CD_VL_DEF_CN AS "enrollType"
+		,	a.RCT_NO AS "rctNo"
+		,	a.RQS_TTL_NM AS "rqsTtlNm"
+		,	NVL(msgCd.CMN_CD_VL_DEF_CN, msgIprt.IPRT_MSG_CD) AS "iprtMsgCd"
+		,	msg.IPRT_MSG_TTL_NM AS "msgTit"
+		,	msg.MSG_SND_CN AS "msg"
+		,	msgIprt.IPRT_MSG_TTL_NM AS "msgIprtTit"
+		,	msgIprt.MSG_SND_CN AS "msgIprt"
+		,	a.UNIF_RQS_PCD AS "unifRqsPcd"
+		,	a.UNIF_RQS_DL_PCD AS "unifRqsDlPcd"
+		,	a.UNIF_RQS_TCD AS "unifRqsTcd"
+		,	(CASE WHEN TRIM(n310.HNDP_BZPR_TLNO) IS NOT NULL THEN TRIM(n310.HNDP_BZPR_TLNO) || '-' END
+			|| CASE WHEN TRIM(n310.HNDP_MTNO) IS NOT NULL THEN TRIM(n310.HNDP_MTNO)                     END
+			|| CASE WHEN TRIM(n310.HNDP_ITNO) IS NOT NULL THEN '-' || TRIM(n310.HNDP_ITNO)              END)
+			AS "hndpTlno"
+		FROM
+			(
+				SELECT
+					*
+				FROM
+					GA01N101
+				WHERE
+					RCT_NO = #{rctNo}
+			) a
+			INNER JOIN GA09C302 u1 ON (u1.CD_KND_NO = 'UNIF_RQS_TCD' AND a.UNIF_RQS_TCD = u1.CMN_CD_VL)
+			INNER JOIN GA09C302 u2 ON (u2.CD_KND_NO = 'UNIF_RQS_DL_PCD' AND a.UNIF_RQS_DL_PCD = u2.CMN_CD_VL)
+			INNER JOIN GA09C302 u3 ON (u3.CD_KND_NO = 'UNIF_RQS_PCD' AND a.UNIF_RQS_PCD = u3.CMN_CD_VL)
+			LEFT OUTER JOIN CB01N310 n310 ON (#{epNo} = n310.EPNO)
+			LEFT OUTER JOIN GA09C302 msgCd ON (msgCd.CD_KND_NO = 'IPRT_MSG_CD_01' AND msgCd.CMN_CD_VL = #{msgTyp} AND REPLACE(a.RQS_SCD,'15','10') = msgCd.USER_DEF_VL1)
+			LEFT OUTER JOIN GA09N501 msg ON (msgCd.CMN_CD_VL_DEF_CN = msg.IPRT_MSG_CD AND msg.USE_YN = '1')
+			LEFT OUTER JOIN GA09N501 msgIprt ON (msgIprt.IPRT_MSG_CD = #{iprtMsgCd} AND msgIprt.USE_YN = '1')
+			LEFT OUTER JOIN GA09C302 msgMenu ON (msgMenu.CD_KND_NO = 'PSIT_MENU_ID_TCD' AND msgMenu.CMN_CD_VL = a.UNIF_RQS_PCD AND msgMenu.USE_YN = '1')
+			LEFT OUTER JOIN
+			(
+				SELECT HR_CMN_CD_KND_NO,HR_CMN_CD,CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_008'
+			) c1Pst ON (n310.HR_PST_CD = c1Pst.HR_CMN_CD)
+			LEFT OUTER JOIN
+			(
+				SELECT HR_CMN_CD_KND_NO,HR_CMN_CD,CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO = 'HRM_007'
+			) c1Sdt ON (n310.HR_OSDT_CD = c1Sdt.HR_CMN_CD)
+	</select>
+
+
+
+	<select id="selectGA09C302OrderRandom1Row" parameterType="com.miraeasset.biz.common.code.vo.GaCode01In00VO" resultType="com.miraeasset.biz.common.code.vo.GaCode01Out00VO">
+	<![CDATA[
+		SELECT *
+		FROM GA09C302
+		WHERE CD_KND_NO = #{cdKndNo} AND USE_YN = '1'
+		ORDER BY DBMS_RANDOM.VALUE
+		FETCH NEXT 1 ROWS ONLY
+	]]>
+	</select>
+
+	<select id="checkBzD5Yn" parameterType="String" resultType="String">
+		/* code_mapper.checkBzD5Yn : basDt가 영업일인지 확인(영업일: 1 / 비영업일: 0) */
+		SELECT BZD5_YN
+		FROM INNOV2.CB05N110
+		WHERE BAS_DT= #{basDt}
+	</select>
+
+	<select id="findHrOsdtCdNmByEpno" parameterType="String" resultType="String">
+		/* code_mapper.findHrOsdtCdNmByEpno : EPNO를 통해 직책명 획득 */
+		SELECT A.CD_STD_NM
+		FROM CB01C111 A
+		   , CB01N310 B
+		WHERE A.HR_CMN_CD_KND_NO = 'HRM_007'
+		  AND B.EPNO = #{epno}
+		  AND A.HR_CMN_CD = B.HR_OSDT_CD
+	</select>
+
+	<select id="findHrPstCdNmByEpno" parameterType="String" resultType="String">
+		/* code_mapper.findHrPstCdNmByEpno : EPNO를 통해 직위명 획득 */
+		SELECT A.CD_STD_NM
+		FROM CB01C111 A
+		   , CB01N310 B
+		WHERE A.HR_CMN_CD_KND_NO = 'HRM_008'
+		  AND B.EPNO = #{epno}
+		  AND A.HR_CMN_CD = B.HR_PST_CD
+	</select>
+
+</mapper>
+
+

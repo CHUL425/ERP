@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sszs_mapper">
+    
+	<select id="selectListGA09N501" parameterType="com.miraeasset.biz.ss.zs.vo.SSZS2000U0In00VO" resultType="com.miraeasset.biz.ss.zs.vo.SSZS2000U0Out00VO">
+		/* SSZS2000U0.selectListGA09N501 : 알림관리 목록조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+
+			SELECT ROW_NUMBER() OVER(ORDER BY IPRT_MSG_CD, ROWNUM DESC) AS RNUM
+			     , COUNT(1) OVER() AS TOT_CNT      /* 총건수 */
+			     , IPRT_MSG_CD
+			     , IPRT_MSG_TTL_NM
+			     , BZ_AREA_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = TRIM(T1.BZ_AREA_TCD) AND ROWNUM = 1 ) AS BZ_AREA_TCD_NM 
+			     , MSG_SND_CN
+			     , USE_YN
+			     , SND_HM
+			     , MSG_SND_MDA_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = TRIM(T1.MSG_SND_MDA_TCD) AND ROWNUM = 1 ) AS MSG_SND_MDA_TCD_NM 
+			     , NTE_CN  
+			  FROM (
+
+						/* 00:전체 01:알림코드 02:알림제목 03:구분 04:사용여부 05:알림내용 06:매체구분코드 */
+						SELECT *
+						FROM GA09N501
+						WHERE
+					<choose>
+						<when test=' srchTcd != null and srchTcd == "01" '>
+							IPRT_MSG_CD LIKE '%' || NVL(TRIM(#{srchVl}),'') || '%'
+						</when>
+						<when test=' srchTcd != null and srchTcd == "02" '>
+							IPRT_MSG_TTL_NM LIKE '%' || NVL(TRIM(#{srchVl}),'') || '%'
+						</when>
+						<when test=' srchTcd != null and srchTcd == "03" '>
+							BZ_AREA_TCD LIKE '%' || NVL(TRIM(#{srchVl}),'') || '%'
+						</when>
+						<when test=' srchTcd != null and srchTcd == "04" '>
+							USE_YN LIKE '%' || NVL(TRIM(#{srchVl}),'') || '%'
+						</when>
+						<when test=' srchTcd != null and srchTcd == "05" '>
+							MSG_SND_CN LIKE '%' || NVL(TRIM(#{srchVl}),'') || '%'
+						</when>
+						<when test=' srchTcd != null and srchTcd == "06" '>
+							MSG_SND_MDA_TCD LIKE '%' || NVL(TRIM(#{srchVl}),'') || '%'
+						</when>
+						<otherwise>
+							1 = 1
+						</otherwise>
+					</choose>
+			) T1
+			ORDER BY T1.IPRT_MSG_CD
+
+		<if test='pageSize == null or pageSize == 0 '>       
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+				
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>	
+	
+	<select id="selectGA09N501" parameterType="com.miraeasset.biz.common.meta.vo.GA09N501VO" resultType="com.miraeasset.biz.common.meta.vo.GA09N501VO">
+		/* SSZS2000U0.selectGA09N501 : 알림관리 상세조회 */
+			SELECT IPRT_MSG_CD
+			     , IPRT_MSG_TTL_NM
+			     , BZ_AREA_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = TRIM(T1.BZ_AREA_TCD) AND ROWNUM = 1 ) AS BZ_AREA_TCD_NM 
+			     , MSG_SND_CN
+			     , USE_YN
+			     , SND_HM
+			     , MSG_SND_MDA_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = TRIM(T1.MSG_SND_MDA_TCD) AND ROWNUM = 1 ) AS MSG_SND_MDA_TCD_NM 
+			     , NTE_CN  
+			  FROM GA09N501	T1 -- 알림관리_메시지관리
+			 WHERE IPRT_MSG_CD = #{iprtMsgCd} 
+	</select>
+
+	<insert id="insertGA09N501" parameterType="com.miraeasset.biz.common.meta.vo.GA09N501VO" >
+		/* SSZS2000U0.insertGA09N501 = 알림관리 신규등록 */			
+			INSERT INTO GA09N501	-- 알림관리_메시지관리
+			(  
+			  IPRT_MSG_CD           /*알림메시지코드        */
+			, IPRT_MSG_TTL_NM       /*알림메시지제목명      */
+			, BZ_AREA_TCD           /*업무영역구분코드      */
+			, MSG_SND_CN            /*메시지발송내용        */
+			, USE_YN                /*사용여부              */
+			, SND_HM                /*발송시분              */
+			, MSG_SND_MDA_TCD       /*메시지발송매체구분코드*/
+			, NTE_CN                /*비고내용              */
+			, OPTR_ID               /*조작자ID              */
+			, OPRT_CHNL_CD          /*조작채널코드          */
+			, OPRT_ORZ_CD           /*조작조직코드          */
+			, OPRT_IP_ADR           /*조작IP주소            */
+			, OPRT_DTTM             /*조작일시              */
+			)
+			VALUES
+			(
+			  #{iprtMsgCd     }     /*알림메시지코드        */    
+			, #{iprtMsgTtlNm  }     /*알림메시지제목명      */    
+			, #{bzAreaTcd     }     /*업무영역구분코드      */    
+			, #{msgSndCn      }     /*메시지발송내용        */    
+			, #{useYn         }     /*사용여부              */    
+			, #{sndHm         }     /*발송시분              */    
+			, #{msgSndMdaTcd  }     /*메시지발송매체구분코드*/    
+			, #{nteCn         }     /*비고내용              */    
+			, #{optrId        }     /*조작자ID              */    
+			, #{oprtChnlCd    }     /*조작채널코드          */    
+			, #{oprtOrzCd     }     /*조작조직코드          */    
+			, #{oprtIpAdr     }     /*조작IP주소            */    
+			, SYSDATE               /*조작일시              */    
+			)	
+		</insert>
+		
+	<update id="updateGA09N501" parameterType="com.miraeasset.biz.common.meta.vo.GA09N501VO" >
+		/* SSZS2000U0.updateGA09N501 = 알림관리 수정 */			
+			UPDATE GA09N501	-- 알림관리_메시지관리
+			   SET IPRT_MSG_TTL_NM    = #{iprtMsgTtlNm  }     /*알림메시지제목명      */   
+			     , BZ_AREA_TCD        = #{bzAreaTcd     }     /*업무영역구분코드      */   
+			     , MSG_SND_CN         = #{msgSndCn      }     /*메시지발송내용        */   
+			     , USE_YN             = #{useYn         }     /*사용여부              */   
+			     , SND_HM             = #{sndHm         }     /*발송시분              */   
+			     , MSG_SND_MDA_TCD    = #{msgSndMdaTcd  }     /*메시지발송매체구분코드*/   
+			     , NTE_CN             = #{nteCn         }     /*비고내용              */   
+			     , OPTR_ID            = #{optrId        }     /*조작자ID              */   
+			     , OPRT_CHNL_CD       = #{oprtChnlCd    }     /*조작채널코드          */   
+			     , OPRT_ORZ_CD        = #{oprtOrzCd     }     /*조작조직코드          */   
+			     , OPRT_IP_ADR        = #{oprtIpAdr     }     /*조작IP주소            */   
+			     , OPRT_DTTM          = SYSDATE               /*조작일시              */   
+			 WHERE IPRT_MSG_CD        = #{iprtMsgCd     }     /*알림메시지코드        */  
+ 	</update>      
+ 	
+	<delete id="deleteGA09N501" parameterType="com.miraeasset.biz.common.meta.vo.GA09N501VO" >
+		/* SSZS2000U0.deleteGA09N501 = 알림관리 삭제 */			
+			DELETE GA09N501	-- 알림관리_메시지관리
+			 WHERE IPRT_MSG_CD        = #{iprtMsgCd     }     /*알림메시지코드        */  
+ 	</delete>      	  
+ 		
+			
+</mapper>

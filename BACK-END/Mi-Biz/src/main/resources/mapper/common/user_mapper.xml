@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="user_mapper">
+
+    <select id="selectUser00List" parameterType="com.miraeasset.biz.common.basic.vo.BasicUser00In00VO" resultType="com.miraeasset.biz.common.basic.vo.BasicUser00Out00VO">
+			/* User00.selectUser00List : 직원조회 */
+			SELECT * FROM (
+			SELECT * FROM (		
+			SELECT   
+			         ROW_NUMBER() OVER(ORDER BY V1.HR_HLDO_CD, V1.EPNO, ROWNUM DESC) AS RNUM     
+			       , COUNT(1) OVER() AS AL_CNT                         /* 전체건수               */      
+			       , V1.EPNO                                           /* 사원번호               */
+			       , V1.EP_NM                                          /* 사원명                 */
+			       , V1.BLNG_ORZ_CD                                    /* 소속조직코드           */
+			       , NVL(T2.ORZ_ABRV_NM, ' ')       AS BLNG_ORZ_NM     /* 소속조직명             */
+			       , V1.NOW_WRKP_ORZ_CD                                /* 현재근무지조직코드     */
+			       , NVL(T3.ORZ_ABRV_NM, ' ')       AS NOW_WRKP_ORZ_NM /* 현재근무지조직명       */
+			       , V1.HR_OSDT_CD                                     /* 인사직책코드           */
+			       , V1.HR_OSDT_NM                                     /* 인사직책명             */
+			       , V1.HR_HLDO_CD                                     /* 인사재직코드           */
+			       , V1.HR_HLDO_NM                                     /* 인사재직명             */
+			       , V1.TLNO                                           /* 전화번호               */
+			       , V1.HNDP_TLNO                                      /* 휴대폰전화번호         */
+			       , V1.XEMP_IDFY_NO_ECP_VL                            /* 임직원식별번호암호화값 */
+			    FROM (SELECT 
+			                 T1.EPNO
+			               , T1.EP_NM
+			               , T1.BLNG_ORZ_CD
+			               , T1.NOW_WRKP_ORZ_CD
+			               , T1.HR_OSDT_CD
+			               , T1.HR_HLDO_CD
+			               , T1.HR_EP_TCD
+			               ,    CASE WHEN TRIM(T1.RTN)  IS NOT NULL THEN '(' || TRIM(T1.RTN)  || ') ' END
+			                 || CASE WHEN TRIM(T1.MTNO) IS NOT NULL THEN TRIM(T1.MTNO)                END
+			                 || CASE WHEN TRIM(T1.ITNO) IS NOT NULL THEN '-' || TRIM(T1.ITNO)         END
+			                                        AS TLNO
+			               ,    CASE WHEN TRIM(T1.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(T1.HNDP_BZPR_TLNO) || ') ' END
+			                 || CASE WHEN TRIM(T1.HNDP_MTNO)      IS NOT NULL THEN TRIM(T1.HNDP_MTNO)                     END
+			                 || CASE WHEN TRIM(T1.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(T1.HNDP_ITNO)              END
+			                                        AS HNDP_TLNO
+			               , T1.XEMP_IDFY_NO_ECP_VL
+			               , NVL(T2.CD_STD_NM, ' ') AS HR_OSDT_NM
+			               , NVL(T3.CD_STD_NM, ' ') AS HR_HLDO_NM
+			            FROM 
+			                 (SELECT /*+ INDEX(T1 (EPNO)) */
+			                         T1.*
+			                    FROM CB01N310 T1
+			                   WHERE #{epno}      IS NOT NULL
+			                     AND T1.EPNO      LIKE #{epno} || '%'
+			                     AND T1.EP_NM     LIKE '%'|| TRIM( #{epNm} ) || '%'
+			                  UNION ALL
+			                  SELECT /*+ INDEX(T1 (EP_NM)) */
+			                         T1.*
+			                    FROM CB01N310 T1
+			                   WHERE #{epno}      IS     NULL   
+			                     AND TRIM( #{epNm} ) IS NOT NULL
+			                     AND T1.EP_NM     LIKE '%'|| TRIM( #{epNm} ) || '%'
+			                  UNION ALL
+			                  SELECT 
+			                         T1.*
+			                    FROM CB01N310 T1
+			                   WHERE #{epno}      IS     NULL
+			                     AND TRIM( #{epNm} ) IS     NULL
+			                 )        T1 /* 사원 */
+			
+			               , CB01C111 T2 /* 인사공통코드(직책) */
+			               , CB01C111 T3 /* 인사공통코드(재직) */
+			           WHERE 1=1
+			             AND 'HRM_007'              = T2.HR_CMN_CD_KND_NO (+) /* 인사직책코드 */
+			             AND TRIM(T1.HR_OSDT_CD)    = T2.HR_CMN_CD        (+)
+			             AND 'CB_001'               = T3.HR_CMN_CD_KND_NO (+) /* 인사재직코드 */
+			             AND TRIM(T1.HR_HLDO_CD)    = T3.HR_CMN_CD        (+)
+			         )        V1 /* 가상_사원 */
+			       , CB01N210 T2 /* 조직(소속조직코드) */
+			       , CB01N210 T3 /* 조직(현재근무지조직코드) */
+			   WHERE V1.BLNG_ORZ_CD                 = T2.ORZ_CD (+)
+			     AND V1.NOW_WRKP_ORZ_CD             = T3.ORZ_CD (+)
+			     AND V1.NOW_WRKP_ORZ_CD            IN (SELECT /*+ UNNEST USE_HASH(T2) */  /* TUN:20180619:힌트 변경 */
+			                                                  T2.ORZ_CD
+			                                             FROM CB01N210 T2 /* 조직 */
+                                                        WHERE T2.ORZ_NM LIKE '%' || TRIM( #{orzNm} ) || '%'   			                                             
+			                                          CONNECT BY PRIOR T2.ORZ_CD = T2.HRK_ORZ_CD
+			                                            START WITH T2.ORZ_CD     = (CASE WHEN TRIM( #{orzCd} ) IS NULL
+			                                                                             THEN '000000'
+			                                                                             ELSE #{orzCd}
+			                                                                        END)
+			                                          )
+			     AND V1.HR_HLDO_CD                 = DECODE( #{rtmprIcldYn} , '1', 'A', V1.HR_HLDO_CD) /* 인사재직코드 */
+			      -- 'NEXTCONDITION START' = 'NEXTCONDITION START'
+			     AND (
+			          V1.HR_HLDO_CD > NVL( #{nextHrHldoCd} , ' ')
+			          OR (V1.HR_HLDO_CD = NVL( #{nextHrHldoCd} , ' ')
+			              AND V1.EPNO >= NVL( #{nextEpno} , ' ')
+			             )
+			         )
+			     AND (
+			               (NVL(#{xempYn}, '0') = '1' AND V1.HR_EP_TCD IN ('11', '15'))
+			            OR (NVL(#{xempYn}, '0') = '0' AND 1=1)
+			          )    
+			      -- 'NEXTCONDITION END' = 'NEXTCONDITION END'
+			   ORDER BY V1.HR_HLDO_CD
+			          , V1.EPNO
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 			  .
+    </select>
+
+
+</mapper>
+
+

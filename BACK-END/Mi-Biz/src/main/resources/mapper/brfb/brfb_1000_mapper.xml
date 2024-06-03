@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brfb_1000_mapper">
+
+    <select id="selectList00CB01N210" resultType="java.util.Map">
+        /* brfb_1000_mapper.selectList00CB01N210 : 지점개요 - 지점리스트 조회 */
+        SELECT A.ORZ_CD
+             , A.ORZ_NM
+        FROM CB01N210 A
+           , CB01N212 B
+        WHERE 1 = 1
+          AND A.ORZ_CD = B.ORZ_CD
+          AND B.LEVL2_ORZ_CD = '200000'
+          AND A.HOBR_TCD = '02'
+          AND A.ORZ_USE_YN = '1'
+          AND A.ORZ_LEVL_VL NOT IN ('2', '3', '4') /* 총괄 제외 */
+          AND REGEXP_LIKE(A.ORZ_CD, '[0-9]{6}')
+        ORDER BY A.LNK_MT_ORZ_CD, A.ORZ_CD
+    </select>
+
+    <select id="selectList01CB01N210" parameterType="com.miraeasset.biz.br.fb.vo.BRFB1000U0Out00VO"
+            resultType="com.miraeasset.biz.br.fb.vo.BRFB1000U0Out00VO">
+        /* brfb_1000_mapper.selectList01CB01N210 : 지점개요 - 지점전체조회 */
+        SELECT * FROM (
+        SELECT * FROM (
+        SELECT A.ORZ_CD
+        , A.ORZ_NM
+        , DECODE(A.ORZ_CD, A.LNK_MT_ORZ_CD, '본부', 'WM팀') AS ORZ_TCD_NM
+        , A.HRK_ORZ_CD
+        , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.HRK_ORZ_CD) AS HRK_ORZ_NM
+        , DECODE(A.ORZ_CD, A.LNK_MT_ORZ_CD, A.OPN_DT, NULL) AS OPN_DT
+        , DECODE(A.ORZ_CD, A.LNK_MT_ORZ_CD, NVL((SELECT CMN_CD_VL FROM GA09C302 WHERE CD_KND_NO = 'LEAS_PCD' AND
+        CMN_CD_VL = C.LEAS_PCD), '미입력'), NULL) AS LEASE_PCD_NM
+        , (SELECT ADR FROM CB01N211 WHERE ORZ_CD = A.ORZ_CD) AS ADR
+        , NVL(D.LEAS_GRT_A, 0) AS LEAS_GRT_A
+        , NVL(D.LS_A, 0) AS LS_A
+        , DECODE(D.ATC_FILE_NO, NULL, NULL, 'ERP_' || D.ATC_FILE_NO) AS ATC_FILE_NO
+        FROM
+        CB01N210 A
+        , CB01N212 B
+        , GA02N001 C
+        , (
+        SELECT X.ORZ_CD, X.ATC_FILE_NO
+        , SUM(Y.LEAS_GRT_A) AS LEAS_GRT_A
+        , SUM(X.SURT_EXP_PY_LS_A) + SUM(X.LS_A_VAT) AS LS_A
+        FROM AT08N100 X, AT08N101 Y
+        WHERE X.LS_CNTC_NO = Y.LS_CNTC_NO AND X.LS_CNTC_ADTN_SRNO = Y.LS_CNTC_ADTN_SRNO
+        AND X.LST_CNTC_YN = '1' AND X.APRV_SCD = '40' AND Y.REST_AST_TCD IN ('02', '03')
+        AND TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN X.LS_OP_DT AND X.LS_END_DT
+        GROUP BY X.ORZ_CD, X.ATC_FILE_NO
+        ) D
+        WHERE 1 = 1
+        /* JOIN */
+        AND A.ORZ_CD = B.ORZ_CD
+        AND A.ORZ_CD = C.ORZ_CD(+)
+        AND A.ORZ_CD = D.ORZ_CD(+)
+        /* COND */
+        AND B.LEVL2_ORZ_CD = '200000'
+        AND A.LNK_MT_ORZ_CD IN (SELECT ORZ_CD FROM CB01N210 WHERE HOBR_TCD = '02')
+        AND A.ORZ_USE_YN = '1'
+        AND A.ORZ_LEVL_VL NOT IN ('2', '3', '4') /* 총괄 제외 */
+        AND A.ORZ_CD NOT LIKE '%X'
+        <if test=" orzCd != null and orzCd != '' ">
+            AND A.ORZ_CD = #{orzCd} /* 지점개요 - 지점상세조회 시 사용 */
+        </if>
+        <choose>
+            <when test=" orzTcd == '01' ">AND A.ORZ_CD = A.LNK_MT_ORZ_CD</when>
+            <when test=" orzTcd == '02' ">AND A.ORZ_CD <![CDATA[ <> ]]> A.LNK_MT_ORZ_CD</when>
+            <otherwise></otherwise>
+        </choose>
+        ORDER BY A.LNK_MT_ORZ_CD, A.ORZ_CD
+        -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+        <if test='pageSize == null or pageSize == 0 '>
+            ) Z
+            ) ZZ
+        </if>
+        <if test='pageSize > 0'>
+            ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+            ) ZZ WHERE RNUM > ( #{pageIndex})
+        </if>
+        -- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+    </select>
+
+    <select id="selectOne00GA02N001" parameterType="com.miraeasset.biz.br.fb.vo.BRFB1000U0In00VO"
+            resultType="com.miraeasset.biz.br.fb.vo.BRFB1000U0Out01VO">
+        /* brfb_1000_mapper.selectOne00GA02N001 : 지점개요관리 조회 */
+        SELECT *
+        FROM GA02N001
+        WHERE ORZ_CD = #{orzCd}
+    </select>
+
+    <insert id="merge00GA02N001" parameterType="com.miraeasset.biz.br.fb.vo.BRFB1000U0Out01VO">
+        /* brfb_1000_mapper.merge00GA02N001 : 지점개요관리 저장 */
+        MERGE INTO GA02N001
+        USING DUAL
+        ON (ORZ_CD = #{orzCd})
+        WHEN MATCHED THEN
+            UPDATE
+            SET LEAS_PCD     = #{leasPcd},
+                FILE_NO1     = #{fileNo1},
+                FILE_NO2     = #{fileNo2},
+                FILE_NO3     = #{fileNo3},
+                FILE_NO4     = #{fileNo4},
+                OPTR_ID      = #{optrId},
+                OPRT_CHNL_CD = #{oprtChnlCd},
+                OPRT_ORZ_CD  = #{oprtOrzCd},
+                OPRT_IP_ADR  = #{oprtIpAdr},
+                OPRT_DTTM    = SYSDATE
+        WHEN NOT MATCHED THEN
+            INSERT (ORZ_CD,
+                    LEAS_PCD,
+                    FILE_NO1,
+                    FILE_NO2,
+                    FILE_NO3,
+                    FILE_NO4,
+                    OPTR_ID,
+                    OPRT_CHNL_CD,
+                    OPRT_ORZ_CD,
+                    OPRT_IP_ADR,
+                    OPRT_DTTM)
+            VALUES (#{orzCd},
+                    #{leasPcd},
+                    #{fileNo1},
+                    #{fileNo2},
+                    #{fileNo3},
+                    #{fileNo4},
+                    #{optrId},
+                    #{oprtChnlCd},
+                    #{oprtOrzCd},
+                    #{oprtIpAdr},
+                    SYSDATE)
+    </insert>
+
+    <select id="selectList00GA01N001" parameterType="com.miraeasset.biz.br.fb.vo.BRFB1000U0In00VO"
+            resultType="com.miraeasset.biz.br.fb.vo.BRFB1000U0Out02VO">
+        SELECT *
+        FROM (SELECT A.EQMT_TCD
+                   , B.CMN_CD_VL_DEF_CN AS EQMT_TCD_NM
+                   , COUNT(*)           AS CNT
+              FROM GA01N001 A
+                 , (SELECT CMN_CD_VL, CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RENT_EQMT_TCD') B
+              WHERE A.MT_ORZ_CD = #{orzCd}
+                AND A.EXCC_YM = (SELECT MAX(EXCC_YM) FROM GA01N001 WHERE A.MT_ORZ_CD = #{orzCd})
+                AND A.EQMT_TCD = B.CMN_CD_VL
+              GROUP BY A.EQMT_TCD, B.CMN_CD_VL_DEF_CN
+              UNION ALL
+              SELECT '05'     AS EQMT_TCD
+                   , '복합기'    AS EQMT_TCD_NM
+                   , COUNT(*) AS CNT
+              FROM GA01N003
+              WHERE MT_ORZ_CD = #{orzCd}
+                AND EXCC_YM = (SELECT MAX(EXCC_YM) FROM GA01N003 WHERE MT_ORZ_CD = #{orzCd}))
+        ORDER BY EQMT_TCD
+    </select>
+
+</mapper>

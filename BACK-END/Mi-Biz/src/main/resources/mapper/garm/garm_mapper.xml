@@ -1,0 +1,686 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="garm_mapper">
+
+	<insert id="insert00GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000ExcelVO">
+		/* GARM1000V0.insert00GA01N001 : 렌탈관리(정수기) - 엑셀업로드 */
+		INSERT INTO GA01N001
+		     ( EXCC_YM       	 /* 정산년월 */
+		     , RENT_CNTC_NO      /* 임대계약번호 */
+		     , EQMT_TCD          /* 장비구분코드 */
+		     , DELP_CD         	 /* 거래처코드 */
+		     , MT_ORZ_CD       	 /* 관리조직코드 */
+		     , GDS_NM         	 /* 제품명 */
+		     , MLY_RENTC         /* 월간임대료 */
+		     , IST_DT         	 /* 설치일자 */
+		     , DUTY_USE_DT       /* 설치장소명 */
+		     , IST_PLC_NM        /* 설치일자 */
+		     , IST_PLC_DL_NM     /* 설치장소상세명 */
+		     , OPTR_ID           /* 조작자ID */
+		     , OPRT_CHNL_CD      /* 조작채널코드 */
+		     , OPRT_ORZ_CD       /* 조작조직코드 */
+		     , OPRT_IP_ADR       /* 조작IP주소 */
+		     , OPRT_DTTM         /* 조작일시 */
+		     )
+		VALUES
+		     (  SUBSTR(REPLACE(#{exccYm}, '-', ''), 0, 6)
+		      , #{rentCntcNo}
+		      , #{eqmtTcd}
+		      , #{delpCd}
+		      , #{mtOrzCd}
+		      , #{gdsNm}
+		      , #{mlyRentc}
+		      , REPLACE(#{istDt}, '-', '')
+		      , REPLACE(#{dutyUseDt}, '-', '')
+		      , #{istPlcNm}
+		      , #{istPlcDlNm}
+		      , #{optrId}
+		      , #{oprtChnlCd}
+		      , #{oprtOrzCd}
+		      , #{oprtIpAdr}
+		      , SYSDATE
+		      )
+	</insert>
+
+	<delete id="delete00GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000ExcelVO">
+		/* GARM1000V0.delete00GA01N001 : 렌탈관리(엑셀업로드) - 삭제 */
+		DELETE FROM GA01N001 /* 임대관리 */
+		      WHERE 1=1
+		        AND EXCC_YM      = SUBSTR(REPLACE(#{exccYm}, '-', ''), 0, 6)
+		        AND MT_ORZ_CD    = #{mtOrzCd}
+		        AND RENT_CNTC_NO = #{rentCntcNo}
+	</delete>
+
+	<delete id="delete01GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000ExcelVO">
+		/* GARM1000V0.delete01GA01N001 : 렌탈관리(엑셀업로드) - 정산년월 전체 삭제 */
+		DELETE FROM GA01N001 /* 임대관리 */
+		WHERE 1=1
+		  AND EXCC_YM      = SUBSTR(REPLACE(#{exccYm}, '-', ''), 0, 6)
+	</delete>
+
+	<select id="selectList00GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000V0In00VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM1000V0Out00VO">
+		/* GARM1000V0.selectList00GA01N001 : 렌탈관리조회 */
+		SELECT * FROM (
+		SELECT * FROM (
+		    SELECT A.EXCC_YM       /* 정산년월 */
+		         , A.RENT_CNTC_NO  /* 임대계약번호 - 계약번호 */
+		         , A.EQMT_TCD      /* 장비구분코드 */
+		         , C.CMN_CD_VL_DEF_CN  AS EQMT_TCD_NM /* 장비구분명 */
+		         , A.DELP_CD       /* 거래처코드 - 관리업체코드 */
+		         , D.CMN_CD_VL_DEF_CN  AS DELP_CD_NM  /* 거래처명 - 관리업체명 */
+		         , A.MT_ORZ_CD     /* 관리조직코드 - 부점코드 */
+		         , B.ORZ_NM        AS MT_ORZ_NM /* 관리조직명 - 부점명 */
+		         , A.GDS_NM        /* 제품명 */
+		         , A.MLY_RENTC     /* 월간임대료 - 렌탈료 */
+		         , A.IST_DT        /* 설치일자 */
+		         , A.DUTY_USE_DT   /* 의무사용일자 */
+		         , A.IST_PLC_NM    /* 설치장소명 */
+		         , A.IST_PLC_DL_NM /* 설치장소상세명 */
+		         , A.OPTR_ID       /* 조작자ID */
+		         , A.OPRT_CHNL_CD  /* 조작채널코드 */
+		         , A.OPRT_ORZ_CD   /* 조작조직코드 */
+		         , A.OPRT_IP_ADR   /* 조작IP주소 */
+		         , A.OPRT_DTTM     /* 조작일시 */
+		         , ROWNUM          AS RNUM
+		         , COUNT(1) OVER() AS AL_CNT /* 전체건수 */
+		      FROM GA01N001 A /* 임대관리 */
+		         , CB01N210 B /* 조직 */
+		         , GA09C302 C /* 총무_공통코드값(장비구분) */
+		         , GA09C302 D /* 총무_공통코드값(관리업체) */
+		     WHERE 1=1
+		       AND A.MT_ORZ_CD     = B.ORZ_CD(+)
+		       AND A.EQMT_TCD      = C.CMN_CD_VL
+		       AND C.CD_KND_NO     = 'RENT_EQMT_TCD'
+		       AND TRIM(A.DELP_CD) = D.CMN_CD_VL
+		       AND D.CD_KND_NO     = 'MT_ENTP_TCD'
+		       AND A.EXCC_YM       = SUBSTR(#{exccYm}, 0, 6)
+		       AND A.EQMT_TCD      = NVL(#{eqmtTcd}, A.EQMT_TCD)
+		       AND B.ORZ_NM        LIKE '%' || NVL(#{mtOrzNm}, B.ORZ_NM) || '%'
+		       AND TRIM(A.DELP_CD) = NVL(#{delpCd}, TRIM(A.DELP_CD))
+		       AND A.RENT_CNTC_NO  LIKE '%' || NVL(#{rentCntcNo}, A.RENT_CNTC_NO) || '%'
+
+		-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+
+	<select id="selectList01GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000V0In01VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM1000V0Out01VO">
+		/* GARM1000V0.selectList01GA01N001 : 렌탈관리요약정보조회 */
+		SELECT NVL(SUM(A.RENTC), 0)   AS TOTAL_RENTC /* 총 렌탈료 */
+		     , NVL(SUM(A.RENTC01), 0) AS RENTC01     /* 정수기 */
+		     , NVL(SUM(A.RENTC02), 0) AS RENTC02     /* 공기청정기 */
+		     , NVL(SUM(A.RENTC03), 0) AS RENTC03     /* 비데 */
+		     , NVL(SUM(A.RENTC04), 0) AS RENTC04     /* 클린워셔 */
+		  FROM (
+		        SELECT EXCC_YM
+		             , NVL(RENTC, 0) AS RENTC
+		             , CASE WHEN EQMT_TCD = '01' THEN NVL(RENTC, 0) END AS RENTC01
+		             , CASE WHEN EQMT_TCD = '02' THEN NVL(RENTC, 0) END AS RENTC02
+		             , CASE WHEN EQMT_TCD = '03' THEN NVL(RENTC, 0) END AS RENTC03
+		             , CASE WHEN EQMT_TCD = '04' THEN NVL(RENTC, 0) END AS RENTC04
+		          FROM (
+		                SELECT A.EXCC_YM
+		                     , A.EQMT_TCD
+		                     , NVL(SUM(A.MLY_RENTC), 0) AS RENTC
+		                  FROM GA01N001 A /* 임대관리 */
+		                     , CB01N210 B /* 조직 */
+		                 WHERE 1=1
+		                   AND A.MT_ORZ_CD  = B.ORZ_CD(+)
+		                   AND A.EXCC_YM    = SUBSTR(#{exccYm}, 0, 6)
+				           AND A.EQMT_TCD   = NVL(#{eqmtTcd}, A.EQMT_TCD)
+				           AND B.ORZ_NM     LIKE '%' || NVL(#{mtOrzNm}, B.ORZ_NM) || '%'
+				           AND TRIM(A.DELP_CD) = NVL(#{delpCd}, TRIM(A.DELP_CD))
+				           AND A.RENT_CNTC_NO LIKE '%' || NVL(#{rentCntcNo}, A.RENT_CNTC_NO) || '%'
+		                 GROUP BY A.EXCC_YM, A.EQMT_TCD
+		                )
+		        ) A
+		  WHERE 1=1
+		  GROUP BY EXCC_YM
+	</select>
+
+	<select id="selectList02GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000V0In02VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM1000V0Out02VO">
+		/* GARM1000V0.selectList02GA01N001 : 연간렌탈료 */
+		SELECT * FROM (
+		SELECT * FROM (
+		SELECT COUNT(1) OVER()    AS TOT_CNT      /* 총건수 */
+		     , A.EXCC_YM          AS EXCC_YM      /* 정산년월 */
+		     , A.EQMT_TCD         AS EQMT_TCD     /* 장비구분코드 */
+		     , D.CMN_CD_VL_DEF_CN AS EQMT_TCD_NM  /* 장비구분명 */
+		     , A.MT_ORZ_CD        AS MT_ORZ_CD    /* 관리조직코드 - 부점코드 */
+			 , C.ORZ_NM           AS ORZ_NM       /* 조직명 - 부점명 */
+		     , A.RENT_CNTC_NO     AS RENT_CNTC_NO /* 임대계약번호 - 계약번호 */
+		     , GDS_NM             AS GDS_NM       /* 제품명 */
+		     , DECODE(B.RNUM, 1, B.MLY_RENTC, '')  AS JAN_MLY_RETC  /* 1월임대료 */
+		     , DECODE(B.RNUM, 2, B.MLY_RENTC, '')  AS FED_MLY_RETC  /* 2월임대료 */
+		     , DECODE(B.RNUM, 3, B.MLY_RENTC, '')  AS MACH_MLY_RETC /* 3월임대료 */
+		     , DECODE(B.RNUM, 4, B.MLY_RENTC, '')  AS APR_MLY_RETC  /* 4월임대료 */
+		     , DECODE(B.RNUM, 5, B.MLY_RENTC, '')  AS MAY_MLY_RETC  /* 5월임대료 */
+		     , DECODE(B.RNUM, 6, B.MLY_RENTC, '')  AS JUNE_MLY_RETC /* 6월임대료 */
+		     , DECODE(B.RNUM, 7, B.MLY_RENTC, '')  AS JULY_MLY_RETC /* 7월임대료 */
+		     , DECODE(B.RNUM, 8, B.MLY_RENTC, '')  AS AUG_MLY_RETC  /* 8월임대료 */
+		     , DECODE(B.RNUM, 9, B.MLY_RENTC, '')  AS SEP_MLY_RETC  /* 9월임대료 */
+		     , DECODE(B.RNUM, 10, B.MLY_RENTC, '') AS OCT_MLY_RETC  /* 10월임대료 */
+		     , DECODE(B.RNUM, 11, B.MLY_RENTC, '') AS NOV_MLY_RETC  /* 11월임대료 */
+		     , DECODE(B.RNUM, 12, B.MLY_RENTC, '') AS DEC_MLY_RETC  /* 12월임대료 */
+		     , ROWNUM AS RNUM
+		  FROM GA01N001 A /* 임대관리 */
+		     , (SELECT A.EXCC_YM
+		             , RENT_CNTC_NO
+		             , SUM(MLY_RENTC) AS MLY_RENTC
+		             , MAX(RNUM) AS RNUM
+		          FROM GA01N001 A
+		             , (SELECT SUBSTR(#{basYm}, 0, 4) || LV AS EXCC_YM
+		                     , ROWNUM AS RNUM
+		                  FROM (SELECT LPAD(LEVEL, 2, '0') LV
+		                          FROM DUAL CONNECT BY LEVEL <![CDATA[<]]>= 12
+		                        )
+		                ) B
+		         WHERE 1=1
+		           AND A.EXCC_YM    = B.EXCC_YM
+		           AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		         GROUP BY A.EXCC_YM, RENT_CNTC_NO
+		         ) B
+		     , CB01N210 C /* 조직 */
+		     , GA09C302 D /* 총무_공통코드값(장비구분) */
+		 WHERE 1=1
+		   AND A.EXCC_YM      = B.EXCC_YM(+)
+		   AND A.RENT_CNTC_NO = B.RENT_CNTC_NO(+)
+		   AND A.MT_ORZ_CD    = C.ORZ_CD(+)
+		   AND A.EQMT_TCD     = D.CMN_CD_VL
+		   AND D.CD_KND_NO    = 'RENT_EQMT_TCD'
+		   AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		   -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>
+		) Z
+		) ZZ
+		</if>
+		<if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= (#{pageIndex} + #{pageSize})
+		) ZZ WHERE RNUM > (#{pageIndex})
+		</if>
+
+		-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	</select>
+
+	<select id="selectList03GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000V0In03VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM1000V0Out03VO">
+		/* GARM1000V0.selectList03GA01N001 : 연간렌탈료요약정보 */
+		SELECT MAX(AL_CNT) AS TOT_CNT       /* 총건수 */
+		     , SUM(VAL01)  AS JAN_MLY_RETC  /* 1월임대료 */
+		     , SUM(VAL02)  AS FED_MLY_RETC  /* 2월임대료 */
+		     , SUM(VAL03)  AS MACH_MLY_RETC /* 3월임대료 */
+		     , SUM(VAL04)  AS APR_MLY_RETC  /* 4월임대료 */
+		     , SUM(VAL05)  AS MAY_MLY_RETC  /* 5월임대료 */
+		     , SUM(VAL06)  AS JUNE_MLY_RETC /* 6월임대료 */
+		     , SUM(VAL07)  AS JULY_MLY_RETC /* 7월임대료 */
+		     , SUM(VAL08)  AS AUG_MLY_RETC  /* 8월임대료 */
+		     , SUM(VAL09)  AS SEP_MLY_RETC  /* 9월임대료 */
+		     , SUM(VAL10)  AS OCT_MLY_RETC  /* 10월임대료 */
+		     , SUM(VAL11)  AS NOV_MLY_RETC  /* 11월임대료 */
+		     , SUM(VAL12)  AS DEC_MLY_RETC  /* 12월임대료 */
+		  FROM (
+		        SELECT COUNT(1) OVER()    AS AL_CNT       /* 전체건수 */
+		             , DECODE(B.RNUM, 1, B.MLY_RENTC, '')  AS VAL01
+		             , DECODE(B.RNUM, 2, B.MLY_RENTC, '')  AS VAL02
+		             , DECODE(B.RNUM, 3, B.MLY_RENTC, '')  AS VAL03
+		             , DECODE(B.RNUM, 4, B.MLY_RENTC, '')  AS VAL04
+		             , DECODE(B.RNUM, 5, B.MLY_RENTC, '')  AS VAL05
+		             , DECODE(B.RNUM, 6, B.MLY_RENTC, '')  AS VAL06
+		             , DECODE(B.RNUM, 7, B.MLY_RENTC, '')  AS VAL07
+		             , DECODE(B.RNUM, 8, B.MLY_RENTC, '')  AS VAL08
+		             , DECODE(B.RNUM, 9, B.MLY_RENTC, '')  AS VAL09
+		             , DECODE(B.RNUM, 10, B.MLY_RENTC, '') AS VAL10
+		             , DECODE(B.RNUM, 11, B.MLY_RENTC, '') AS VAL11
+		             , DECODE(B.RNUM, 12, B.MLY_RENTC, '') AS VAL12
+		          FROM GA01N001 A /* 임대관리 */
+		             , (SELECT A.EXCC_YM
+		                     , RENT_CNTC_NO
+		                     , SUM(MLY_RENTC) AS MLY_RENTC
+		                     , MAX(RNUM) AS RNUM
+		                  FROM GA01N001 A
+		                     , (SELECT SUBSTR(#{basYm}, 0, 4) || LV AS EXCC_YM
+		                             , ROWNUM AS RNUM
+		                          FROM (SELECT LPAD(LEVEL, 2, '0') LV
+		                                  FROM DUAL CONNECT BY LEVEL <![CDATA[<]]>= 12
+		                                )
+		                        ) B
+		                 WHERE 1=1
+		                   AND A.EXCC_YM    = B.EXCC_YM
+		                   AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		                 GROUP BY A.EXCC_YM, RENT_CNTC_NO
+		                 ) B
+		             , CB01N210 C /* 조직 */
+		             , GA09C302 D /* 총무_공통코드값(장비구분) */
+		         WHERE 1=1
+		           AND A.EXCC_YM      = B.EXCC_YM(+)
+		           AND A.RENT_CNTC_NO = B.RENT_CNTC_NO(+)
+		           AND A.MT_ORZ_CD    = C.ORZ_CD(+)
+		           AND A.EQMT_TCD     = D.CMN_CD_VL
+		           AND D.CD_KND_NO    = 'RENT_EQMT_TCD'
+		           AND SUBSTR(A.EXCC_YM, 0, 4) = SUBSTR(#{basYm}, 0, 4)
+		        )
+	</select>
+
+	<select id="selectList04GA01N001" parameterType="com.miraeasset.biz.ga.rm.vo.GARM1000V0In04VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM1000V0Out04VO">
+		/* GARM1000V0.selectList04GA01N001 : 렌탈제품조회(신청지점의 렌탈관리 조회) */
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT ROWNUM AS RNUM
+			     , COUNT(1) OVER()    AS AL_CNT        /* 전체건수 */
+			     , '0'                AS CHK_YN        /* 체크여부 */
+			     , A.MT_ORZ_CD        AS ORZ_CD        /* 사용조직코드 */
+			     , B.ORZ_NM           AS ORZ_NM        /* 조직명 */
+			     , A.EQMT_TCD         AS EQMT_TCD      /* 장비구분코드 */
+			     , C.CMN_CD_VL_DEF_CN AS EQMT_TCD_NM   /* 장비구분코드명 */
+			     , A.RENT_CNTC_NO     AS RENT_CNTC_NO  /* 임대계약번호 */
+			     , A.GDS_NM           AS GDS_NM        /* 제품명 */
+			     , A.IST_PLC_NM       AS IST_PLC_NM    /* 설치장소명 */
+			     , A.IST_PLC_DL_NM    AS IST_PLC_DL_NM /* 설치장소상세명 */
+			     , A.OPTR_ID          AS OPTR_ID       /* 조작자ID */
+			     , A.OPRT_CHNL_CD     AS OPRT_CHNL_CD  /* 조작채널코드 */
+			     , A.OPRT_ORZ_CD      AS OPRT_ORZ_CD   /* 조작조직코드 */
+			     , A.OPRT_IP_ADR      AS OPRT_IP_ADR   /* 조작IP주소 */
+			     , A.OPRT_DTTM        AS OPRT_DTTM     /* 조작일시 */
+			  FROM
+			      <choose>
+					  <when test="eqmtTcd == '05'">
+			      		GA01N003 A
+					  </when>
+					  <otherwise>
+					  	GA01N001 A
+					  </otherwise>
+				  </choose>
+			     , CB01N210 B -- 공통코드
+			     , GA09C302 C -- 장비구분
+			 WHERE 1=1
+			   AND A.MT_ORZ_CD  = B.ORZ_CD(+)
+			   AND A.EQMT_TCD   = C.CMN_CD_VL(+)
+			   AND C.CD_KND_NO  = CASE WHEN #{eqmtTcd} = '05' THEN 'MFP_TCD'
+			                           ELSE 'RENT_EQMT_TCD'   END
+			   AND A.MT_ORZ_CD  = #{orzCd}
+			   <if test="eqmtTcd != '05'">
+			   AND A.EQMT_TCD   = NVL(#{eqmtTcd}, A.EQMT_TCD)
+			   </if>
+			-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+			<if test='pageSize == null or pageSize == 0 '>
+				  ) Z
+				  ) ZZ
+			</if>
+			<if test='pageSize > 0'>
+				  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+				  ) ZZ WHERE RNUM > ( #{pageIndex})
+			</if>
+			-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+
+	</select>
+
+	<insert id="insert00GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2000ExcelVO">
+		/* GARM2000V0.insert00GA01N003 : 렌탈관리(복합기) - 엑셀업로드 */
+		INSERT INTO GA01N003
+		          ( EXCC_YM           /* 정산년월 */
+		          , MT_ORZ_CD         /* 관리조직코드 */
+		          , RENT_CNTC_NO      /* 임대계약번호 */
+		          , EQMT_TCD 		  /* 장비구분코드 */
+		          , DELP_CD 		  /* 거래처코드 */
+		          , GDS_NM 			  /* 제품명 */
+		          , MLY_RENTC         /* 월간임대료 */
+		          , IST_PLC_NM 		  /* 설치장소명 */
+		          , IST_PLC_DL_NM     /* 설치장소상세명 */
+		          , COLR_UVOL 		  /* 컬러사용량 */
+		          , COLR_BASE_UVOL    /* 컬러기본사용량 */
+		          , COLR_UPR          /* 컬러단가 */
+		          , BLAK_UVOL         /* 흑백사용량 */
+		          , BLAK_BASE_UVOL    /* 흑백기본사용량 */
+		          , BLAK_UPR 		  /* 흑백단가 */
+		          , OPTR_ID           /* 조작자ID */
+		     	  , OPRT_CHNL_CD      /* 조작채널코드 */
+				  , OPRT_ORZ_CD       /* 조작조직코드 */
+		          , OPRT_IP_ADR       /* 조작IP주소 */
+		     	  , OPRT_DTTM         /* 조작일시 */
+		          )
+		     VALUES
+		          ( SUBSTR(REPLACE(#{exccYm}, '-', ''), 0, 6)
+		          , #{mtOrzCd}
+		          , #{rentCntcNo}
+		          , #{eqmtTcd}
+		          , ''
+		          , #{gdsNm}
+		          , #{mlyRentc}
+		          , #{istPlcNm}
+		          , #{istPlcDlNm}
+		          , #{colrUvol}
+		          , #{colrBaseUvol}
+		          , #{colrUpr}
+		          , #{blakUvol}
+		          , #{blakBaseUvol}
+		          , #{blakUpr}
+		          , #{optrId}
+		          , #{oprtChnlCd}
+		          , #{oprtOrzCd}
+		          , #{oprtIpAdr}
+		          , SYSDATE
+		          )
+	</insert>
+
+	<delete id="delete00GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2000ExcelVO">
+		/* GARM2000V0.delete00GA01N003 : 렌탈관리(엑셀업로드) - 삭제 */
+		DELETE FROM GA01N003 /* 임대복합기관리 */
+		      WHERE 1=1
+		        AND EXCC_YM      = SUBSTR(REPLACE(#{exccYm}, '-', ''), 0, 6)
+		        AND MT_ORZ_CD    = #{mtOrzCd}
+		        AND RENT_CNTC_NO = #{rentCntcNo}
+	</delete>
+
+	<delete id="delete01GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2000ExcelVO">
+		/* GARM2000V0.delete01GA01N003 : 렌탈관리(엑셀업로드) - 정산년월 전체 삭제 */
+		DELETE FROM GA01N003 /* 임대복합기관리 */
+		WHERE 1=1
+		  AND EXCC_YM      = SUBSTR(REPLACE(#{exccYm}, '-', ''), 0, 6)
+	</delete>
+
+	<select id="selectList00GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2000V0In00VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM2000V0Out00VO">
+	/* GARM2000V0.selectList00GA01N003 : 렌탈관리내역(복합기) 조회 */
+	/* 복합기 계산식
+	 * 1.칼라
+	 *  - 칼라사용량	=> 칼라청구매수
+	 *  - 컬러기본사용량 => 칼라기본매수
+	 *  - 칼라단가		=> 추가단가
+	 *  - 칼라기본요금 => 기본요금합계 * 1.1
+	 *  - 칼라추가매수 => 칼라청구매수 - 칼라기본매수
+	 *  - 칼라추가요금 => ROUND((칼라추가매수 * 칼라단가),0)
+	 *  - 칼라금액		=> 칼라기본요금
+	 * 2.흑백
+	 *  - 흑백사용량	=> 흑백청구매수
+	 *  - 흑백기본사용량 => 흑백기본매수
+	 *  - 흑백단가		=> 추가단가
+	 *	- 흑백기본요금	=> 없음
+	 *	- 흑백추가매수	=> 흑백청구매수 - 흑백기본매수
+	 *	- 흑백추가요금 => IF( ROUND((흑백추가매수*흑백단가),0)>칼라추가요금, ROUND((흑백추가매수*흑백단가),0), 0 )
+	 *	- 흑백금액	=> 칼라추가요금+흑백추가요금
+	 * 3.정산
+	 *  - 정산금액 => 칼라금액+흑백금액
+	 * 4.기본요금
+	 *  - 기본요금 => 기본요금합계 * 1.1
+	 * 5.추가요금
+	 *	- 추가요금 = 컬러추가요금 + (if(흑백추가요금 > 컬러추가요금 , 흑백추가요금 + 컬러추가요금 , 0)
+	 */
+	WITH T1 AS (
+			SELECT * FROM (
+			SELECT * FROM (
+				SELECT A.EXCC_YM           AS EXCC_YM        /* 정산년월 */
+                     , A.DELP_CD           AS DELP_CD        /* 거래처코드 */
+                     , A.MT_ORZ_CD         AS MT_ORZ_CD      /* 관리조직코드 - 조직코드 */
+                     , B.ORZ_NM            AS MT_ORZ_NM      /* 관리조직명 - 조직명 */
+                     , A.EQMT_TCD          AS EQMT_TCD       /* 장비구분코드 */
+                     , C.CMN_CD_VL_DEF_CN  AS EQMT_TCD_NM    /* 장비구분명 */
+                     , A.RENT_CNTC_NO      AS RENT_CNTC_NO   /* 임대계약번호 - 기계번호 */
+                     , A.GDS_NM            AS GDS_NM         /* 제품명 */
+                     /* 칼라기본요금 = 기본요금 */
+                     , NVL(A.MLY_RENTC, 0) AS MLY_RENTC /* 월간임대료 = 기본요금 */
+                     , A.BLAK_UVOL         AS BLAK_UVOL      /* 흑백사용량 = 흑백_청구매수 */
+                     , A.BLAK_BASE_UVOL    AS BLAK_BASE_UVOL /* 흑백기본사용량 = 흑백기본매수 */
+                     , NVL(A.BLAK_UPR, 0)  AS BLAK_UPR       /* 흑백단가 = 추가단가 */
+                     , A.BLAK_AD_BUY       AS BLAK_AD_BUY    /* 흑백추가매수 */
+                     , A.BLAK_AD_CRGA      AS BLAK_AD_CRGA   /* 흑백추가요금 */
+                     , (NVL(A.COLR_AD_CRGA, 0) + NVL(A.BLAK_AD_CRGA, 0)) AS BLAK_A  /* 흑백금액 */
+                     , A.COLR_UVOL         AS COLR_UVOL      /* 컬러사용량 = 칼라_청구매수 */
+                     , A.COLR_BASE_UVOL    AS COLR_BASE_UVOL /* 컬러기본사용량 = 칼라기본매수 */
+                     , NVL(A.COLR_UPR, 0)  AS COLR_UPR       /* 컬러단가 = 추가단가 */
+                     , A.COLR_AD_BUY       AS COLR_AD_BUY    /* 컬러추가매수 */
+                     , A.COLR_AD_CRGA      AS COLR_AD_CRGA   /* 칼라추가요금 */
+                     /* 칼라금액 = 칼라기본요금 */
+                     , NVL(A.MLY_RENTC, 0) AS COLR_A   /* 칼라금액 */
+                     , A.IST_PLC_NM        AS IST_PLC_NM     /* 설치장소명 */
+                     , A.IST_PLC_DL_NM     AS IST_PLC_DL_NM  /* 설치장소상세명 */
+                     , A.OPTR_ID           AS OPTR_ID        /* 조작자ID */
+                     , A.OPRT_CHNL_CD      AS OPRT_CHNL_CD   /* 조작채널코드 */
+                     , A.OPRT_ORZ_CD       AS OPRT_ORZ_CD    /* 조작조직코드 */
+                     , A.OPRT_IP_ADR       AS OPRT_IP_ADR    /* 조작IP주소 */
+                     , A.OPRT_DTTM         AS OPRT_DTTM      /* 조작일시 */
+                     , ROWNUM              AS RNUM
+                     , COUNT(1) OVER()     AS AL_CNT /* 전체건수 */
+                  FROM (SELECT A.*
+                             /* 흑백추가매수 = 청구매수-기본매수 */
+                             , NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0) AS BLAK_AD_BUY
+                             /* 흑백추가요금  = IF( ROUND((흑백추가매수*흑백단가),0)>칼라추가요금, ROUND((흑백추가매수*흑백단가),0), 0 ) */
+                             , CASE WHEN ROUND(((NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0)) * NVL(A.BLAK_UPR, 0)), 0) >
+                                         ROUND(((NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0)) * NVL(A.COLR_UPR, 0)), 0)
+                                         THEN
+                                         ROUND(((NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0)) * NVL(A.BLAK_UPR, 0)), 0)
+                                    ELSE 0
+                                    END AS BLAK_AD_CRGA
+                             /* 칼라추가매수 = 청구매수-기본매수 */
+                             , NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0) AS COLR_AD_BUY
+                             /* 칼라추가요금 = ROUND((칼라추가매수*칼라단가),0) */
+                             , ROUND(((NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0)) * NVL(A.COLR_UPR, 0)), 0) AS COLR_AD_CRGA
+                          FROM GA01N003 A /* 임대복합기관리 */
+                         WHERE 1=1
+                           AND A.EXCC_YM    = SUBSTR(#{exccYm}, 0, 6)
+                           AND A.EQMT_TCD   = NVL(#{eqmtTcd}, A.EQMT_TCD)
+                           AND A.RENT_CNTC_NO LIKE '%' || NVL(#{rentCntcNo}, A.RENT_CNTC_NO) || '%'
+                        ) A
+                     , CB01N210 B /* 조직 */
+                     , GA09C302 C /* 총무_공통코드값(장비구분) */
+                 WHERE 1=1
+                   AND A.MT_ORZ_CD  = B.ORZ_CD(+)
+                   AND A.EQMT_TCD   = C.CMN_CD_VL
+                   AND B.ORZ_NM     LIKE #{mtOrzNm} || '%'
+                   AND C.CD_KND_NO  = 'MFP_TCD'
+			-- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+			<if test='pageSize == null or pageSize == 0 '>
+			) Z
+			) ZZ
+			</if>
+			<if test='pageSize > 0'>
+			) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			) ZZ WHERE RNUM > ( #{pageIndex})
+			</if>
+			-- 'PAGING END' = 'PAGEINDEX, PAGESIZE'
+	)
+	SELECT A.*
+	  FROM (
+	        SELECT T1.EXCC_YM           AS EXCC_YM        /* 정산년월 */
+	             , T1.DELP_CD           AS DELP_CD        /* 거래처코드 */
+	             , T1.MT_ORZ_CD         AS MT_ORZ_CD      /* 관리조직코드 - 조직코드 */
+	             , T1.MT_ORZ_NM         AS MT_ORZ_NM      /* 관리조직명 - 조직명 */
+	             , T1.EQMT_TCD          AS EQMT_TCD       /* 장비구분코드 */
+	             , T1.EQMT_TCD_NM       AS EQMT_TCD_NM    /* 장비구분명 */
+	             , T1.RENT_CNTC_NO      AS RENT_CNTC_NO   /* 임대계약번호 - 기계번호 */
+	             , T1.GDS_NM            AS GDS_NM         /* 제품명 */
+	             , T1.MLY_RENTC         AS MLY_RENTC      /* 월간임대료 = 기본요금 */
+	             , T1.BLAK_UVOL         AS BLAK_UVOL      /* 흑백사용량 = 흑백_청구매수 */
+	             , T1.BLAK_BASE_UVOL    AS BLAK_BASE_UVOL /* 흑백기본사용량 = 흑백기본매수 */
+	             , T1.BLAK_UPR          AS BLAK_UPR       /* 흑백단가 = 추가단가 */
+	             , T1.BLAK_AD_BUY       AS BLAK_AD_BUY    /* 흑백추가매수 */
+	             , T1.BLAK_AD_CRGA      AS BLAK_AD_CRGA   /* 흑백추가요금 */
+	             , T1.BLAK_A            AS BLAK_A         /* 흑백금액 */
+	             , T1.COLR_UVOL         AS COLR_UVOL      /* 컬러사용량 = 칼라_청구매수 */
+	             , T1.COLR_BASE_UVOL    AS COLR_BASE_UVOL /* 컬러기본사용량 = 칼라기본매수 */
+	             , T1.COLR_UPR          AS COLR_UPR       /* 컬러단가 = 추가단가 */
+	             , T1.COLR_AD_BUY       AS COLR_AD_BUY    /* 컬러추가매수 */
+	             , T1.COLR_AD_CRGA      AS COLR_AD_CRGA   /* 칼라추가요금 */
+	             , T1.COLR_A            AS COLR_A         /* 칼라금액 */
+	             , T1.IST_PLC_NM        AS IST_PLC_NM     /* 설치장소명 */
+	             , T1.IST_PLC_DL_NM     AS IST_PLC_DL_NM  /* 설치장소상세명 */
+	             , T1.OPTR_ID           AS OPTR_ID        /* 조작자ID */
+	             , T1.OPRT_CHNL_CD      AS OPRT_CHNL_CD   /* 조작채널코드 */
+	             , T1.OPRT_ORZ_CD       AS OPRT_ORZ_CD    /* 조작조직코드 */
+	             , T1.OPRT_IP_ADR       AS OPRT_IP_ADR    /* 조작IP주소 */
+	             , T1.OPRT_DTTM         AS OPRT_DTTM      /* 조작일시 */
+	             , T1.RNUM              AS RNUM
+	             , T1.AL_CNT            AS AL_CNT /* 전체건수 */
+	          FROM T1
+	         UNION ALL
+	        SELECT ''                     AS EXCC_YM        /* 정산년월 */
+	             , ''                     AS DELP_CD        /* 거래처코드 */
+	             , ''                     AS MT_ORZ_CD      /* 관리조직코드 - 조직코드 */
+	             , ''                     AS MT_ORZ_NM      /* 관리조직명 - 조직명 */
+	             , 'TOTAL'                AS EQMT_TCD       /* 장비구분코드 */
+	             , '합계'                  AS EQMT_TCD_NM    /* 장비구분명 */
+	             , ''                     AS RENT_CNTC_NO   /* 임대계약번호 - 기계번호 */
+	             , ''                     AS GDS_NM         /* 제품명 */
+	             , SUM(T1.MLY_RENTC)*1.1  AS MLY_RENTC      /* 월간임대료 = 기본요금 * 1.1 */
+	             , SUM(T1.BLAK_UVOL)      AS BLAK_UVOL      /* 흑백사용량 = 흑백_청구매수 */
+	             , SUM(T1.BLAK_BASE_UVOL) AS BLAK_BASE_UVOL /* 흑백기본사용량 = 흑백기본매수 */
+	             , SUM(T1.BLAK_UPR)       AS BLAK_UPR       /* 흑백단가 = 추가단가 */
+	             , SUM(T1.BLAK_AD_BUY)    AS BLAK_AD_BUY    /* 흑백추가매수 */
+	             , SUM(T1.BLAK_AD_CRGA)   AS BLAK_AD_CRGA   /* 흑백추가요금 */
+	             , SUM(T1.BLAK_A)         AS BLAK_A         /* 흑백금액 */
+	             , SUM(T1.COLR_UVOL)      AS COLR_UVOL      /* 컬러사용량 = 칼라_청구매수 */
+	             , SUM(T1.COLR_BASE_UVOL) AS COLR_BASE_UVOL /* 컬러기본사용량 = 칼라기본매수 */
+	             , SUM(T1.COLR_UPR)       AS COLR_UPR       /* 컬러단가 = 추가단가 */
+	             , SUM(T1.COLR_AD_BUY)    AS COLR_AD_BUY    /* 컬러추가매수 */
+	             , SUM(T1.COLR_AD_CRGA)   AS COLR_AD_CRGA   /* 칼라추가요금 */
+	             , SUM(T1.COLR_A) * 1.1   AS COLR_A         /* 칼라금액 */
+	             , ''                     AS IST_PLC_NM     /* 설치장소명 */
+	             , ''                     AS IST_PLC_DL_NM  /* 설치장소상세명 */
+	             , ''                     AS OPTR_ID        /* 조작자ID */
+	             , ''                     AS OPRT_CHNL_CD   /* 조작채널코드 */
+	             , ''                     AS OPRT_ORZ_CD    /* 조작조직코드 */
+	             , ''                     AS OPRT_IP_ADR    /* 조작IP주소 */
+	             , NULL                   AS OPRT_DTTM      /* 조작일시 */
+	             , MAX(T1.RNUM)           AS RNUM
+	             , MAX(T1.AL_CNT)         AS AL_CNT /* 전체건수 */
+	          FROM T1
+	         WHERE 1=1
+	         GROUP BY T1.EXCC_YM
+	        ) A
+	</select>
+
+	<select id="selectList01GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2000V0In01VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM2000V0Out01VO">
+	/* GARM2000V0.selectList01GA01N003 : 렌탈관리요약정보(복합기) 조회 */
+	/* 계산식
+	 * 총정산금액	 = (기본요금 * 1.1) + 추가금액
+     * 기본요금	 = 기본요금합계 * 1.1
+     * 추가요금	 = 컬러추가요금 + (if(흑백추가요금 > 컬러추가요금 , 흑백추가요금 + 컬러추가요금 , 0)
+	 */
+	SELECT NVL(BASE_CRGA, 0) +
+		   CASE WHEN NVL(COLR_AD_CRGA, 0) + NVL(BLAK_AD_CRGA, 0) > 0
+				THEN NVL(COLR_AD_CRGA, 0) + NVL(BLAK_AD_CRGA, 0) ELSE 0 END
+	       AS TOTAL_EXCC_A /* 총정산금액 */
+		 , NVL(BASE_CRGA, 0)    AS BASE_CRGA    /* 기본요금 */
+		/* 추가요금 = 컬러추가요금 + (if(흑백추가요금 > 컬러추가요금 , 흑백추가요금 + 컬러추가요금 , 0) */
+		 , CASE WHEN NVL(COLR_AD_CRGA, 0) + NVL(BLAK_AD_CRGA, 0) > 0
+		        THEN NVL(COLR_AD_CRGA, 0) + NVL(BLAK_AD_CRGA, 0) ELSE 0 END AS AD_CRGA /* 추가요금 */
+	FROM (SELECT /* (칼라금액 + 흑백금액) = 총정산금액 */
+			  (SUM(MLY_RENTC) * 1.1) + SUM(COLR_AD_CRGA + BLAK_AD_CRGA) AS TOTAL_EXCC_A
+			  /* 칼라기본요금 = 기본요금합계 * 1.1 */
+			   , SUM(MLY_RENTC) * 1.1 AS BASE_CRGA
+			   , SUM(COLR_AD_CRGA) AS COLR_AD_CRGA /* 칼러추가요금 */
+			   , CASE WHEN SUM(BLAK_AD_CRGA) > SUM(COLR_AD_CRGA)
+						  THEN SUM(BLAK_AD_CRGA)
+					  ELSE -1*SUM(COLR_AD_CRGA) END AS BLAK_AD_CRGA /* 흑백추가요금 */
+			   , CASE WHEN SUM(BLAK_AD_CRGA) > SUM(COLR_AD_CRGA) THEN SUM(BLAK_AD_CRGA) + SUM(COLR_AD_CRGA)
+					  ELSE 0 END AS CRGA /* 요금 */
+		  FROM (SELECT A.*
+					/* 흑백추가매수 = 청구매수-기본매수 */
+					 , NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0) AS BLAK_AD_BUY
+					/* 흑백추가요금  = IF( ROUND((흑백추가매수*흑백단가),0)>칼라추가요금, ROUND((흑백추가매수*흑백단가),0), 0 ) */
+					 , (NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0)) * NVL(A.BLAK_UPR, 0) AS BLAK_AD_CRGA
+					/* 칼라추가매수 = 청구매수-기본매수 */
+					 , NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0) AS COLR_AD_BUY
+					/* 칼라추가요금 = ROUND((칼라추가매수*칼라단가),0) */
+					 , (NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0)) * NVL(A.COLR_UPR, 0) AS COLR_AD_CRGA
+				FROM GA01N003 A /* 임대복합기관리 */
+				WHERE 1=1
+				  AND A.EXCC_YM      = SUBSTR(#{exccYm}, 0, 6)
+				  AND A.EQMT_TCD     = NVL(#{eqmtTcd}, A.EQMT_TCD)
+				  AND A.RENT_CNTC_NO LIKE '%' || NVL(#{rentCntcNo}, A.RENT_CNTC_NO) || '%'
+		  ) A
+			 , CB01N210 B /* 조직 */
+			 , GA09C302 C /* 총무_공통코드값(장비구분) */
+	         WHERE 1=1
+	           AND A.MT_ORZ_CD  = B.ORZ_CD(+)
+	           AND A.EQMT_TCD   = C.CMN_CD_VL
+	           AND C.CD_KND_NO  = 'MFP_TCD'
+	        )
+	</select>
+
+	<select id="selectList02GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2010V0In00VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM2010V0Out00VO">
+	/* GARM2000V0.selectList02GA01N003 : 연간렌탈료(복합기) 조회 */
+	WITH T1 AS (
+	            SELECT A.*
+	                 /* 흑백추가매수 = 청구매수-기본매수 */
+	                 , NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0) AS BLAK_AD_BUY
+	                 /* 흑백추가요금  = IF( ROUND((흑백추가매수*흑백단가),0)>칼라추가요금, ROUND((흑백추가매수*흑백단가),0), 0 ) */
+	                 , CASE WHEN ROUND(((NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0)) * NVL(A.BLAK_UPR, 0)), 0) >
+	                             ROUND(((NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0)) * NVL(A.COLR_UPR, 0)), 0)
+	                             THEN
+	                             ROUND(((NVL(A.BLAK_UVOL, 0) - NVL(A.BLAK_BASE_UVOL, 0)) * NVL(A.BLAK_UPR, 0)), 0)
+	                        ELSE 0
+	                        END AS BLAK_AD_CRGA
+	                 /* 칼라추가매수 = 청구매수-기본매수 */
+	                 , NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0) AS COLR_AD_BUY
+	                 /* 칼라추가요금 = ROUND((칼라추가매수*칼라단가),0) */
+	                 , ROUND(((NVL(A.COLR_UVOL, 0) - NVL(A.COLR_BASE_UVOL, 0)) * NVL(A.COLR_UPR, 0)), 0) AS COLR_AD_CRGA
+	              FROM GA01N003 A /* 임대복합기관리 */
+	             WHERE 1=1
+	               AND A.EXCC_YM    = SUBSTR(#{exccYm}, 0, 6)
+	)
+	SELECT EXCC_YM           AS EXCC_YM   /* 기준년월 */
+	     , COLR_TCD          AS COLR_TCD  /* 컬러구분 */
+	     , NVL(UVOL, 0)      AS UVOL      /* 청구매수 */
+	     , NVL(BASE_UVOL, 0) AS BASE_UVOL /* 기본매수 */
+	     , NVL(BASE_CRGA, 0) AS BASE_CRGA /* 기본요금 */
+	     , NVL(AD_BUY, 0)    AS AD_BUY    /* 추가매수 */
+	     , NVL(AD_UPR, 0)    AS AD_UPR    /* 추가단가 */
+	     , NVL(AD_CRGA, 0)   AS AD_CRGA   /* 추가요금 */
+	  FROM (/* 컬러 */
+	        SELECT MAX(T1.EXCC_YM)         AS EXCC_YM   /* 기준년월 */
+	             , '01'                    AS COLR_TCD  /* 컬러구분 */
+	             , SUM(T1.COLR_UVOL)       AS UVOL      /* 청구매수 */
+	             , SUM(T1.COLR_BASE_UVOL)  AS BASE_UVOL /* 기본매수 */
+	             , SUM(T1.MLY_RENTC) * 1.1 AS BASE_CRGA /* 기본요금 */
+	             , SUM(T1.COLR_AD_BUY)     AS AD_BUY    /* 추가매수 */
+	             , MAX(T1.COLR_UPR)        AS AD_UPR    /* 추가단가 */
+	             , SUM(T1.COLR_AD_CRGA)    AS AD_CRGA   /* 추가요금 */
+	          FROM T1
+	         UNION ALL
+	        /* 흑백 */
+	        SELECT MAX(T1.EXCC_YM)         AS EXCC_YM   /* 기준년월 */
+	             , '02'                    AS COLR_TCD  /* 컬러구분 */
+	             , SUM(T1.BLAK_UVOL)       AS UVOL      /* 청구매수 */
+	             , SUM(T1.BLAK_BASE_UVOL)  AS BASE_UVOL /* 기본매수 */
+	             , NULL                    AS BASE_CRGA /* 기본요금 */
+	             , SUM(T1.BLAK_AD_BUY)     AS AD_BUY    /* 추가매수 */
+	             , MAX(T1.BLAK_UPR)        AS AD_UPR    /* 추가단가 */
+	             , SUM(T1.BLAK_AD_CRGA)    AS AD_CRGA   /* 추가요금 */
+	          FROM T1
+	        /* 합계 */
+	         UNION ALL
+	        SELECT '최종 정산금액'             AS EXCC_YM
+	             , 'TOTAL'                 AS COLR_TCD  /* 컬러구분 */
+	             , NULL                    AS UVOL
+	             , NULL                    AS BASE_UVOL
+	             , NULL                    AS BASE_CRGA
+	             , NULL                    AS AD_BUY
+	             , NULL                    AS AD_UPR
+	             , (SUM(T1.MLY_RENTC) * 1.1) + SUM(T1.COLR_AD_CRGA + T1.BLAK_AD_CRGA) AS AD_CRGA   /* 정산금액 */
+	          FROM T1
+	        )
+	</select>
+
+	<update id="update00GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2010V0In01VO">
+	/* GARM2000V0.update00GA01N003 : 연간렌탈료(복합기) 수정 */
+	UPDATE GA01N003
+	   SET COLR_UPR = #{colrUpr}
+	     , BLAK_UPR = #{blakUpr}
+	 WHERE 1=1
+	   AND EXCC_YM = SUBSTR(#{exccYm}, 0, 6)
+	</update>
+
+	<select id="selectOne00GA01N003" parameterType="com.miraeasset.biz.ga.rm.vo.GARM2010V0In01VO" resultType="com.miraeasset.biz.ga.rm.vo.GARM2010V0In01VO">
+		SELECT SUBSTR(#{exccYm}, 0, 6) AS EXCC_YM
+		     , MAX(COLR_UPR) 		   AS COLR_UPR
+             , MAX(BLAK_UPR) 		   AS BLAK_UPR
+          FROM GA01N003
+         WHERE EXCC_YM = SUBSTR(#{exccYm}, 0, 6)
+	</select>
+</mapper>

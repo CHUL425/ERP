@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org_mapper">
+
+    <select id="selectOrg00List" parameterType="com.miraeasset.biz.common.basic.vo.BasicOrg00In00VO" resultType="com.miraeasset.biz.common.basic.vo.BasicOrg00Out00VO">
+			/* Org00.selectOrgList : 조직조회 */
+			SELECT * FROM (
+			SELECT * FROM (			
+			SELECT 
+			     ROW_NUMBER() OVER(ORDER BY T1.ORZ_CD, ROWNUM DESC) AS RNUM     
+			   , COUNT(1) OVER() AS AL_CNT            /* 전체건수 */      
+			   , T1.ORZ_CD                            AS ORZ_CD               /* T1.조직코드             */
+			   , T1.ORZ_NM                            AS ORZ_NM               /* T1.조직명               */
+			   , T1.ORZ_ABRV_NM                       AS ORZ_ABRV_NM          /* T1.조직약어명           */
+			   , T1.ORZ_ENG_NM                        AS ORZ_ENG_NM           /* T1.조직영문명           */
+			   , T1.HRK_ORZ_CD                        AS HRK_ORZ_CD           /* T1.상위조직코드         */
+			   , NVL(T3.ORZ_NM, T1.HRK_ORZ_CD)        AS HRK_ORZ_NM           /* T3.조직명(상위조직명)   */
+			   , T1.HOBR_TCD                          AS HOBR_TCD             /* T1.본지점구분코드       */
+			   , NVL(V1.CMN_CD_VL_NM, T1.HOBR_TCD)    AS HOBR_TP_NM           /* V1.본지점구분명         */
+			   , T1.ORZ_LEVL_VL                       AS ORZ_LEVL_VL          /* T1.조직레벨값           */
+			   , NVL(V2.CD_STD_NM, T1.ORZ_LEVL_VL)    AS ORZ_LEVL_VL_NM       /* V2.조직레벨값명         */
+			   , T2.BLNO                              AS BLNO                 /* T2.사업자등록번호       */
+			   , T2.CTNO                              AS CTNO                 /* T2.국가전화번호         */
+			   , T2.RTN                               AS RTN                  /* T2.지역전화번호         */
+			   , T2.MTNO                              AS MTNO                 /* T2.국전화번호           */
+			   , T2.ITNO                              AS ITNO                 /* T2.개별전화번호         */
+			   , T2.FAX_RTN                           AS FAX_RTN              /* T2.팩스지역전화번호     */
+			   , T2.FAX_MTNO                          AS FAX_MTNO             /* T2.팩스국전화번호       */
+			   , T2.FAX_ITNO                          AS FAX_ITNO             /* T2.팩스개별전화번호     */
+			   , T2.ZPCD                              AS ZPCD                 /* T2.우편번호             */
+			   , T2.ADR                               AS ADR                  /* T2.주소                 */
+			   , T1.ORZ_USE_YN                        AS ORZ_USE_YN           /* T1.조직사용여부         */
+			   , T1.OPN_DT                            AS OPN_DT               /* T1.개설일자             */
+			   , #{pageIndex} AS PAGE_NO
+			FROM CB01N210 T1 /* 조직           */
+			   , CB01N211 T2 /* 조직상세       */
+			   , CB01N210 T3 /* 조직(상위조직) */
+			   , (SELECT CMN_CD_VL          /* 공통코드값   */
+			           , CMN_CD_VL_NM       /* 공통코드값명 */
+			        FROM CB03C111           /* 공통코드값   */
+			       WHERE CMN_CD           = 'HOBR_TCD'
+			     ) V1
+			   , (SELECT HR_CMN_CD          /* 인사공통코드 */
+			           , CD_STD_NM          /* 코드표준명   */
+			        FROM CB01C111           /* 인사공통코드 */
+			       WHERE HR_CMN_CD_KND_NO = 'CB_005'
+			     ) V2
+			WHERE T1.ORZ_CD                = T2.ORZ_CD(+)                     /* 조직코드       */
+			 AND T1.HRK_ORZ_CD            = T3.ORZ_CD(+)                     /* 상위조직코드   */
+			 AND T1.HOBR_TCD              = V1.CMN_CD_VL(+)                  /* 본지점구분코드 */
+			 AND T1.ORZ_LEVL_VL           = V2.HR_CMN_CD(+)                  /* 조직레벨값     */
+			 AND T1.HOBR_TCD           LIKE '%' || TRIM( #{hobrTcd} )    || '%' /* 본지점구분코드 */
+			 AND T1.ORZ_LEVL_VL        LIKE '%' || TRIM( #{orzLevlVl} ) || '%' /* 조직레벨값     */
+			 AND T1.ORZ_NM             LIKE '%' || TRIM( #{orzNm} )      || '%' /* 조직명         */
+			 AND T1.ORZ_CD             LIKE '%' || DECODE(TRIM( #{orzCd} ),'',T1.ORZ_CD,TRIM( #{orzCd} )) || '%'        /* 조직코드        */
+			 AND T1.ORZ_USE_YN         LIKE NVL(TRIM( #{orzUseYn} ) , '%')     /* 조직사용여부   */
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 			  
+    </select>
+    
+    <select id="selectOrg01" parameterType="com.miraeasset.biz.common.basic.vo.BasicOrg01In00VO" resultType="com.miraeasset.biz.common.basic.vo.BasicOrg01Out00VO">
+			/* Org01.selectOrg01 : 조직단건조회(PK) */
+      SELECT 
+             T1.ORZ_CD            -- 조직코드        
+           , T1.ORZ_NM            -- 조직명      
+           , T2.BLNO              -- 사업자등록번호  
+           , T2.BBLNO             -- 구사업자등록번호
+           , T2.CTNO              -- 국가전화번호    
+           , T2.RTN               -- 지역전화번호    
+           , T2.MTNO              -- 국전화번호      
+           , T2.ITNO              -- 개별전화번호    
+           , T2.FAX_RTN           -- 팩스지역전화번호
+           , T2.FAX_MTNO          -- 팩스국전화번호  
+           , T2.FAX_ITNO          -- 팩스개별전화번호
+           , T2.ZPCD              -- 우편번호        
+           , T2.ADR               -- 주소            
+           , T2.ENG_ADR           -- 영문주소        
+           , T2.HR_LST_ALTR_DT    -- 인사최종수정일자
+           , T2.HR_RFLC_DT        -- 인사반영일자    
+           , T1.ORZ_ABRV_NM       -- 조직약어명     
+           , T1.ORZ_ENG_NM        -- 조직영문명     
+           , T1.HRK_ORZ_CD        -- 상위조직코드   
+           , T1.HOBR_TCD          -- 본지점구분코드 
+           , T1.ORZ_LEVL_VL       -- 조직레벨값     
+        FROM CB01N210 T1
+           , CB01N211 T2
+       WHERE T1.ORZ_CD = #{orzCd}
+         AND T2.ORZ_CD (+) = T1.ORZ_CD
+  
+    </select>    
+
+	<select id="selectAprvOrgList" parameterType="com.miraeasset.biz.common.basic.vo.AprvOrg00VO" resultType="com.miraeasset.biz.common.basic.vo.AprvOrg00VO">
+		/* 결재선 조직도 조회 */ 
+		SELECT * FROM (
+		SELECT * FROM (
+		    SELECT A.ORZ_CD
+		         , A.ORZ_NM
+		         , A.ORZ_ABRV_NM
+		         , A.ORZ_ENG_NM
+		         , B.EPNO
+		         , B.EP_NM
+		         , B.HR_OSDT_CD
+		         , C.CD_STD_NM AS HR_OSDT_NM 
+		         , ROW_NUMBER() OVER(ORDER BY A.ORZ_CD, ROWNUM DESC) AS RNUM     
+				 , COUNT(1) OVER() AS AL_CNT            /* 전체건수 */ 
+		    FROM CB01N210 A
+		   INNER JOIN CB01N310 B
+		      ON (A.ORZ_USE_YN = 1 AND A.ORZ_RPTV_EPNO = B.EPNO)
+		    LEFT OUTER JOIN CB01C111 C 
+              ON (    C.HR_CMN_CD_KND_NO='HRM_007'
+                  AND C.HR_CMN_CD = B.HR_OSDT_CD
+                 )   
+		   WHERE A.ORZ_CD LIKE '%' || #{schwCn} || '%'
+		      OR A.ORZ_NM LIKE '%' || #{schwCn} || '%'
+		      OR B.EPNO   LIKE '%' || #{schwCn} || '%'
+		      OR B.EP_NM  LIKE '%' || #{schwCn} || '%'
+		   ORDER BY A.ORZ_CD 
+	   -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+	   <if test='pageSize == null or pageSize == 0 '>
+		) Z 
+		) ZZ 		
+	   </if>
+	   <if test='pageSize > 0'>
+		) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+		) ZZ WHERE RNUM > ( #{pageIndex})			 
+	   </if>		  
+	   -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 
+	</select>
+	
+</mapper>
+
+

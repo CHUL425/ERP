@@ -1,0 +1,1398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rqsr_mapper">
+	
+	<select id="selectListGA01N101BySeal" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In00VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out00VO">
+		/* RQSR1000U0.selectListGA01N101BySeal = 인감날인신청 목록조회 */
+		
+		<if test='orzRptvYn == "Y" '>
+			<include refid="selectListGA01N101BySeal_With" />
+		</if>
+		
+	      SELECT 
+	             T1.RCT_NO
+	           , T1.UNIF_RQS_TCD 
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM    
+	           , T1.UNIF_RQS_PCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM    
+	           , T1.UNIF_RQS_DL_PCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM    
+	           , T1.RQS_ORZ_CD
+	           , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+	           , T1.RQS_EPNO
+	           , T2.EP_NM AS RQS_EP_NM
+	           ,    CASE WHEN TRIM(T2.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(T2.HNDP_BZPR_TLNO) || ') ' END
+	           || CASE WHEN TRIM(T2.HNDP_MTNO)      IS NOT NULL THEN TRIM(T2.HNDP_MTNO)                     END
+	           || CASE WHEN TRIM(T2.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(T2.HNDP_ITNO)              END
+	           AS RQS_EP_HNDP_TLNO			         
+	           , T1.RQS_TTL_NM
+	           , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+	           , T1.HOPE_DT
+	           , T1.RQS_DT
+	           , T1.APRV_WRRPT_MT_NO
+	           , T1.APRV_WRRPT_ORZ_CD
+	           , T1.RQS_SCD
+	           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM      
+	           , ( SELECT SUM(RQS_Q) FROM GA01N504 WHERE RCT_NO = T1.RCT_NO ) AS SEAL_SALG_CNT /* 인감날인부수 */
+	           , ( SELECT SUM(RQS_Q) FROM GA01N505 WHERE RCT_NO = T1.RCT_NO AND SEAL_CTFW_TCD='10') AS SEAL_DOC_CNT /* 인감증명서부수 */
+	           , ( SELECT SUM(RQS_Q) FROM GA01N505 WHERE RCT_NO = T1.RCT_NO AND SEAL_CTFW_TCD='20') AS CERT_DOC_CNT /* 등기부등본부수 */
+			   , NVL(T3.REF_DT,'N') AS REF_DT     /*사전참조일자*/
+			  
+			     /*승인완료,처리완료일 포함 7일 경과여부 구분값추가*/
+               , (CASE WHEN T1.RQS_SCD = '10' THEN 
+                       (CASE WHEN (TRUNC(V.APRV_DTTM)+6)<![CDATA[ < ]]>TRUNC(SYSDATE) THEN 'Y' ELSE 'N' END)
+                       WHEN T1.RQS_SCD = '40' THEN 
+                       (CASE WHEN TO_DATE(T1.CMPN_DT,'YYYYMMDD')+6<![CDATA[ < ]]>TRUNC(SYSDATE) THEN 'Y' ELSE 'N' END)
+                  ELSE 'N' END
+                  ) AS VALD_TERM_PAS_YN
+                  
+	        FROM GA01N101 T1 -- 임대신청
+	             LEFT OUTER JOIN GA09N607 V
+                 ON V.APRV_WRRPT_MT_NO = T1.APRV_WRRPT_MT_NO
+                 AND V.APRV_WRRPT_TCD='2'
+	             LEFT OUTER JOIN CB01N310 T2 -- 직원
+	             ON T2.EPNO = T1.RQS_EPNO
+	             LEFT OUTER JOIN (SELECT T22.APRV_WRRPT_MT_NO
+                                       , CASE WHEN T22.APRV_DTTM IS NULL THEN 'N' ELSE TO_CHAR(T22.APRV_DTTM, 'YYYYMMDD') END AS REF_DT
+                                    FROM GA09N607 T22 
+                                   WHERE T22.APRV_WRRPT_MT_NO||T22.APRV_RNK IN (
+                                         SELECT T21.APRV_WRRPT_MT_NO||MAX(T21.APRV_RNK) AS APRV_RNK
+                                           FROM GA09N607 T21
+                                          WHERE T21.DCFC_PCD = '09'
+                                            AND T21.APRV_WRRPT_MT_NO IN ( SELECT T1.APRV_WRRPT_MT_NO 
+                                                                           FROM GA01N101  T1
+                                                                           <include refid="selectListGA01N101BySeal_Where" />
+                                                                        )
+                                          GROUP BY T21.APRV_WRRPT_MT_NO
+                                         )
+                                  ) T3
+                 ON T1.APRV_WRRPT_MT_NO = T3.APRV_WRRPT_MT_NO
+	         <include refid="selectListGA01N101BySeal_Where" />
+	       ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC
+		   OFFSET #{pageIndex} ROWS FETCH NEXT #{pageSize} ROWS ONLY 	 	
+	</select>	
+	
+	<sql id="selectListGA01N101BySeal_With">
+		WITH TAB1 AS (
+	        SELECT *
+	         FROM (
+	            SELECT ROWNUM AS RNUM
+	                , MAX(ROWNUM) OVER ()  AS MAXROW
+	                , COL_NM, COL_VAL
+	             FROM (
+	                    SELECT  HR_LEVL1_ORZ_CD
+	                          , HR_LEVL2_ORZ_CD
+	                          , HR_LEVL3_ORZ_CD 
+	                          , HR_LEVL4_ORZ_CD 
+	                          , HR_LEVL5_ORZ_CD
+	                          , HR_LEVL6_ORZ_CD
+	                          , HR_LEVL7_ORZ_CD
+	                          , HR_LEVL8_ORZ_CD
+	                          , HR_LEVL9_ORZ_CD
+	                    FROM INNOV2.CB01N112  
+	                    WHERE HR_NEW_ORZ_CD = (SELECT NVL(HR_ORZ_CD,HR_NEW_ORZ_CD) FROM CB01N310 WHERE EPNO=#{epno} AND BLNG_ORZ_CD = #{rqsOrzCd} and ROWNUM=1) 
+	                      AND LKOU_DT>TO_CHAR(SYSDATE, 'YYYYMMDD')  
+	              ) 
+	              UNPIVOT 
+	              (
+	              COL_VAL FOR COL_NM IN (HR_LEVL1_ORZ_CD,HR_LEVL2_ORZ_CD,HR_LEVL3_ORZ_CD,HR_LEVL4_ORZ_CD,HR_LEVL5_ORZ_CD,HR_LEVL6_ORZ_CD,HR_LEVL7_ORZ_CD,HR_LEVL8_ORZ_CD,HR_LEVL9_ORZ_CD)
+	              )
+	           )  
+	          WHERE RNUM = MAXROW
+          )
+          , TAB2 AS (
+                SELECT DISTINCT A.ORZ_CD 
+                FROM INNOV2.CB01N112 A
+                WHERE (A.HR_LEVL1_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL2_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL3_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL4_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL5_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL6_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL7_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL8_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL9_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                      )
+         )
+	</sql>
+	
+	<sql id="selectListGA01N101BySeal_Where">
+	   WHERE T1.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+	     AND T1.UNIF_RQS_PCD = '05'  /* 신청유형코드 01:공사 02:구매 03:렌탈 04:명함 05:인감 */
+	     
+	     <if test='rqsEpno != null and rqsEpno != ""'>
+         AND T1.RQS_EPNO    LIKE '%' || TRIM( NVL(#{rqsEpno},' ') )   || '%'    /* 신청사번 */
+         </if>
+         
+         <if test='rqsTtlNm != null and rqsTtlNm != ""'>
+         AND NVL(T1.RQS_TTL_NM,' ')  LIKE '%' || TRIM( NVL(#{rqsTtlNm},' ') )    || '%' /* 신청명 */
+         </if>
+         
+         <if test='unifRqsDlPcd != null and unifRqsDlPcd != ""'>
+         AND T1.UNIF_RQS_DL_PCD = #{unifRqsDlPcd}  /* 구분 */
+         </if>
+         
+         <choose>
+	       <when test='orzRptvYn == "Y" '>
+	         AND T1.RQS_ORZ_CD IN (SELECT ORZ_CD FROM TAB2)
+	       </when>
+	       <otherwise>
+	         AND T1.RQS_ORZ_CD  LIKE '%' || TRIM( NVL(#{rqsOrzCd},' ') )  || '%'    /* 신청조직코드 */
+	       </otherwise>
+         </choose>
+         
+         <if test='rqsScd != null and rqsScd != ""'>
+		    /* 신청상태 */
+			AND T1.RQS_SCD IN
+				<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+				</foreach>
+		</if>
+         
+	</sql>
+	
+	<select id="selectInfoGA01N101BySeal" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In00VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out11VO">
+		/* RQSR1000U0.selectInfoGA01N101BySeal = 인장신청_인감날인신청신청상태 정보조회 */
+		<if test='orzRptvYn == "Y" '>
+			<include refid="selectListGA01N101BySeal_With" />
+		</if>
+		
+			SELECT NVL(MAX(RQS_SCD_00_CNT),0) AS RQS_SCD_00_CNT
+			     , NVL(MAX(RQS_SCD_05_CNT),0) AS RQS_SCD_05_CNT
+			     , NVL(MAX(RQS_SCD_10_CNT),0) AS RQS_SCD_10_CNT
+			     , NVL(MAX(RQS_SCD_30_CNT),0) AS RQS_SCD_30_CNT
+			     , NVL(MAX(RQS_SCD_90_CNT),0) AS RQS_SCD_90_CNT
+			     , NVL(MAX(RQS_SCD_91_CNT),0) AS RQS_SCD_91_CNT
+			     , NVL(MAX(RQS_SCD_40_CNT),0) AS RQS_SCD_40_CNT
+			     
+			FROM (
+			      SELECT CASE WHEN T1.RQS_SCD = '00' THEN COUNT(1) END AS RQS_SCD_00_CNT
+			           , CASE WHEN T1.RQS_SCD = '05' THEN COUNT(1) END AS RQS_SCD_05_CNT
+			           , CASE WHEN T1.RQS_SCD = '10' THEN COUNT(1) END AS RQS_SCD_10_CNT
+			           , CASE WHEN T1.RQS_SCD = '30' THEN COUNT(1) END AS RQS_SCD_30_CNT
+			           , CASE WHEN T1.RQS_SCD = '90' THEN COUNT(1) END AS RQS_SCD_90_CNT
+			           , CASE WHEN T1.RQS_SCD = '91' THEN COUNT(1) END AS RQS_SCD_91_CNT
+			           , CASE WHEN T1.RQS_SCD = '40' THEN COUNT(1) END AS RQS_SCD_40_CNT    /*2023.12.14 처리완료 추가*/
+			        FROM GA01N101 T1 -- 통합신청
+					<include refid="selectListGA01N101BySeal_Where" />
+			       GROUP BY T1.RQS_SCD
+			)  
+	</select>			
+	
+	<select id="selectListGA01N504" parameterType="com.miraeasset.biz.common.meta.vo.GA01N504VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N504VO">
+		/* RQSR1000U0.selectListGA01N504 = 인장신청_인감날인신청 목록조회 */
+			SELECT T2.SEAL_SALG_RQS_SQNC_NO
+			     , T2.RCT_NO
+			     , T2.RCT_DL_NO
+			     , T2.USE_SEAL_YN
+			     , T2.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+			     , T2.SMITP_CN
+			     , T2.SAL_MT_NO
+			     , T2.RQS_Q
+			     , T2.FILE_NO
+			     , T4.CMN_CD_VL_DEF_CN || ' / ' || T3.SAL_DL_NM AS SAL_MT_NM
+			     
+			  FROM GA01N504	T2 -- 인장신청_인감날인신청
+			     , GA01N501	T3 -- 인장조제관리
+			     , GA09C302	T4 -- 공통코드값
+			  
+			 WHERE T2.RCT_NO = #{rctNo }
+			   AND T3.SAL_MT_NO (+)= T2.SAL_MT_NO
+			   AND T4.CD_KND_NO (+)= 'SAL_PCD'
+			   AND T4.CMN_CD_VL (+)= T3.SAL_PCD
+			 
+			 ORDER BY T2.RCT_DL_NO	
+	</select>	
+	
+	<select id="selectListGA01N505" parameterType="com.miraeasset.biz.common.meta.vo.GA01N505VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N505VO">
+		/* RQSR1000U0.selectListGA01N505 = 인장신청_인감증명서신청 목록조회 */
+		SELECT T2.SEAL_CTFW_RQS_SQNC_NO
+			 , T2.RCT_NO
+			 , T2.RCT_DL_NO
+			 , T2.SMITP_CN
+			 , T2.SMIT_USGE_CN
+			 , T2.SAL_MT_NO
+			 , T2.SEAL_CTFW_TCD
+			 , (CASE WHEN T2.SEAL_CTFW_TCD='10' THEN T2.RQS_Q ELSE 0 END) AS SEAL_DOC_CNT /* 인감증명서부수 */
+			 , (CASE WHEN T2.SEAL_CTFW_TCD='20' THEN T2.RQS_Q ELSE 0 END) AS CERT_DOC_CNT /* 등기부등본부수 */
+			 , T2.DSUS_DT
+			 , CASE WHEN T2.SAL_MT_NO IS NULL THEN '등기부등본' ELSE T4.CMN_CD_VL_DEF_CN || ' / ' || T3.SAL_DL_NM END AS SAL_MT_NM
+		  FROM
+			GA01N505	T2 -- 인장신청_인감증명서신청
+			LEFT OUTER JOIN GA01N501 T3 ON (T2.SAL_MT_NO = T3.SAL_MT_NO)
+			LEFT OUTER JOIN GA09C302 T4 ON (T4.CD_KND_NO = 'SAL_PCD' AND T4.CMN_CD_VL = T3.SAL_PCD)
+		WHERE
+			T2.RCT_NO = #{rctNo}
+		ORDER BY
+			T2.RCT_DL_NO
+	</select>
+	
+	<select id="selectListGA01N505BySalMtNoWithQ1" parameterType="com.miraeasset.biz.common.meta.vo.GA01N505VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N505OutQ1VO">
+ 		/* RQSR1000U0.selectListGA01N505BySalMtNoWithQ1 = 인장신청_인감증명서신청 인감기준 증명서 목록조회 */
+			 SELECT C.SEAL_CTFW_RQS_SQNC_NO
+			      , C.RCT_NO
+			      , C.SAL_MT_NO
+			      , E.CMN_CD_VL_DEF_CN || ' / ' || D.SAL_DL_NM AS SAL_MT_NM
+			      , C.SMITP_CN
+			      , C.SMIT_USGE_CN
+			      , C.SEAL_CTFW_TCD	
+                  , (CASE WHEN C.OPUT_Q>0 THEN C.OPUT_Q ELSE C.RQS_Q END) AS RQS_Q
+			      , (CASE WHEN C.OPUT_Q>0 THEN SRNO_CN ELSE NULL END) AS SRNO_CN
+			      , (CASE WHEN C.OPUT_Q>0 THEN F.FROM_DT||'~'||F.TO_DT ELSE NULL END) AS USE_TERM
+			      , (CASE WHEN C.OPUT_Q>0 THEN 'REOPUT' ELSE 'OPUT' END) AS OPUT_DIV  
+			  FROM (
+			   SELECT A.SEAL_CTFW_RQS_SQNC_NO
+			        , A.RCT_NO
+			        , A.SAL_MT_NO
+			        , A.SMITP_CN         /*제출처*/
+			        , A.SMIT_USGE_CN     /*제출용도*/
+			        , A.SEAL_CTFW_TCD
+                    , A.RQS_Q
+                    , listagg(B.SEAL_CTFW_SQNC_NO, ',') within group (order by B.SEAL_CTFW_SQNC_NO) SRNO_CN
+                    , COUNT(B.SEAL_CTFW_SQNC_NO) AS OPUT_Q
+			     FROM GA01N505 A
+			     LEFT OUTER JOIN GA01N510 B
+			     ON A.SEAL_CTFW_RQS_SQNC_NO = B.SEAL_CTFW_RQS_SQNC_NO
+			    WHERE A.RCT_NO= #{rctNo}
+			      AND A.SEAL_CTFW_TCD = '10'
+			      AND B.DSUS_DT IS NULL 
+			   GROUP BY A.SEAL_CTFW_RQS_SQNC_NO
+			          , A.RCT_NO
+			          , A.SAL_MT_NO
+			          , A.SEAL_CTFW_TCD
+			          , A.SMITP_CN         
+			          , A.SMIT_USGE_CN
+                      , A.RQS_Q
+			  ) C 
+			  LEFT OUTER JOIN GA01N501 D ON C.SAL_MT_NO = D.SAL_MT_NO
+			  LEFT OUTER JOIN GA09C302 E ON E.CD_KND_NO = 'SAL_PCD' AND E.CMN_CD_VL= D.SAL_PCD
+              LEFT OUTER JOIN (
+                SELECT #{rctNo} AS RCT_NO 
+                     , TO_CHAR(APRV_DTTM,'YYYY/fmMM/DD')   AS FROM_DT
+                     , TO_CHAR(APRV_DTTM+6,'YYYY/fmMM/DD') AS TO_DT    /*승인일포함 7일*/
+                  FROM GA09N607
+                 WHERE APRV_WRRPT_MT_NO||APRV_RNK IN (
+                     SELECT APRV_WRRPT_MT_NO || MAX(APRV_RNK) AS APRV_RNK
+                       FROM GA09N607 
+                      WHERE APRV_WRRPT_MT_NO IN (
+                       SELECT A.APRV_WRRPT_MT_NO
+                         FROM GA01N101 A
+                        WHERE A.RCT_NO = #{rctNo}
+                          AND A.RQS_SCD IN ('10','40','90','91')  /*승인완료,처리완료,사용처제출,원본폐기*/
+                       )
+                    AND APRV_RNK <![CDATA[ < ]]>  80
+                    GROUP BY APRV_WRRPT_MT_NO
+                    )
+              ) F ON F.RCT_NO = C.RCT_NO
+		ORDER BY  C.SEAL_CTFW_RQS_SQNC_NO
+	</select>	
+	
+	<select id="selectListGA01N505BySmtpCnWithQ2" parameterType="com.miraeasset.biz.common.meta.vo.GA01N505VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N505OutQ2VO">
+		/* RQSR1000U0.selectListGA01N505BySmtpCnWithQ2 = 인장신청_인감증명서신청 제출처기준 등기부등본 목록조회 */
+			 SELECT C.SEAL_CTFW_RQS_SQNC_NO
+			      , C.RCT_NO
+			      , C.SAL_MT_NO
+			      , '등기부등본' AS SAL_MT_NM
+			      , C.SMITP_CN
+			      , C.SMIT_USGE_CN
+			      , C.SEAL_CTFW_TCD	
+                  , (CASE WHEN C.OPUT_Q>0 THEN C.OPUT_Q ELSE C.RQS_Q END) AS RQS_Q
+			      , (CASE WHEN C.OPUT_Q>0 THEN 'REOPUT' ELSE 'OPUT' END)  AS OPUT_DIV
+                  , C.SEAL_CTFW_ID_CN                                               
+			  FROM (
+			   SELECT A.SEAL_CTFW_RQS_SQNC_NO
+			        , A.RCT_NO
+			        , A.SAL_MT_NO
+			        , A.SMITP_CN         /*제출처*/
+			        , A.SMIT_USGE_CN     /*제출용도*/
+			        , A.SEAL_CTFW_TCD
+                    , A.RQS_Q
+			        , COUNT(B.SEAL_CTFW_RQS_SQNC_NO) AS OPUT_Q
+                    , listagg(B.SEAL_CTFW_ID_CN,',') within group (ORDER BY B.SEAL_CTFW_ID_CN) AS SEAL_CTFW_ID_CN
+			     FROM GA01N505 A
+			     LEFT OUTER JOIN GA01N510 B
+			     ON A.SEAL_CTFW_RQS_SQNC_NO = B.SEAL_CTFW_RQS_SQNC_NO
+			    WHERE A.RCT_NO= #{rctNo}
+			      AND A.SEAL_CTFW_TCD = '20'
+			      AND B.DSUS_DT IS NULL 
+			   GROUP BY A.SEAL_CTFW_RQS_SQNC_NO
+			          , A.RCT_NO
+			          , A.SAL_MT_NO
+			          , A.SEAL_CTFW_TCD
+			          , A.SMITP_CN         
+			          , A.SMIT_USGE_CN
+                      , A.RQS_Q    
+              ) C
+          ORDER BY C.SEAL_CTFW_RQS_SQNC_NO
+	</select>		
+
+	<select id="selectGA01N101" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N101VO">
+		/* RQSR1000U0.selectGA01N101 = 통합신청상세정보 */
+			SELECT T1.RCT_NO
+			     , T1.RQS_DT
+			     , T1.UNIF_RQS_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM    
+			     , T1.UNIF_RQS_DL_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM    
+			     , T1.UNIF_RQS_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM    
+			     , T1.RQS_ORZ_CD
+			     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+			     , T1.RQS_EPNO
+			     , T2.EP_NM AS RQS_EP_NM
+			     , ( SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO='HRM_008' AND HR_CMN_CD = T2.HR_PST_CD AND ROWNUM = 1) AS HR_PST_NM			     
+			     , T1.RQS_TTL_NM
+			     , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+			     , T1.HOPE_DT
+			     , T1.CMPN_DT
+			     , T1.APRV_WRRPT_MT_NO
+			     , T1.APRV_WRRPT_ORZ_CD
+			     , T1.RQS_SCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM
+			     , ( SELECT T3.APRV_RSN_CN FROM GA09N607 T3 WHERE T3.APRV_WRRPT_MT_NO=T1.APRV_WRRPT_MT_NO AND T3.APRV_EPNO=#{epno} AND ROWNUM=1) AS APRV_RSN_CN    
+			  FROM GA01N101	T1 -- 통합신청_신청관리
+			     , CB01N310 T2 -- 직원
+			 WHERE 1=1
+			   AND T2.EPNO (+)= T1.RQS_EPNO 		
+			   AND T1.RCT_NO = #{rctNo }	 
+
+	</select>		
+	
+	<select id="selectListGA01N109" parameterType="com.miraeasset.biz.common.meta.vo.GA01N109VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N109VO">
+		/* RQSR1000U0.selectListGA01N109 = 통합신청_신청별기안문서 목록조회 */
+			SELECT T1.RCT_NO
+			     , T1.DRFT_DOC_NO
+			     , T2.DRFT_DOC_TTL_NM
+			  FROM GA01N109	T1 -- 통합신청_신청별기안문서
+			     , AT09N401 T2 -- 기안문서 
+			 WHERE T1.RCT_NO = #{rctNo }
+			   AND T1.DRFT_DOC_NO = T2.DRFT_DOC_NO
+			 ORDER BY T1.DRFT_DOC_NO
+	</select>	
+	
+	<insert id="insertGA01N504" parameterType="com.miraeasset.biz.common.meta.vo.GA01N504VO" >
+		/* RQSR1000U0.insertGA01N504 = 인장신청_인감날인신청 신규등록 */					
+			INSERT INTO GA01N504	-- 인장신청_인감날인신청
+			( SEAL_SALG_RQS_SQNC_NO   /*인감날인신청시퀀스번호*/
+			, RCT_NO                  /*접수번호    */    
+			, RCT_DL_NO               /*접수상세번호*/    
+			, USE_SEAL_YN             /*사용인감여부*/    
+			, UNIF_RQS_RSN_CN         /*신청사유내용*/
+			, SMITP_CN                /*제출처내용  */    
+			, SAL_MT_NO               /*인장관리번호*/    
+			, RQS_Q                   /*신청수량    */    
+			, FILE_NO                 /*파일번호    */    
+			, OPTR_ID                 /*조작자ID    */    
+			, OPRT_CHNL_CD            /*조작채널코드*/    
+			, OPRT_ORZ_CD             /*조작조직코드*/    
+			, OPRT_IP_ADR             /*조작IP주소  */    
+			, OPRT_DTTM
+			)
+			VALUES
+			( #{sealSalgRqsSqncNo}  /*인감날인신청시퀀스번호*/
+			, #{rctNo      }        /*접수번호         */
+			, #{rctDlNo    }        /*접수상세번호      */
+			, #{useSealYn  }        /*사용인감여부      */
+			, #{rqsRsnCn   }        /*신청사유내용      */
+			, #{smitpCn    }        /*제출처내용       */
+			, #{salMtNo    }        /*인장관리번호      */
+			, #{rqsQ       }        /*신청수량         */
+			, #{fileNo     }        /*파일번호         */
+			, #{optrId     }        /*조작자ID        */
+			, #{oprtChnlCd }        /*조작채널코드      */
+			, #{oprtOrzCd  }        /*조작조직코드      */
+			, #{oprtIpAdr  }        /*조작IP주소       */
+			, SYSDATE               
+			)
+	</insert>
+	
+	<update id="updateGA01N504" parameterType="com.miraeasset.biz.common.meta.vo.GA01N504VO" >
+
+		/* RQSR1000U0.updateGA01N504 = 인장신청_인감날인신청 수정  */	
+			UPDATE GA01N504	-- 인장신청_인감날인신청
+			   SET USE_SEAL_YN     = #{useSealYn  }  /*사용인감여부*/
+			     , UNIF_RQS_RSN_CN = #{rqsRsnCn   }  /*신청사유내용*/
+			     , SMITP_CN        = #{smitpCn    }  /*제출처내용  */
+			     , SAL_MT_NO       = #{salMtNo    }  /*인장관리번호*/
+			     , RQS_Q           = #{rqsQ       }  /*신청수량    */
+			     , FILE_NO         = #{fileNo     }  /*파일번호    */
+			 WHERE RCT_NO          = #{rctNo      }  /*접수번호    */
+			   AND RCT_DL_NO       = #{rctDlNo    }  /*접수상세번호*/
+			    
+	</update>		
+	
+	<delete id="deleteGA01N504ByRctNo" parameterType="com.miraeasset.biz.common.meta.vo.GA01N504VO" >
+
+		/* RQSR1000U0.deleteGA01N504ByRctNo = 인장신청_인감날인신청 접수번호기준 삭제  */	
+			DELETE GA01N504	-- 인장신청_인감날인신청
+			WHERE RCT_NO       =  #{rctNo       }   /*접수번호    */        
+			    
+	</delete>			
+	
+	<insert id="insertGA01N505" parameterType="com.miraeasset.biz.common.meta.vo.GA01N505VO" >
+		/* RQSR1000U0.insertGA01N505 = 인장신청_인감증명서신청 신규등록 */					
+			INSERT INTO GA01N505	-- 인장신청_인감증명서신청
+			( SEAL_CTFW_RQS_SQNC_NO  /*인감증명서신청시퀀스번호*/
+			, RCT_NO                 /*접수번호    */     
+			, RCT_DL_NO              /*접수상세번호*/    
+			, SMITP_CN               /*제출처내용  */    
+			, SMIT_USGE_CN           /*제출용도내용*/    
+			, SAL_MT_NO              /*인장관리번호*/    
+			, SEAL_CTFW_TCD          /*인감증명서구분코드*/  
+			, RQS_Q                  /*신청수량   */       
+			, DSUS_DT                /*폐기일자    */    
+			, OPTR_ID                /*조작자ID    */    
+			, OPRT_CHNL_CD           /*조작채널코드*/    
+			, OPRT_ORZ_CD            /*조작조직코드*/    
+			, OPRT_IP_ADR            /*조작IP주소  */    
+			, OPRT_DTTM   
+			)
+			VALUES
+			( #{sealCtfwRqsSqncNo}   /*인감증명서신청시퀀스번호*/
+			, #{rctNo            }    /*접수번호    */
+			, #{rctDlNo          }    /*접수상세번호*/
+			, #{smitpCn          }    /*제출처내용  */
+			, #{smitUsgeCn       }    /*제출용도내용*/
+			, #{salMtNo          }    /*인장관리번호*/
+			, #{sealCtfwTcd      }    /*인감증명서구분코드*/
+			, #{rqsQ             }    /*신청수량   */
+			, #{dsusDt           }    /*폐기일자    */
+			, #{optrId           }    /*조작자ID    */
+			, #{oprtChnlCd       }    /*조작채널코드*/
+			, #{oprtOrzCd        }    /*조작조직코드*/
+			, #{oprtIpAdr        }    /*조작IP주소  */
+			, SYSDATE  
+			)		
+	</insert>	
+	
+	<update id="updateGA01N505" parameterType="com.miraeasset.biz.common.meta.vo.GA01N505VO" >
+
+		/* RQSR1000U0.updateGA01N505 = 인장신청_인감증명서신청 수정  */	
+			UPDATE GA01N505	-- 인장신청_인감증명서신청
+			   SET SMITP_CN      = #{smitpCn     }  /*제출처내용  */   
+			     , SMIT_USGE_CN  = #{smitUsgeCn  }  /*제출용도내용*/   
+			     , SAL_MT_NO     = #{salMtNo     }  /*인장관리번호*/   
+			     , RQS_Q1        = #{rqsQ1       }  /*신청수량1   */   
+			     , RQS_Q2        = #{rqsQ2       }  /*신청수량2   */   
+			 WHERE RCT_NO         = #{rctNo      }  /*접수번호    */        
+			   AND RCT_DL_NO      = #{rctDlNo    }  /*접수상세번호*/   
+	</update>
+	
+	<delete id="deleteGA01N505ByRctNo" parameterType="com.miraeasset.biz.common.meta.vo.GA01N505VO" >
+
+		/* RQSR1000U0.deleteGA01N505ByRctNo = 인장신청_인감날인신청 접수번호기준 삭제  */	
+			DELETE GA01N505	-- 인장신청_인감증명서신청
+			WHERE RCT_NO       =  #{rctNo       }   /*접수번호    */        
+			    
+	</delete>			
+	
+	<insert id="insertGA01N109" parameterType="com.miraeasset.biz.common.meta.vo.GA01N109VO" >
+		/* RQSR1000U0.insertGA01N109 = 통합신청_신청별기안문서 신규등록 */					
+			INSERT INTO GA01N109	-- 통합신청_신청별기안문서
+			( RCT_NO            /*접수번호    */   
+			, DRFT_DOC_NO       /*기안문서번호*/   
+			, OPTR_ID           /*조작자ID    */   
+			, OPRT_CHNL_CD      /*조작채널코드*/   
+			, OPRT_ORZ_CD       /*조작조직코드*/   
+			, OPRT_IP_ADR       /*조작IP주소  */   
+			, OPRT_DTTM 
+			)
+			VALUES
+			( #{rctNo       }   /*접수번호    */
+			, #{drftDocNo   }   /*기안문서번호*/
+			, #{optrId      }   /*조작자ID    */
+			, #{oprtChnlCd  }   /*조작채널코드*/
+			, #{oprtOrzCd   }   /*조작조직코드*/
+			, #{oprtIpAdr   }   /*조작IP주소  */
+			, SYSDATE
+			)  		
+	</insert>	
+	
+	<delete id="deleteGA01N109" parameterType="com.miraeasset.biz.common.meta.vo.GA01N109VO" >
+
+		/* RQSR1000U0.deleteGA01N109 = 인장신청_인감증명서신청 삭제  */	
+			DELETE GA01N109	-- 통합신청_신청별기안문서
+			WHERE RCT_NO       =  #{rctNo       }   /*접수번호    */        
+			  AND DRFT_DOC_NO  =  #{drftDocNo   }   /*기안문서번호*/    
+			    
+	</delete>		
+	
+	<delete id="deleteGA01N109ByRctNo" parameterType="com.miraeasset.biz.common.meta.vo.GA01N109VO" >
+
+		/* RQSR1000U0.deleteGA01N109 = 인장신청_인감증명서신청 접수번호기준 삭제  */	
+			DELETE GA01N109	-- 통합신청_신청별기안문서
+			WHERE RCT_NO       =  #{rctNo       }   /*접수번호    */        
+			    
+	</delete>		
+  
+	<insert id="insertGA01N101" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" >
+		/* RQSR1000U0.insertGA01N101 = 통합신청_신청관리 신규등록  */	
+		INSERT INTO GA01N101 -- 신청관리
+		( RCT_NO             /*접수번호        */
+        , UNIF_RQS_TCD            /*신청구분코드   */
+		, UNIF_RQS_PCD            /*신청유형코드    */
+		, UNIF_RQS_DL_PCD         /*신청상세유형코드 */
+		, RQS_ORZ_CD         /*신청조직코드    */
+		, RQS_EPNO           /*신청사원번호    */
+		, RQS_TTL_NM         /*신청제목명      */
+		, UNIF_RQS_RSN_CN    /*신청사유내용    */
+		, HOPE_DT            /*희망일자        */
+		, RQS_DT             /*신청일자        */
+		, CMPN_DT            /*완료일자       */
+		, APRV_WRRPT_MT_NO   /*결재상신관리번호    */
+		, RQS_SCD            /*신청상태코드    */
+		, OPTR_ID            /*조작자ID        */
+		, OPRT_CHNL_CD       /*조작채널코드    */
+		, OPRT_ORZ_CD        /*조작조직코드    */
+		, OPRT_IP_ADR        /*조작IP주소      */
+		, OPRT_DTTM          /*조작일시        */
+		) 
+		VALUES
+		( #{rctNo       }     /*접수번호        */
+		, #{unifRqsTcd      }     /*신청구분코드    */
+		, #{unifRqsPcd      }     /*신청유형코드    */
+		, #{unifRqsDlPcd    }     /*신청상세유형코드 */
+		, #{rqsOrzCd    }     /*신청조직코드    */
+		, #{rqsEpno     }     /*신청사원번호    */
+		, #{rqsTtlNm    }     /*신청제목명      */
+		, #{rqsRsnCn    }     /*신청사유내용    */
+		, #{hopeDt      }     /*희망일자        */
+		, #{rqsDt       }     /*신청일자        */
+		, #{cmpnDt      }     /*완료일자        */
+		, #{aprvWrrptMtNo }   /*결재상신관리번호    */
+		, #{rqsScd      }     /*신청상태코드    */
+		, #{optrId      }     /*조작자ID        */
+		, #{oprtChnlCd  }     /*조작채널코드    */
+		, #{oprtOrzCd   }     /*조작조직코드    */
+		, #{oprtIpAdr   }     /*조작IP주소      */
+		, SYSDATE             /*조작일시        */
+		)	
+	</insert>
+		
+	<update id="updateGA01N101" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" >
+		/* RQSR1000U0.updateGA01N101 = 통합신청_신청관리 수정  */	
+		UPDATE GA01N101 -- 신청관리
+		   SET UNIF_RQS_TCD          = #{unifRqsTcd       }
+		     , UNIF_RQS_PCD          = #{unifRqsPcd       }
+		     , UNIF_RQS_DL_PCD       = #{unifRqsDlPcd     }
+		     , RQS_ORZ_CD       = #{rqsOrzCd     }
+		     , RQS_EPNO         = #{rqsEpno      }
+		     , RQS_TTL_NM       = #{rqsTtlNm     }
+		     , UNIF_RQS_RSN_CN  = #{rqsRsnCn     }
+		     , HOPE_DT          = #{hopeDt       }
+		     , RQS_DT           = TO_CHAR(SYSDATE, 'YYYYMMDD')
+		     , CMPN_DT          = #{cmpnDt       }
+		     , APRV_WRRPT_MT_NO = #{aprvWrrptMtNo }
+		     , RQS_SCD          = #{rqsScd       }
+		     , OPTR_ID          = #{optrId       }
+		     , OPRT_CHNL_CD     = #{oprtChnlCd   }
+		     , OPRT_ORZ_CD      = #{oprtOrzCd    }
+		     , OPRT_IP_ADR      = #{oprtIpAdr    }
+		     , OPRT_DTTM        = SYSDATE      
+		 WHERE RCT_NO           = #{rctNo        }
+	</update>	
+
+	<delete id="deleteGA01N101ByRctNo" parameterType="com.miraeasset.biz.common.meta.vo.GA01N101VO" >
+
+		/* RQSR1000U0.deleteGA01N101ByRctNo = 통합신청_신청관리 접수번호기준 삭제  */	
+			DELETE GA01N101	-- 통합신청_신청관리
+			WHERE RCT_NO       =  #{rctNo       }   /*접수번호    */        
+			    
+	</delete>	
+	
+<sql id="selectListApvCmpn_MainQry">
+		WITH MAIN_T AS
+		(
+			SELECT
+				ROW_NUMBER() OVER(ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC) AS RNUM
+				, T1.RCT_NO
+				, T1.RQS_TTL_NM
+				, T1.RQS_ORZ_CD
+				, T1.RQS_EPNO
+				, T1.RQS_DT
+				, TO_CHAR(T2.APRV_DTTM,'YYYYMMDD') AS APRV_DT
+				, T1.RQS_SCD
+				, T2.APRV_WRRPT_MT_NO
+				, T2.APRV_WRRPT_ORZ_CD
+				, T2.DCFC_PCD
+				, n210.ORZ_NM AS RQS_ORZ_NM
+				, n310.EP_NM AS RQS_EP_NM
+				, rqsScd.CMN_CD_VL_DEF_CN AS RQS_SCD_NM
+			FROM
+				(
+					SELECT
+						T2.APRV_WRRPT_MT_NO
+					,	MAX(APRV_RNK) AS APRV_RNK
+					,	MAX(APRV_DL_RNK) AS APRV_DL_RNK
+					FROM GA09N607 T2
+					WHERE
+						T2.APRV_DTTM BETWEEN TO_DATE(#{qryStrtDt} || ' 00:00:00', 'YYYYMMDD HH24:MI:SS') AND TO_DATE(#{qryEndDt} || ' 23:59:59', 'YYYYMMDD HH24:MI:SS')
+						AND
+						(
+							( T2.APRV_EPNO = #{aprvEpno} OR T2.SBAP_EPNO = #{aprvEpno} )
+							OR
+							(
+								T2.APRV_UNIT_TCD = '10'
+								AND
+								T2.APRV_UNIT_DL_VL = (SELECT PSIT_MENU_ID
+												   FROM GA09N209
+												  WHERE EPNO = #{aprvEpno}
+													AND PSIT_MENU_ID = T2.APRV_UNIT_DL_VL)
+							)
+						)
+					GROUP BY
+						T2.APRV_WRRPT_MT_NO
+				) tMap
+				INNER JOIN GA01N101 T1 ON (T1.APRV_WRRPT_MT_NO = tMap.APRV_WRRPT_MT_NO AND T1.UNIF_RQS_PCD = '05')
+				INNER JOIN GA09N607 T2 ON (tMap.APRV_WRRPT_MT_NO = T2.APRV_WRRPT_MT_NO AND tMap.APRV_RNK = T2.APRV_RNK AND tMap.APRV_DL_RNK = T2.APRV_DL_RNK)
+				LEFT OUTER JOIN CB01N210 n210 ON (T1.RQS_ORZ_CD = n210.ORZ_CD)
+				LEFT OUTER JOIN CB01N310 n310 ON (T1.RQS_EPNO = n310.EPNO)
+				LEFT OUTER JOIN GA09C302 rqsScd ON (rqsScd.CD_KND_NO = 'RQS_SCD' AND T1.RQS_SCD = rqsScd.CMN_CD_VL)
+			WHERE
+			<choose>
+				<when test='dcfcPcd == "01"'>
+					T2.DCFC_PCD IN ('01','02')
+				</when>
+				<when test='dcfcPcd == "09"'>
+					T2.DCFC_PCD = '09'
+				</when>
+				<otherwise>
+					T2.DCFC_PCD IN ('01','02','09')
+				</otherwise>
+			</choose>
+			<if test='rqsScd != null and rqsScd != ""'>
+				AND T1.RQS_SCD IN
+				<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+					#{itm}
+				</foreach>
+			</if>
+			<if test='rqsOrzCd != null and rqsOrzCd != ""'>
+				AND T1.RQS_ORZ_CD LIKE '%' || TRIM( #{rqsOrzCd} )    || '%' /* 신청부점  */
+			</if>
+			<if test='rqsTtlNm != null and rqsTtlNm != ""'>
+				AND NVL(T1.RQS_TTL_NM,' ')  LIKE '%' || TRIM( #{rqsTtlNm} ) || '%' /* 신청명 */
+			</if>
+			<if test='mobSelTyp != null and mobSelTyp != ""'>
+				AND
+				(
+					n210.ORZ_NM LIKE '%' || TRIM(#{mobSelTxt}) || '%'
+					OR
+					n310.EP_NM LIKE '%' || TRIM(#{mobSelTxt}) || '%'
+					OR
+					T1.RQS_TTL_NM LIKE '%' || TRIM(#{mobSelTxt}) || '%'
+				)
+			</if>
+			 <if test='unifRqsDlPcd != null and unifRqsDlPcd != ""'>
+	         AND T1.UNIF_RQS_DL_PCD = #{unifRqsDlPcd} /* 구분 */
+	         </if>
+			ORDER BY
+				T1.RQS_DT DESC, T1.RCT_NO DESC
+			OFFSET
+				( #{pageNum} - 1 ) * #{pageSize}  ROW FETCH NEXT #{pageSize} ROWS ONLY
+		)
+
+	</sql>
+	
+	<select id="selectListApvCmpnTotCnt" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In20VO" resultType="int">
+		/* RQSR1000U0.selectListApvCmpnTotCnt : 승인완료 목록건수조회 */	
+		<include refid="selectListApvCmpn_MainQry" />
+		SELECT COUNT(*) AS TOT_CNT
+		  FROM MAIN_T
+	</select>
+	
+	<select id="selectListApvCmpn" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In20VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out20VO">
+		/* RQSR1000U0.selectListApvCmpn : 승인완료 목록조회 */	
+		<include refid="selectListApvCmpn_MainQry" />
+
+		   SELECT T1.RNUM
+                , #{totCnt} AS TOT_CNT
+                , T1.RCT_NO
+                , T1.RQS_TTL_NM
+                , T4.RQS_Q  AS SEAL_SALG_CNT
+                , T3.SEAL_DOC_CNT                  /* 인감증명서부수 */
+                , T3.CERT_DOC_CNT                  /* 등기부등본부수 */
+                , T1.RQS_ORZ_CD
+                , T1.RQS_ORZ_NM
+                , T1.RQS_EPNO
+                , T1.RQS_EP_NM
+                , T1.RQS_DT
+                , T1.APRV_DT
+                , NVL(T2.REF_DT,'N') AS REF_DT     /*사전참조일자*/
+                , T1.RQS_SCD
+                , T1.RQS_SCD_NM
+                , T1.APRV_WRRPT_MT_NO
+			    , T1.APRV_WRRPT_ORZ_CD
+			    , T1.DCFC_PCD
+			    , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'DCFC_PCD' AND CMN_CD_VL = T1.DCFC_PCD AND ROWNUM = 1 ) AS DCFC_PCD_NM   
+			    
+			     /*승인완료,처리완료일 포함 7일 경과여부 구분값추가*/
+                 , (CASE WHEN T1.RQS_SCD IN ('10','40') THEN 
+                       (CASE WHEN TO_DATE(T1.APRV_DT,'YYYYMMDD')+6<![CDATA[ < ]]>TRUNC(SYSDATE) THEN 'Y' ELSE 'N' END)
+                     ELSE 'N' END
+                   ) AS VALD_TERM_PAS_YN
+			    
+             FROM MAIN_T T1 
+             LEFT OUTER JOIN (SELECT T22.APRV_WRRPT_MT_NO
+						           , CASE WHEN T22.APRV_DTTM IS NULL THEN 'N' ELSE TO_CHAR(T22.APRV_DTTM, 'YYYYMMDD') END AS REF_DT
+                                FROM GA09N607 T22 
+                               WHERE T22.APRV_WRRPT_MT_NO||T22.APRV_RNK IN (
+                                               SELECT T21.APRV_WRRPT_MT_NO||MAX(T21.APRV_RNK) AS APRV_RNK
+                                                 FROM GA09N607 T21
+                                                WHERE T21.DCFC_PCD = '09'
+                                                  AND T21.APRV_WRRPT_MT_NO IN (SELECT APRV_WRRPT_MT_NO FROM MAIN_T)
+                                               GROUP BY T21.APRV_WRRPT_MT_NO
+                                               )
+                               ) T2 ON T1.APRV_WRRPT_MT_NO = T2.APRV_WRRPT_MT_NO
+               LEFT OUTER JOIN ( SELECT RCT_NO
+                                      , SUM( CASE WHEN SEAL_CTFW_TCD='10' THEN RQS_Q ELSE 0 END) AS SEAL_DOC_CNT /* 인감증명서부수 */
+                                      , SUM( CASE WHEN SEAL_CTFW_TCD='20' THEN RQS_Q ELSE 0 END) AS CERT_DOC_CNT /* 등기부등본부수 */
+                                   FROM GA01N505 
+                                   WHERE RCT_NO IN (SELECT RCT_NO FROM MAIN_T)
+                                   GROUP BY RCT_NO
+                                ) T3 ON T3.RCT_NO = T1.RCT_NO
+             LEFT OUTER JOIN ( SELECT RCT_NO, SUM(RQS_Q) AS RQS_Q
+                                FROM GA01N504 
+                               WHERE RCT_NO IN (SELECT RCT_NO FROM MAIN_T)
+                               GROUP BY RCT_NO
+                             ) T4 ON T4.RCT_NO = T1.RCT_NO
+             WHERE RQS_SCD != '00' /* 임시저장 제외 */
+            ORDER BY T1.RNUM
+	</select>
+	
+	<select id="selectListApvCmpnBySeal" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In20VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out11VO">
+		/* RQSR1000U0.selectListApvCmpnBySeal : 승인완료 목록조회 */	
+		<include refid="selectListApvCmpn_MainQry" />
+			SELECT NVL(MAX(RQS_SCD_00_CNT),0) AS RQS_SCD_00_CNT
+			     , NVL(MAX(RQS_SCD_05_CNT),0) AS RQS_SCD_05_CNT
+			     , NVL(MAX(RQS_SCD_10_CNT),0) AS RQS_SCD_10_CNT
+			     , NVL(MAX(RQS_SCD_30_CNT),0) AS RQS_SCD_30_CNT
+			     , NVL(MAX(RQS_SCD_90_CNT),0) AS RQS_SCD_90_CNT
+			     , NVL(MAX(RQS_SCD_91_CNT),0) AS RQS_SCD_91_CNT
+			     , NVL(MAX(RQS_SCD_40_CNT),0) AS RQS_SCD_40_CNT
+			FROM (
+                SELECT   CASE WHEN RQS_SCD = '00' THEN COUNT(1) END AS RQS_SCD_00_CNT
+                       , CASE WHEN RQS_SCD = '05' THEN COUNT(1) END AS RQS_SCD_05_CNT
+                       , CASE WHEN RQS_SCD = '10' THEN COUNT(1) END AS RQS_SCD_10_CNT
+                       , CASE WHEN RQS_SCD = '30' THEN COUNT(1) END AS RQS_SCD_30_CNT
+                       , CASE WHEN RQS_SCD = '90' THEN COUNT(1) END AS RQS_SCD_90_CNT
+                       , CASE WHEN RQS_SCD = '91' THEN COUNT(1) END AS RQS_SCD_91_CNT
+                       --, CASE WHEN RQS_SCD = '99' THEN COUNT(1) END AS RQS_SCD_99_CNT  /*2023.12.14 완료 삭제*/
+                       , CASE WHEN RQS_SCD = '40' THEN COUNT(1) END AS RQS_SCD_40_CNT   /*2023.12.14 처리완료 추가*/
+                  FROM MAIN_T
+                  GROUP BY RQS_SCD
+                  )
+	</select>
+	
+	<update id="updateGA09N607ForCfmt" parameterType="com.miraeasset.biz.common.meta.vo.GA09N607VO" >
+		/* RQSR1000U0.updateGA09N607ForCfmt = 결재정보상세_사전참조_확인 수정  */	
+		UPDATE GA09N607 -- 결재정보상세
+		   SET APRV_DTTM        = SYSDATE
+		     , APRV_EPNO        = #{aprvEpno     }
+		     , APRV_RTRN_TCD    = '3'               /*사전참조확인*/
+		     , SBAP_YN          = #{sbapYn       }
+		     , SBAP_EPNO        = #{sbapEpno     }
+		     , OPTR_ID          = #{optrId       }
+		     , OPRT_CHNL_CD     = #{oprtChnlCd   }
+		     , OPRT_ORZ_CD      = #{oprtOrzCd    }
+		     , OPRT_IP_ADR      = #{oprtIpAdr    }
+		     , OPRT_DTTM        = SYSDATE      
+		 WHERE APRV_WRRPT_MT_NO = #{aprvWrrptMtNo }
+		   AND APRV_RNK         = #{aprvRnk       }
+		   AND APRV_DL_RNK      = #{aprvDlRnk     }
+		   AND DCFC_PCD         = '09' /* 09:참조 */
+	</update>
+	
+	<select id="reApplyByRctNo" parameterType="Map">
+		/* RQSR1000U0.reApplyByRctNo : 인장날인 재신청 */
+		BEGIN
+
+			INSERT INTO GA01N101
+			(
+				RCT_NO, RQS_SCD, RQS_DT, UNIF_RQS_PCD, UNIF_RQS_DL_PCD, UNIF_RQS_TCD, RQS_ORZ_CD, RQS_EPNO, RQS_TTL_NM, UNIF_RQS_RSN_CN, HOPE_DT, CMPN_DT, APRV_WRRPT_MT_NO, APRV_WRRPT_ORZ_CD,
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				#{rctNo} AS RCT_NO
+			,	'00' AS RQS_SCD
+			,	TO_CHAR(SYSDATE,'YYYYMMDD') AS RQS_DT
+			,	UNIF_RQS_PCD
+			,	UNIF_RQS_DL_PCD
+			,	UNIF_RQS_TCD
+			,	RQS_ORZ_CD
+			,	RQS_EPNO
+			,	RQS_TTL_NM
+			,	UNIF_RQS_RSN_CN
+			,	NULL AS HOPE_DT
+			,	NULL AS CMPN_DT
+			,	NULL AS APRV_WRRPT_MT_NO
+			,	NULL AS APRV_WRRPT_ORZ_CD
+
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N101
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+			
+			INSERT INTO GA01N109 -- 통합신청_신청별기안문서			
+			(
+				RCT_NO
+				, DRFT_DOC_NO
+				, OPTR_ID
+				, OPRT_CHNL_CD
+				, OPRT_ORZ_CD
+				, OPRT_IP_ADR
+				, OPRT_DTTM
+			)
+			SELECT
+			  #{rctNo} AS RCT_NO
+			, DRFT_DOC_NO        
+            
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N109
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+						
+		END
+		;
+	</select>
+	
+	<select id="selectSalgSealDocCnt" parameterType="String" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out05VO">
+		/* GASR1000U0.selectSalgSealDocCnt = 인감날인증명서 건수 조회*/
+	     SELECT (SELECT COUNT(SEAL_SALG_RQS_SQNC_NO) AS SALG_RQS_CNT 
+	               FROM GA01N504
+	              WHERE RCT_NO = #{rctNo}
+	             ) AS SALG_RQS_CNT
+	           , (SELECT COUNT(SEAL_CTFW_RQS_SQNC_NO) AS SEAL_RQS_CNT 
+	                FROM GA01N505
+	               WHERE RCT_NO = #{rctNo}
+	                 AND SEAL_CTFW_TCD='10'
+	             ) AS SEAL_RQS_CNT
+	          , (SELECT COUNT(SEAL_CTFW_RQS_SQNC_NO) AS CTFW_RQS_CNT 
+	               FROM GA01N505
+	              WHERE RCT_NO = #{rctNo}
+	                AND SEAL_CTFW_TCD='20'
+	             ) AS CTFW_RQS_CNT
+	   FROM DUAL
+	</select>
+	
+	<insert id="reApplyGA01N504" parameterType="Map">
+		/* RQSR1000U0.reApplyGA01N504 = 반려건 재사용 - 인감날인신청*/
+		INSERT INTO GA01N504 -- 인장신청_인감날인신청
+		(
+			  SEAL_SALG_RQS_SQNC_NO
+			, RCT_NO
+			, RCT_DL_NO
+			, USE_SEAL_YN
+			, UNIF_RQS_RSN_CN
+			, SMITP_CN
+			, SAL_MT_NO
+			, RQS_Q
+			, FILE_NO
+			, OPTR_ID
+			, OPRT_CHNL_CD
+			, OPRT_ORZ_CD
+			, OPRT_IP_ADR
+			, OPRT_DTTM
+		)
+		
+		  SELECT  #{sealSalgRqsSqncNo} 
+				, #{rctNo} AS RCT_NO
+				, RCT_DL_NO
+				, USE_SEAL_YN
+				, UNIF_RQS_RSN_CN
+				, SMITP_CN
+				, SAL_MT_NO
+				, RQS_Q
+				, FILE_NO            
+		           
+				,	#{optrId      }
+				,	#{oprtChnlCd  }
+				,	#{oprtOrzCd   }
+				,	#{oprtIpAdr   }
+				,	SYSDATE
+				FROM
+					GA01N504
+				WHERE
+					RCT_NO = #{prevRctNo}
+				AND RCT_DL_NO = #{prevDlNo}
+	</insert>
+		
+	<insert id="reApplyGA01N505" parameterType="Map">
+		/* RQSR1000U0.reApplyGA01N505 = 반려건 재사용 - 인감증명서신청*/
+		INSERT INTO GA01N505 -- 인장신청_인감증명서신청
+		(
+			  SEAL_CTFW_RQS_SQNC_NO
+			, RCT_NO
+			, RCT_DL_NO
+			, SMITP_CN
+			, SMIT_USGE_CN
+			, SAL_MT_NO
+			, SEAL_CTFW_TCD
+			, RQS_Q
+			, DSUS_DT
+			, OPTR_ID
+			, OPRT_CHNL_CD
+			, OPRT_ORZ_CD
+			, OPRT_IP_ADR
+			, OPRT_DTTM
+		)
+		 SELECT   #{sealCtfwRqsSqncNo}
+				, #{rctNo} AS RCT_NO
+				, RCT_DL_NO
+				, SMITP_CN
+				, SMIT_USGE_CN
+				, SAL_MT_NO
+				, SEAL_CTFW_TCD
+				, RQS_Q
+				, DSUS_DT         
+				
+				,	#{optrId      }
+				,	#{oprtChnlCd  }
+				,	#{oprtOrzCd   }
+				,	#{oprtIpAdr   }
+				,	SYSDATE
+				
+			 FROM GA01N505
+			WHERE RCT_NO = #{prevRctNo}
+			  AND RCT_DL_NO = #{prevDlNo}
+	</insert>
+		
+	<select id="selectListSealDocPcd" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out15VO">
+		/* GASR1000U0.selectListSealDocPcd = 입고폐기관리 증명서유형 조회 */
+			SELECT SAL_MT_NO
+			     , SAL_PCD_NM || ' / ' || SAL_DL_NM AS SAL_MT_NM
+			     , '10' AS SEAL_CTFW_TCD
+			FROM (
+			      SELECT SAL_MT_NO 
+			           , SAL_PCD
+			           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = T1.SAL_PCD AND ROWNUM = 1 ) AS SAL_PCD_NM  
+			           , SAL_DL_NM
+			        FROM GA01N501	T1 -- 인장조제관리
+			       WHERE MT_ORZ_CD = 'S03001'
+			         AND HOBR_TCD = '01'
+			         AND SAL_PCD = 'A' -- A:법인인감 
+			         AND SEAL_SCD = '10' 
+			       ORDER BY SAL_PCD,SAL_DL_NM
+			    ) 	
+			UNION 
+			SELECT NULL AS SAL_MT_NO
+			     , '법인등기부등본' AS SAL_MT_NM
+			     , '20' AS SEAL_CTFW_TCD
+			FROM DUAL
+	</select>	
+		
+	<select id="selectGA01N510MNo"  parameterType="com.miraeasset.biz.common.meta.vo.GA01N510VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N510VO">
+		/* RQSR1000U0.selectGA01N510MNo = 인감증명서번호 조회 - 폐기(만료일 조건 삭제) */
+		SELECT MAX(SEAL_CTFW_SQNC_NO) AS SEAL_CTFW_SQNC_NO_MAX
+		    ,  MIN(SEAL_CTFW_SQNC_NO) AS SEAL_CTFW_SQNC_NO_MIN
+	      FROM GA01N510
+	     WHERE ISS_DT = #{issDt}              /*발급일*/
+	       AND SEAL_CTFW_TCD = #{sealCtfwTcd} /*인감증명서구분코드*/
+	       AND OUTQ_DT IS NULL                /*출고일자*/
+	       AND DSUS_DT IS NULL                /*폐기일자*/
+	                                          /*만료일 제외*/
+	       <if test='salMtNo != null and salMtNo != ""'>
+	       	AND SAL_MT_NO = #{salMtNo} /*인장관리번호*/
+	       </if>
+	        <if test='salMtNo == null or salMtNo == ""'>
+	       	AND SAL_MT_NO IS NULL
+	       </if>
+	</select>
+	
+	<select id="selectGA01N510MaxNo"  parameterType="com.miraeasset.biz.common.meta.vo.GA01N510VO" resultType="String">
+		/* RQSR1000U0.selectGA01N510MaxNo = 인감증명서번호 max번호 조회*/
+		SELECT MAX(SEAL_CTFW_SQNC_NO) AS SEAL_CTFW_SQNC_NO_MAX
+	      FROM GA01N510
+	     WHERE ISS_DT = #{issDt}              /*발급일        */
+	       AND SEAL_CTFW_TCD = #{sealCtfwTcd} /*인감증명서구분코드*/
+	</select>
+	
+	<insert id="insertGA01N510" parameterType="java.util.HashMap" >
+		/* RQSR1000U0.insertGA01N510 = 인감신청_인감증명서관리 신규등록 */
+		BEGIN
+		<foreach collection="list" item="item" open="" close=";" separator=";">
+			INSERT INTO GA01N510	-- 인감신청_인감증명서관리
+			( SEAL_CTFW_SQNC_NO       /* 인감증명서시퀀스번호    */
+			, SEAL_CTFW_RQS_SQNC_NO   /* 인감증명서신청시퀀스번호 */
+			, ISS_DT                  /* 발급일자            */
+			, SEAL_CTFW_TCD           /* 인감증명서구분코드     */
+			, SAL_MT_NO               /* 인장관리번호         */
+			, SEAL_CTFW_SCD           /* 인감증명서상태코드     */
+			, SEAL_CTFW_DL_SCD        /* 인감증명서상세상태코드   */
+			, INQ_DT                  /* 입고일자            */
+			, OUTQ_DT                 /* 출고일자            */
+
+			, XPIR_DT                 /* 만료일자            */
+			
+			, SEAL_CTFW_ID_CN         /* 인감증명서ID내용       */
+			, PRCR_EPNO               /* 처리자사원번호         */
+			, OPTR_ID                 /* 조작자ID            */
+			, OPRT_CHNL_CD            /* 조작채널코드          */
+			, OPRT_ORZ_CD             /* 조작조직코드          */
+			, OPRT_IP_ADR             /* 조작IP주소           */
+			, OPRT_DTTM               /* 조작일시             */
+			)
+			VALUES
+			(
+			  #{item.sealCtfwSqncNo    }
+			, #{item.sealCtfwRqsSqncNo }
+			, #{item.issDt             }
+			, #{item.sealCtfwTcd       }
+			, #{item.salMtNo           }
+			, #{item.sealCtfwScd       }
+			, #{item.sealCtfwDlScd     }
+			, TO_CHAR(SYSDATE,'YYYYMMDD')
+			, #{item.outqDt            }
+			
+			, TO_CHAR(TO_DATE(#{item.issDt},'YYYYMMDD')+90,'YYYYMMDD') 
+			
+			, #{item.sealCtfwIdCn      }
+			, #{item.prcrEpno          }
+			, #{item.optrId            }
+			, #{item.oprtChnlCd        }
+			, #{item.oprtOrzCd         }
+			, #{item.oprtIpAdr         }
+			, SYSDATE               
+			) 
+		</foreach>
+		END;
+	</insert>
+	
+	<update id="updateGA01N510Dsus" parameterType="com.miraeasset.biz.common.meta.vo.GA01N510VO" >
+	/* RQSR1000U0.updateGA01N510Dsus : 폐기 업데이트 */
+		UPDATE GA01N510
+		   SET  DSUS_DT = TO_CHAR(SYSDATE,'YYYYMMDD')         /* 폐기일자           */
+              , SEAL_CTFW_DSUS_RSN_CN = #{sealCtfwDsusRsnCn}  /* 인감증명서폐기사유내용  */
+	     	  , SEAL_CTFW_SCD         = #{sealCtfwScd}        /* 인감증명서상태코드     */
+			  , SEAL_CTFW_DL_SCD      = #{sealCtfwDlScd}      /* 인감증명서상세상태코드  */
+			  , PRCR_EPNO             = #{prcrEpno}           /* 처리자             */
+	    WHERE ISS_DT = #{issDt}
+	     AND SEAL_CTFW_SQNC_NO IN (  
+						        SELECT SEAL_CTFW_SQNC_NO                      /*인감증명서시퀀스번호      */
+						         FROM (
+						             SELECT A.SEAL_CTFW_SQNC_NO 
+						               FROM GA01N510 A
+						              WHERE A.SEAL_CTFW_SCD = '10'            /* 입고 */
+					             	    AND A.ISS_DT = #{issDt}  
+					             	       <if test='salMtNo != null and salMtNo != ""'>
+									       	AND A.SAL_MT_NO = #{salMtNo} /*인장관리번호*/
+									       </if>
+									        <if test='salMtNo == null or salMtNo == ""'>
+									       	AND A.SAL_MT_NO IS NULL
+									       </if>
+						             ORDER BY A.SEAL_CTFW_SQNC_NO
+						             )
+						        WHERE ROWNUM <![CDATA[ < ]]>= #{rqsQ}          /* 신청수량 */
+						    )
+	</update>
+
+	<select id="selectListGA01N510" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In19VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out19VO">
+	    /* RQSR1000U0.selectListGA01N510 : 입고폐기관리 목록조회 */
+		SELECT ISS_DT,
+		       SEAL_CTFW_TCD,
+		       SAL_MT_NO,
+		       SEAL_CTFW_SCD,
+		       (SELECT CMN_CD_VL_DEF_CN 
+		          FROM GA09C302 
+		         WHERE CD_KND_NO = 'SEAL_CTFW_SCD' 
+		           AND CMN_CD_VL = SEAL_CTFW_SCD 
+		           AND ROWNUM = 1 ) AS SEAL_CTFW_SCD_NM,
+		       SEAL_CTFW_DL_SCD,
+		       ( SELECT CMN_CD_VL_DEF_CN 
+		           FROM GA09C302 
+		          WHERE CD_KND_NO = 'SEAL_CTFW_DL_SCD' 
+		            AND CMN_CD_VL = SEAL_CTFW_DL_SCD 
+		            AND ROWNUM = 1 ) AS SEAL_CTFW_DL_SCD_NM,
+		       SEAL_CTFW_DSUS_RSN_CN,
+		       DSUS_DT,
+		       XPIR_DT ,
+		       COUNT(1) AS RQS_Q ,
+		       MIN(SEAL_CTFW_SQNC_NO)||'~'||MAX(SEAL_CTFW_SQNC_NO) AS SEAL_CTFW_NO_SECT
+		  FROM GA01N510
+		 WHERE ISS_DT BETWEEN #{issDtFrom} AND #{issDtTo}
+            <if test='salMtNo != null and salMtNo != ""'>
+	       	AND SAL_MT_NO = #{salMtNo} /*인장관리번호*/
+	       </if>
+	        <if test='salMtNo == null or salMtNo == ""'>
+	       	AND SAL_MT_NO IS NULL
+	       </if>
+	       
+	       <if test='sealCtfwScd != null and sealCtfwScd != ""'> 
+	       AND SEAL_CTFW_SCD = #{sealCtfwScd} 
+	       </if>
+	       
+           <if test='sealCtfwDlScd != null and sealCtfwDlScd != ""'> 
+           AND SEAL_CTFW_DL_SCD = #{sealCtfwDlScd} 
+           </if> 
+           
+           AND SEAL_CTFW_SCD IN ('10','30')
+		 GROUP BY ISS_DT,
+			      SEAL_CTFW_TCD,
+			      SAL_MT_NO,
+			      SEAL_CTFW_SCD,
+			      SEAL_CTFW_DL_SCD,
+			      SEAL_CTFW_DSUS_RSN_CN,
+			      DSUS_DT,
+			      XPIR_DT 
+	</select>
+	
+	<select id="selectListGA01N510BalPstt" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In19VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out18VO">
+		/* RQSR1000U0.selectListGA01N510BalPstt : 입고/폐기관리 증명서잔고현황 조회  */
+			SELECT SEAL_CTFW_TCD, SAL_MT_NO 
+		           <if test='selTyp == "I"'> , ISS_DT, XPIR_DT </if>
+		         , COUNT(INQ_DT)  AS INQ_RQS_Q     /*입고*/
+		         , SUM(CASE WHEN DSUS_DT IS NULL AND OUTQ_DT IS NOT NULL THEN 1 ELSE 0 END) AS OUTQ_RQS_Q   /*출고*/
+		         , COUNT(DSUS_DT) AS DSUS_RQS_Q    /*폐기*/
+		         , (COUNT(INQ_DT) - SUM(CASE WHEN DSUS_DT IS NULL AND OUTQ_DT IS NOT NULL THEN 1 ELSE 0 END) - COUNT(DSUS_DT)) AS TDY_RQS_Q  /*잔고*/
+		     FROM GA01N510
+		    WHERE 1=1
+		      AND XPIR_DT >= TO_CHAR(SYSDATE,'YYYYMMDD') /*만료일*/
+		      AND SEAL_CTFW_DL_SCD  <![CDATA[ <> ]]> '3010'  /*입고폐기한 수량 제외*/
+		      <if test='selTyp == "I"'> AND ISS_DT BETWEEN #{issDtFrom} AND #{issDtTo} </if>
+    		  <if test='salMtNo != null and salMtNo != ""'>
+		       AND SAL_MT_NO = #{salMtNo} /*인장관리번호*/
+		      </if>
+		      <if test='salMtNo == null or salMtNo == ""'>
+		       AND SAL_MT_NO IS NULL
+		      </if>
+		   GROUP BY SEAL_CTFW_TCD, SAL_MT_NO
+		   <if test='selTyp == "I"'>  , ISS_DT, XPIR_DT ORDER BY ISS_DT  </if>
+	</select>
+
+	<select id="selectInfoGA01N510BalPstt" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out17VO">
+    	/* RQSR1000U0.selectInfoGA01N510BalPstt : 당일잔여수량 조회  */
+        SELECT A.SAL_MT_NO
+	         , A.SAL_MT_NM
+	         , NVL(B.SEAL_CTFW_BAL, '0/0') AS SEAL_CTFW_BAL
+	         , A.SEAL_CTFW_TCD
+	      FROM (
+				SELECT SAL_MT_NO
+				     , SAL_PCD_NM || '(' || SAL_DL_NM || ')' AS SAL_MT_NM 
+				     , '10' AS SEAL_CTFW_TCD
+				FROM (
+				      SELECT SAL_MT_NO 
+				           , SAL_PCD
+				           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = T1.SAL_PCD AND ROWNUM = 1 ) AS SAL_PCD_NM  
+				           , SAL_DL_NM
+				        FROM GA01N501	T1 -- 인장조제관리
+				       WHERE MT_ORZ_CD = 'S03001'
+				         AND HOBR_TCD = '01'
+				         AND SAL_PCD = 'A' -- A:법인인감 
+				         AND SEAL_SCD = '10' 
+				    ) 	
+				UNION 
+				SELECT NULL AS SAL_MT_NO
+				     , '법인등기부등본' AS SAL_MT_NM
+				     , '20' AS SEAL_CTFW_TCD
+				FROM DUAL
+	           ) A
+	      LEFT OUTER JOIN (
+                    SELECT SEAL_CTFW_TCD
+	                     , SAL_MT_NO
+	                     , TO_CHAR(NVL(OUTQ_RQS_Q,0))||'/'||TO_CHAR(NVL(INQ_RQS_Q,0)) AS SEAL_CTFW_BAL /* 당일출고수량/잔여수량(총무팀기준) */
+	                 FROM (                          
+                           SELECT SEAL_CTFW_TCD, SAL_MT_NO
+							    , SUM(CASE WHEN OUTQ_DT IS NULL AND DSUS_DT IS NULL    THEN 1 ELSE 0 END) AS INQ_RQS_Q     /*입고*/
+								, SUM(CASE WHEN OUTQ_DT = TO_CHAR(SYSDATE, 'YYYYMMDD') THEN 1 ELSE 0 END) AS OUTQ_RQS_Q    /*당일출고*/
+                             FROM GA01N510
+                            WHERE 1=1
+                              AND XPIR_DT >= TO_CHAR(SYSDATE,'YYYYMMDD') /*만료일*/
+                            GROUP BY SEAL_CTFW_TCD, SAL_MT_NO
+	                    )
+	      ) B  
+	      ON A.SEAL_CTFW_TCD = B.SEAL_CTFW_TCD
+	      AND ((A.SAL_MT_NO IS NOT NULL AND A.SAL_MT_NO=B.SAL_MT_NO) OR A.SAL_MT_NO IS NULL)
+	      ORDER BY A.SEAL_CTFW_TCD, A.SAL_MT_NO 
+    </select>
+	
+	
+	<select id="selectGA01N505CtfwCnt" parameterType="String" resultType="int">
+		/* RQSR1000U0.selectGA01N505CtfwCnt : 인감증명서 건수 조회  */
+		SELECT COUNT(1) AS CNT 
+		  FROM GA01N505
+		 WHERE RCT_NO = #{rctNo}
+	</select>
+
+	<select id="selectGA01N510AblCnt" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In24VO" resultType="int">
+		/* RQSR1000U0.selectGA01N510AblCnt : 인감증명서 출력가능수량  */
+          SELECT COUNT(1) AS ABL_CNT
+            FROM GA01N510
+           WHERE SEAL_CTFW_SCD = '10'  /*입고*/
+            <if test='salMtNo != null and salMtNo != ""'>
+	       	AND SAL_MT_NO = #{salMtNo} /*인장관리번호*/
+	       </if>
+	        <if test='salMtNo == null or salMtNo == ""'>
+	       	AND SAL_MT_NO IS NULL
+	       </if>
+             AND XPIR_DT >= TO_CHAR(SYSDATE,'YYYYMMDD') /*만료일*/
+	</select>
+	
+	<update id="updateGA01N510Oput" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In24VO">
+		/* RQSR1000U0.updateGA01N510Oput : 인감증명서 출력 */
+		UPDATE GA01N510 
+	      SET OUTQ_DT               = TO_CHAR(SYSDATE,'YYYYMMDD') /* 출고일자            */
+	        , SEAL_CTFW_SCD         = #{sealCtfwScd}              /* 인감증명서상태코드      */
+	        , SEAL_CTFW_DL_SCD      = #{sealCtfwDlScd}            /* 인감증명서신청시퀀스번호  */
+	        , SEAL_CTFW_RQS_SQNC_NO = #{sealCtfwRqsSqncNo}        /* 인감증명서신청시퀀스번호  */
+	        , PRCR_EPNO             = #{epno}                     /* 처리자              */
+	    WHERE SEAL_CTFW_SQNC_NO IN (  
+	            SELECT SEAL_CTFW_SQNC_NO                          /*인감증명서시퀀스번호      */
+	             FROM (
+	                 SELECT A.SEAL_CTFW_SQNC_NO 
+	                  FROM GA01N510 A
+	                 WHERE A.SEAL_CTFW_TCD = '10'
+	                   AND A.SAL_MT_NO= #{salMtNo}                  /*인장관리번호          */
+	                   AND A.SEAL_CTFW_SCD = '10'                   /*입고               */
+	                   AND A.XPIR_DT >= TO_CHAR(SYSDATE,'YYYYMMDD') /*만료일              */
+	                 ORDER BY A.SEAL_CTFW_SQNC_NO
+	                 )
+	            WHERE ROWNUM <![CDATA[ < ]]>= #{rqsQ}               /*신청수량          */
+	        )
+	</update>
+	
+	<update id="updateGA01N510CertDocOput" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In24VO">
+		/* RQSR1000U0.updateGA01N510CertDocOput : 등기부등본 출력 */
+		UPDATE GA01N510 
+	      SET OUTQ_DT               = TO_CHAR(SYSDATE,'YYYYMMDD') /* 출고일자            */
+	        , SEAL_CTFW_SCD         = #{sealCtfwScd}              /* 인감증명서상태코드      */
+	        , SEAL_CTFW_DL_SCD      = #{sealCtfwDlScd}            /* 인감증명서신청시퀀스번호  */
+	        , SEAL_CTFW_RQS_SQNC_NO = #{sealCtfwRqsSqncNo}        /* 인감증명서신청시퀀스번호  */
+	        , PRCR_EPNO             = #{epno}                     /* 처리자              */
+	        , SEAL_CTFW_ID_CN       = #{sealCtfwIdCn}             /* 인감증명서ID내용       */
+	    WHERE SEAL_CTFW_SQNC_NO IN (  
+		                 SELECT MIN(A.SEAL_CTFW_SQNC_NO) 
+		                  FROM GA01N510 A
+		                 WHERE A.SEAL_CTFW_TCD = '20'                   /*등기부등본      */
+		                   AND A.SEAL_CTFW_SCD = '10'                   /*입고          */
+		                   AND A.XPIR_DT >= TO_CHAR(SYSDATE,'YYYYMMDD') /*만료일         */
+	        )
+	</update>
+	
+		
+	<update id="updateGA01N510DlScd" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In01VO" >
+		/* RQSR1000U0.updateGA01N510DlScd : 출력 처리  */
+		UPDATE GA01N510
+	 	   SET SEAL_CTFW_DL_SCD = #{sealCtfwDlScd}     
+	 	 WHERE SEAL_CTFW_RQS_SQNC_NO IN (SELECT SEAL_CTFW_RQS_SQNC_NO
+										   FROM GA01N505
+										  WHERE RCT_NO = #{rctNo}     /* 접수번호  */
+									    )
+		 AND SEAL_CTFW_SCD = '20'                                     /* 인감증명서상태코드 : 출력  */
+	</update>
+
+	<select id="selectListGA01N510Oput" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In24VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out23VO">
+		/* RQSR1000U0.selectListGA01N510Oput : 재출력/폐기 - 조회  */
+		 SELECT A.SMITP_CN
+		      , A.SMIT_USGE_CN
+		      , B.ISS_DT
+		      , B.SEAL_CTFW_SQNC_NO
+		      , B.SEAL_CTFW_RQS_SQNC_NO
+		      , A.SEAL_CTFW_TCD
+		      , A.SAL_MT_NO
+		      , (  
+		        SELECT ((SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = T1.SAL_PCD AND ROWNUM = 1 ) 
+		                    ||'/'||SAL_DL_NM) AS SAL_MT_NM
+		            FROM GA01N501	T1 -- 인장조제관리
+		           WHERE SAL_MT_NO = A.SAL_MT_NO
+		          ) AS SAL_MT_NM
+		       , A.RCT_NO
+		  FROM GA01N505 A
+		  LEFT OUTER JOIN GA01N510 B
+		  ON A.SEAL_CTFW_RQS_SQNC_NO = B.SEAL_CTFW_RQS_SQNC_NO
+		  AND B.SEAL_CTFW_SCD IN ('10','20')  /*10:입고 20:출고*/
+		 WHERE A.SEAL_CTFW_RQS_SQNC_NO = #{sealCtfwRqsSqncNo}
+		 ORDER BY B.SEAL_CTFW_SQNC_NO
+	</select>
+
+	<update id="updateGA01N510ReOputDsus" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In26VO" >
+	   /* RQSR1000U0.updateGA01N510ReOputDsus : 재출력/폐기 - 폐기 */
+		UPDATE GA01N510
+		   SET  DSUS_DT               = TO_CHAR(SYSDATE,'YYYYMMDD')  /* 폐기일자            */
+              , SEAL_CTFW_DSUS_RSN_CN = #{sealCtfwDsusRsnCn}         /* 폐기사유            */
+	     	  , SEAL_CTFW_SCD         = #{sealCtfwScd}               /* 인감증명서상태코드     */
+			  , SEAL_CTFW_DL_SCD      = #{sealCtfwDlScd}             /* 인감증명서상세상태코드  */
+	      WHERE SAL_MT_NO             = #{salMtNo}                   /*인장관리번호         */
+	        AND SEAL_CTFW_RQS_SQNC_NO = #{sealCtfwRqsSqncNo}
+	        AND SEAL_CTFW_SQNC_NO IN 
+   			<foreach collection="sealCtfwSqncNoArr" item="itm" index="index" open="(" close=")" separator=",">
+			#{itm}
+			</foreach>
+	</update>
+	
+	<select id="selectGA01N101SameDayYn" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In24VO" resultType="boolean">
+		/* RQSR1000U0.selectGA01N101SameDayYn = 출력/재출력일자와 승인완료일 비교 */
+		 SELECT CASE WHEN TRUNC(APRV_DTTM) = TRUNC(SYSDATE) THEN '1' ELSE '0' END AS SAME_DAY_YN
+		  FROM GA09N607
+		 WHERE APRV_WRRPT_MT_NO||APRV_RNK IN (
+		     SELECT APRV_WRRPT_MT_NO || MAX(APRV_RNK) AS APRV_RNK
+		       FROM GA09N607 
+		      WHERE APRV_WRRPT_MT_NO IN (
+		       SELECT A.APRV_WRRPT_MT_NO
+		         FROM GA01N101 A
+		        WHERE A.RCT_NO = #{rctNo}
+		          AND A.RQS_SCD IN ('10', '40')
+		       )
+		    AND APRV_RNK <![CDATA[ < ]]> 80
+		    GROUP BY APRV_WRRPT_MT_NO
+		    )
+	</select>
+	
+	<select id="selectGA01N510Oput" parameterType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0In24VO" resultType="com.miraeasset.biz.rq.sr.vo.RQSR1000U0Out24VO">
+		/* RQSR1000U0.selectGA01N510Oput = 출고 - 출력후 미리보기 */
+		 SELECT A.RQS_ORZ_CD
+	         , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM 
+	         , A.RQS_EPNO
+	         , C.EP_NM AS RQS_EP_NM  
+	         , ( SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO='HRM_008' AND HR_CMN_CD = C.HR_PST_CD AND ROWNUM = 1) AS RQS_HR_PST_NM
+	         , B.FROM_DT||'~'||B.TO_DT AS USE_TERM 
+	         , D.SMITP_CN
+	         , D.SMIT_USGE_CN
+	         , SEAL_CTFW_SQNC_NO
+	     FROM GA01N101 A
+	      LEFT OUTER JOIN (                
+	             SELECT APRV_WRRPT_MT_NO
+	                 ,  TO_CHAR(APRV_DTTM,'YYYY/fmMM/DD') AS FROM_DT
+	                 ,  TO_CHAR(APRV_DTTM+6,'YYYY/fmMM/DD') AS TO_DT     /*승인일포함 7일*/
+	              FROM GA09N607
+	             WHERE APRV_WRRPT_MT_NO||APRV_RNK IN (
+	                 SELECT APRV_WRRPT_MT_NO || MAX(APRV_RNK) AS APRV_RNK
+	                   FROM GA09N607 
+	                  WHERE APRV_WRRPT_MT_NO =  ( SELECT A.APRV_WRRPT_MT_NO
+											        FROM GA01N101 A
+											       WHERE A.RCT_NO = #{rctNo}
+											         AND A.RQS_SCD IN ('10', '40')
+											       )
+	                   AND APRV_RNK <![CDATA[ < ]]> 80
+	                GROUP BY APRV_WRRPT_MT_NO ) 
+	            ) B ON A.APRV_WRRPT_MT_NO = B.APRV_WRRPT_MT_NO
+	     LEFT OUTER JOIN CB01N310 C ON A.RQS_EPNO = C.EPNO
+	     LEFT OUTER JOIN (      
+	             SELECT A.SMITP_CN            /*제출처*/
+	                  , A.SMIT_USGE_CN        /*제출용도*/
+	                  , B.SEAL_CTFW_SQNC_NO   /*증명서번호*/
+	                  , B.SEAL_CTFW_RQS_SQNC_NO
+	                  , A.RCT_NO
+	              FROM GA01N505 A
+	              LEFT OUTER JOIN GA01N510 B
+	              ON A.SEAL_CTFW_RQS_SQNC_NO = B.SEAL_CTFW_RQS_SQNC_NO
+	              AND B.SEAL_CTFW_SCD IN ('10','20')  /*10:입고 20:출고*/
+	             WHERE A.SEAL_CTFW_RQS_SQNC_NO = #{sealCtfwRqsSqncNo}
+	             ORDER BY B.SEAL_CTFW_SQNC_NO
+	     ) D ON A.RCT_NO = D.RCT_NO 
+	    WHERE A.RCT_NO = #{rctNo}
+	      AND A.RQS_SCD IN ('10', '40')
+	    ORDER BY D.SEAL_CTFW_SQNC_NO
+	</select>
+	
+</mapper>

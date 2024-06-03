@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gabm_mapper">
+
+	
+	<select id="selectList00GA01N401" parameterType="com.miraeasset.biz.ga.bm.vo.GABM1000U0In00VO" resultType="com.miraeasset.biz.ga.bm.vo.GABM1000U0Out00VO">
+		
+		/* GABM1000V0.selectList00GA01N401 : 예산관리 조회 */
+		WITH T1 AS (
+            SELECT A.ACSJ_CD
+			      , NVL(A.TDAY_ACMA_A,0) - NVL(B.TDAY_ACMA_A,0) AS ENFC_A
+			   FROM (
+			         SELECT ACSJ_CD
+			              , SUM(TDAY_ACMA_A) AS TDAY_ACMA_A
+			           FROM AT01N201 A
+			              , GA04C400 B
+			           WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD
+			             AND A.TR_DT = #{yrDyEndDt}
+			             AND A.CO_CD = '005'
+			             AND A.ACTG_FILD_CD = '100'
+                         AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			           GROUP BY ACSJ_CD
+			         ) A
+			      , (
+			         SELECT ACSJ_CD
+			              , SUM(TDAY_ACMA_A) AS TDAY_ACMA_A
+                     FROM AT01N201 A
+                        , GA04C400 B
+                     WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD
+                       AND A.TR_DT = #{yrDyStrtDt}
+                       AND A.CO_CD = '005'
+                       AND A.ACTG_FILD_CD = '100'
+                       AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			           GROUP BY ACSJ_CD  
+			         ) B
+			  WHERE A.ACSJ_CD = B.ACSJ_CD(+)
+	),
+	 T2 AS (
+            SELECT A.ACSJ_CD
+			      , NVL(A.TDAY_ACMA_A,0) - NVL(B.TDAY_ACMA_A,0) AS YRBF_ENFC_A
+			   FROM (
+			         SELECT ACSJ_CD
+			              , SUM(TDAY_ACMA_A) AS TDAY_ACMA_A
+                     FROM AT01N201 A
+                        , GA04C400 B
+                     WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD
+                       AND A.TR_DT = #{yr1DybfEndDt}
+                       AND A.CO_CD = '005'
+                       AND A.ACTG_FILD_CD = '100'
+                       AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			           GROUP BY ACSJ_CD
+			         ) A
+			      , (
+			         SELECT ACSJ_CD
+			              , SUM(TDAY_ACMA_A) AS TDAY_ACMA_A
+                     FROM AT01N201 A
+                        , GA04C400 B
+                     WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD
+                       AND A.TR_DT = #{yr1DybfStrtDt}
+                       AND A.CO_CD = '005'
+                       AND A.ACTG_FILD_CD = '100'
+                       AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			           GROUP BY ACSJ_CD  
+			         ) B
+			  WHERE A.ACSJ_CD = B.ACSJ_CD(+)
+	),
+	 T3 AS (
+    	    SELECT C.ACSJ_CD    AS ACSJ4_CD
+                 , C.ACSJ_CD_NM AS ACSJ4_CD_NM
+                 , B.ACSJ_CD    AS ACSJ5_CD
+                 , B.ACSJ_CD_NM AS ACSJ5_CD_NM
+                 , A.ACSJ_CD    AS ACSJ6_CD
+                 , A.ACSJ_CD_NM AS ACSJ6_CD_NM
+                 , A.TTLZ_BAS_ORZ_CD
+                 , A.BDGT_FMTN_A
+              FROM (SELECT A.CO_CD
+                         , A.ACSJ_CD
+                         , A.ACTG_BAS_CD 
+                         , A.ACSJ_CD_NM
+                         , A.HRK_ACSJ_CD 
+                         , A.ACSJ_GCD
+                         , B.TTLZ_BAS_ORZ_CD
+                         , C.BDGT_FMTN_A
+                      FROM AT01C001 A
+                         , GA04C400 B
+                         , (SELECT ACTG_ACSJ_CD
+                                 , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+                              FROM GA01N401
+                             WHERE BAS_YM like #{basYm} || '%'
+                             GROUP BY ACTG_ACSJ_CD
+                          ) C /* 예산관리 */
+                     WHERE A.CO_CD = '005'
+                       AND ACTG_BAS_CD = 'G009'
+                       AND A.ACSJ_CD = B.ACTG_ACSJ_CD
+                       AND A.ACSJ_CD = C.ACTG_ACSJ_CD(+)
+                    ) A
+                 , AT01C001 B
+                 , AT01C001 C
+             WHERE A.CO_CD = B.CO_CD
+               AND B.CO_CD = C.CO_CD(+)
+               AND A.ACTG_BAS_CD = B.ACTG_BAS_CD
+               AND B.ACTG_BAS_CD = C.ACTG_BAS_CD(+)
+               AND A.HRK_ACSJ_CD = B.ACSJ_CD
+               AND B.HRK_ACSJ_CD = C.ACSJ_CD(+)
+    )
+	SELECT *
+	  FROM (
+            SELECT L_ACSJ_CD
+                 , L_ACSJ_NM
+                 , M_ACSJ_CD
+                 , M_ACSJ_NM
+                 , S_ACSJ_CD
+                 , S_ACSJ_NM
+                 , ORZ_CD
+                 , ORZ_NM
+                 , YRBF_ENFC_A
+                 , NVL(ENFC_A, 0) AS ENFC_A
+                 , BDGT_FMTN_A
+                 , NVL(ENFCR, 0) AS ENFCR
+                 , L_SORT
+                 , COUNT(1) OVER() AL_CNT
+              FROM (SELECT A.ACSJ4_CD     AS L_ACSJ_CD
+                         , REGEXP_SUBSTR(A.ACSJ4_CD_NM, '[^ ]+', 1, 2) AS L_ACSJ_NM
+                         , A.ACSJ5_CD     AS M_ACSJ_CD
+                         , REGEXP_SUBSTR(A.ACSJ5_CD_NM, '[^ ]+', 1, 2) AS M_ACSJ_NM
+                         , A.ACSJ6_CD     AS S_ACSJ_CD
+                         , A.ACSJ6_CD_NM  AS S_ACSJ_NM
+                         , A.TTLZ_BAS_ORZ_CD AS ORZ_CD
+                         , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.TTLZ_BAS_ORZ_CD) AS ORZ_NM
+                         , E.YRBF_ENFC_A  AS YRBF_ENFC_A /* 전년도집행금액 */
+                         , F.ENFC_A       AS ENFC_A      /* 집행금액 */
+                         , A.BDGT_FMTN_A  AS BDGT_FMTN_A /* 예산편성금액 */
+                         , NVL(ROUND((F.ENFC_A / NULLIF(A.BDGT_FMTN_A, 0)) * 100), 0) AS ENFCR
+                         , CASE WHEN A.ACSJ4_CD = '5270100000' THEN 1
+                                WHEN A.ACSJ4_CD = '5270090000' THEN 2
+                                WHEN A.ACSJ4_CD = '5270160000' THEN 3
+                                WHEN A.ACSJ4_CD = '5270290000' THEN 4
+                                WHEN A.ACSJ4_CD = '5270040000' THEN 5
+                                WHEN A.ACSJ4_CD = '5270150000' THEN 6
+                                WHEN A.ACSJ4_CD = '5270270000' THEN 7
+                                WHEN A.ACSJ4_CD = '5270320000' THEN 8
+                                WHEN A.ACSJ4_CD = '5270280000' THEN 9
+                                WHEN A.ACSJ4_CD = '5270240000' THEN 10
+                                WHEN A.ACSJ4_CD = '5270060000' THEN 11
+                                WHEN A.ACSJ4_CD = '5270080000' THEN 12
+                                WHEN A.ACSJ4_CD = '5270070000' THEN 13
+                                WHEN A.ACSJ4_CD = '5270260000' THEN 14
+                                WHEN A.ACSJ4_CD = '5270300000' THEN 15
+                                WHEN A.ACSJ4_CD = '5270230000' THEN 16
+                                END AS L_SORT
+                      FROM T3 A
+                         , T2 E /* 전해년도 */
+                         , T1 F /* 당해년도 */
+                     WHERE A.ACSJ6_CD = E.ACSJ_CD(+)
+                       AND A.ACSJ6_CD = F.ACSJ_CD(+)
+                    )
+             UNION ALL
+             /* 중분류 */
+            SELECT '' AS L_ACSJ_CD 
+                 , '' AS L_ACSJ_NM
+                 , '' AS M_ACSJ_CD
+                 , M_ACSJ_NM AS M_ACSJ_NM
+                 , '' AS S_ACSJ_CD
+                 , '' AS S_ACSJ_NM
+                 , '' AS ORZ_CD
+                 , '' AS ORZ_NM
+                 , YRBF_ENFC_A AS YRBF_ENFC_A
+                 , ENFC_A      AS ENFC_A
+                 , BDGT_FMTN_A AS BDGT_FMTN_A
+                 , ENFCR AS ENFCR
+                 , L_SORT      AS L_SORT
+                 , NULL AS AL_CNT
+              FROM (SELECT L_ACSJ_CD AS L_ACSJ_CD 
+                         , '' AS L_ACSJ_NM
+                         , '' AS M_ACSJ_CD
+                         , MAX(M_ACSJ_NM) || ' 합계' AS M_ACSJ_NM
+                         , '' AS S_ACSJ_CD
+                         , '' AS S_ACSJ_NM
+                         , '' AS ORZ_CD
+                         , '' AS ORZ_NM
+                         , SUM(YRBF_ENFC_A) AS YRBF_ENFC_A
+                         , SUM(ENFC_A)      AS ENFC_A
+                         , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+                         , NVL(ROUND((SUM(ENFC_A) / NULLIF(SUM(BDGT_FMTN_A), 0)) * 100), 0)  AS ENFCR
+                         , MAX(L_SORT)      AS L_SORT
+                         , MAX(B.CNT)  CNT2
+                         , MAX(B.CNT2) CNT3
+                      FROM (SELECT A.ACSJ4_CD AS L_ACSJ_CD
+                                 , '' AS L_ACSJ_NM
+                                 , A.ACSJ5_CD AS M_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ5_CD_NM, '[^ ]+', 1, 2) AS M_ACSJ_NM
+                                 , A.ACSJ6_CD AS S_ACSJ_CD
+                                 , '' AS S_ACSJ_NM
+                                 , '' AS ORZ_CD
+                                 , '' AS ORZ_NM
+                                 , E.YRBF_ENFC_A  AS YRBF_ENFC_A /* 전년도집행금액 */
+                                 , F.ENFC_A       AS ENFC_A      /* 집행금액 */
+                                 , A.BDGT_FMTN_A  AS BDGT_FMTN_A /* 예산편성금액 */
+                                 , NULL AS ENFCR /* 집행율 */
+                                 , CASE WHEN A.ACSJ4_CD = '5270100000' THEN 1
+                                        WHEN A.ACSJ4_CD = '5270090000' THEN 2
+                                        WHEN A.ACSJ4_CD = '5270160000' THEN 3
+                                        WHEN A.ACSJ4_CD = '5270040000' THEN 5
+                                        WHEN A.ACSJ4_CD = '5270150000' THEN 6
+                                        WHEN A.ACSJ4_CD = '5270280000' THEN 9
+                                        WHEN A.ACSJ4_CD = '5270240000' THEN 10
+                                        WHEN A.ACSJ4_CD = '5270070000' THEN 13
+                                        WHEN A.ACSJ4_CD = '5270260000' THEN 14
+                                        END AS L_SORT
+                              FROM T3 A
+                                 , T2 E /* 전해년도 */
+                                 , T1 F /* 당해년도 */
+                             WHERE A.ACSJ6_CD = E.ACSJ_CD(+)
+                               AND A.ACSJ6_CD = F.ACSJ_CD(+)
+                            ) A
+                         , (SELECT HRK_ACSJ_CD
+                                 , COUNT(HRK_ACSJ_CD) AS CNT
+                                 , MAX(CNT2) AS CNT2
+                              FROM (
+                                    SELECT B.HRK_ACSJ_CD
+                                         , COUNT(A.ACTG_ACSJ_CD) AS CNT2
+                                      FROM GA04C400 A
+                                         , AT01C001 B
+                                     WHERE 1=1
+                                       AND A.ACTG_ACSJ_CD = B.ACSJ_CD
+                                       AND B.ACTG_BAS_CD = 'G009'
+                                     GROUP BY HRK_ACSJ_CD 
+                                    )
+                             GROUP BY HRK_ACSJ_CD 
+                            ) B
+                     WHERE A.M_ACSJ_CD = B.HRK_ACSJ_CD(+)
+                       AND L_SORT IS NOT NULL
+                     GROUP BY L_ACSJ_CD, M_ACSJ_CD
+                    ) WHERE CNT3 >= 2
+             UNION ALL
+            /* 대분류 */ 
+            SELECT '' AS L_ACSJ_CD 
+                 , L_ACSJ_NM AS L_ACSJ_NM
+                 , '' AS M_ACSJ_CD
+                 , '' AS M_ACSJ_NM
+                 , '' AS S_ACSJ_CD
+                 , '' AS S_ACSJ_NM
+                 , '' AS ORZ_CD
+                 , '' AS ORZ_NM
+                 , YRBF_ENFC_A AS YRBF_ENFC_A
+                 , ENFC_A      AS ENFC_A
+                 , BDGT_FMTN_A AS BDGT_FMTN_A
+                 , ENFCR AS ENFCR
+                 , L_SORT      AS L_SORT
+                 , NULL AS AL_CNT
+              FROM (SELECT '' AS L_ACSJ_CD
+                         , MAX(L_ACSJ_NM) || ' 합계' AS L_ACSJ_NM
+                         , '' AS M_ACSJ_CD
+                         , '' AS M_ACSJ_NM
+                         , '' AS S_ACSJ_CD
+                         , '' AS S_ACSJ_NM
+                         , '' AS ORZ_CD
+                         , '' AS ORZ_NM
+                         , SUM(YRBF_ENFC_A) AS YRBF_ENFC_A
+                         , SUM(ENFC_A)      AS ENFC_A
+                         , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+                         , NVL(ROUND((SUM(ENFC_A) / NULLIF(SUM(BDGT_FMTN_A), 0)) * 100), 0)  AS ENFCR
+                         , MAX(L_SORT) AS L_SORT
+                      FROM (SELECT A.ACSJ4_CD     AS L_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ4_CD_NM, '[^ ]+', 1, 2) AS L_ACSJ_NM
+                                 , A.ACSJ5_CD     AS M_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ5_CD_NM, '[^ ]+', 1, 2) AS M_ACSJ_NM
+                                 , A.ACSJ6_CD     AS S_ACSJ_CD
+                                 , A.ACSJ6_CD_NM  AS S_ACSJ_NM
+                                 , A.TTLZ_BAS_ORZ_CD AS ORZ_CD
+                                 , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.TTLZ_BAS_ORZ_CD) AS ORZ_NM
+                                 , E.YRBF_ENFC_A  AS YRBF_ENFC_A /* 전년도집행금액 */
+                                 , F.ENFC_A       AS ENFC_A      /* 집행금액 */
+                                 , A.BDGT_FMTN_A  AS BDGT_FMTN_A /* 예산편성금액 */
+                                 , CASE WHEN A.ACSJ4_CD = '5270100000' THEN 1
+                                        WHEN A.ACSJ4_CD = '5270090000' THEN 2
+                                        WHEN A.ACSJ4_CD = '5270160000' THEN 3
+                                        WHEN A.ACSJ4_CD = '5270040000' THEN 5
+                                        WHEN A.ACSJ4_CD = '5270150000' THEN 6
+                                        WHEN A.ACSJ4_CD = '5270270000' THEN 7
+                                        WHEN A.ACSJ4_CD = '5270320000' THEN 8
+                                        WHEN A.ACSJ4_CD = '5270280000' THEN 9
+                                        WHEN A.ACSJ4_CD = '5270240000' THEN 10
+                                        WHEN A.ACSJ4_CD = '5270060000' THEN 11
+                                        WHEN A.ACSJ4_CD = '5270080000' THEN 12
+                                        WHEN A.ACSJ4_CD = '5270070000' THEN 13
+                                        WHEN A.ACSJ4_CD = '5270260000' THEN 14
+                                        END AS L_SORT
+                              FROM T3 A
+                                 , T2 E /* 전해년도 */
+                                 , T1 F /* 당해년도 */
+                             WHERE A.ACSJ6_CD = E.ACSJ_CD(+)
+                               AND A.ACSJ6_CD = F.ACSJ_CD(+)
+                            )
+                     WHERE L_SORT IS NOT NULL
+                     GROUP BY L_ACSJ_CD        
+                    )
+            UNION ALL
+            /* 총합계 */ 
+            SELECT '' AS L_ACSJ_CD 
+                 , '총합계' AS L_ACSJ_NM
+                 , '' AS M_ACSJ_CD
+                 , '' AS M_ACSJ_NM
+                 , '' AS S_ACSJ_CD
+                 , '' AS S_ACSJ_NM
+                 , '' AS ORZ_CD
+                 , '' AS ORZ_NM
+                 , YRBF_ENFC_A AS YRBF_ENFC_A
+                 , ENFC_A      AS ENFC_A
+                 , BDGT_FMTN_A AS BDGT_FMTN_A
+                 , ENFCR AS ENFCR
+                 , L_SORT      AS L_SORT
+                 , NULL AS AL_CNT
+              FROM (SELECT '' AS L_ACSJ_CD
+                         , '' AS L_ACSJ_NM
+                         , '' AS M_ACSJ_CD
+                         , '' AS M_ACSJ_NM
+                         , '' AS S_ACSJ_CD
+                         , '' AS S_ACSJ_NM
+                         , '' AS ORZ_CD
+                         , '' AS ORZ_NM
+                         , SUM(YRBF_ENFC_A) AS YRBF_ENFC_A
+                         , SUM(ENFC_A)      AS ENFC_A
+                         , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+                         , NVL(ROUND((SUM(ENFC_A) / NULLIF(SUM(BDGT_FMTN_A), 0)) * 100), 0)  AS ENFCR
+                         , MAX(L_SORT) AS L_SORT
+                      FROM (SELECT A.ACSJ4_CD     AS L_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ4_CD_NM, '[^ ]+', 1, 2) AS L_ACSJ_NM
+                                 , A.ACSJ5_CD     AS M_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ5_CD_NM, '[^ ]+', 1, 2) AS M_ACSJ_NM
+                                 , A.ACSJ6_CD     AS S_ACSJ_CD
+                                 , A.ACSJ6_CD_NM  AS S_ACSJ_NM
+                                 , A.TTLZ_BAS_ORZ_CD AS ORZ_CD
+                                 , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.TTLZ_BAS_ORZ_CD) AS ORZ_NM
+                                 /* 5270162801 - 차량보험료가 합계에서 제외됨 */
+                                 , E.YRBF_ENFC_A AS YRBF_ENFC_A /* 전년도집행금액 */
+                                 , F.ENFC_A      AS ENFC_A      /* 집행금액 */
+                                 , A.BDGT_FMTN_A AS BDGT_FMTN_A /* 예산편성금액 */
+                                 , 17 AS L_SORT
+                              FROM T3 A
+                                 , T2 E /* 전해년도 */
+                                 , T1 F /* 당해년도 */
+                             WHERE A.ACSJ6_CD = E.ACSJ_CD(+)
+                               AND A.ACSJ6_CD = F.ACSJ_CD(+)
+                            )
+                     GROUP BY L_SORT
+                    )
+	)
+	ORDER BY L_SORT, CASE WHEN L_SORT = 1 THEN M_ACSJ_CD
+	                      ELSE M_ACSJ_NM  END ASC
+		
+	</select>
+	
+	
+	<insert id="insert00GA01N401" parameterType="com.miraeasset.biz.ga.bm.vo.GABM1000U0In01VO">
+	/* GABM1000V0.insert00GA01N401 : 편성금액관리 */
+	MERGE INTO GA01N401
+		USING DUAL
+		   ON (    BAS_YM     = SUBSTR(#{actgDt}, 0, 4) || '01'
+		       AND ACTG_ACSJ_CD = #{sAcsjCd}  
+		       )
+        WHEN MATCHED THEN 
+        UPDATE SET
+              BDGT_FMTN_A = #{bdgtFmtnA}
+        WHERE BAS_YM = SUBSTR(#{actgDt}, 0, 4) || '01'
+          AND ACTG_ACSJ_CD = #{sAcsjCd}
+		WHEN NOT MATCHED THEN
+		INSERT
+		     ( BAS_YM            /* 기준년월 */
+		     , ACTG_ACSJ_CD      /* 회계계정과목코드 */
+		     , BDGT_FMTN_A       /* 예산편성금액 */
+		     , OPTR_ID           /* 조작자ID */
+		     , OPRT_CHNL_CD      /* 조작채널코드 */
+		     , OPRT_ORZ_CD       /* 조작조직코드 */
+		     , OPRT_IP_ADR       /* 조작IP주소 */
+		     , OPRT_DTTM         /* 조작일시 */ 
+		     )
+		VALUES
+		     (  SUBSTR(#{actgDt}, 0, 4) || '01'
+		      , #{sAcsjCd}
+		      , #{bdgtFmtnA}
+		      , #{optrId}
+		      , #{oprtChnlCd}
+		      , #{oprtOrzCd}
+		      , #{oprtIpAdr}
+		      , SYSDATE
+		      ) 
+	</insert>
+	
+	
+</mapper>

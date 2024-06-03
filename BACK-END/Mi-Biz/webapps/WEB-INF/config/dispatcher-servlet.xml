@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+		xmlns="http://www.springframework.org/schema/beans"
+		xmlns:mvc="http://www.springframework.org/schema/mvc"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xmlns:context="http://www.springframework.org/schema/context"
+		xmlns:aop="http://www.springframework.org/schema/aop" xmlns:task="http://www.springframework.org/schema/task"
+		xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+		http://www.springframework.org/schema/mvc
+		http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-4.3.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+ 
+	<!-- SpringMVC 설정 -->
+	<mvc:annotation-driven />
+	
+	<!-- base-package 설정 -->
+	<context:component-scan base-package="com.miraeasset.biz" use-default-filters="false">
+    	<context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+		<context:include-filter type="annotation" expression="org.springframework.scheduling.annotation.Scheduled"/>
+	</context:component-scan>
+
+	<mvc:interceptors>
+    	<mvc:interceptor>
+    		<mvc:mapping path="/*/**" />
+    		<bean class="com.miraeasset.biz.common.interceptor.BIZsInterceptor"/>
+    	</mvc:interceptor>
+    </mvc:interceptors>
+
+	<!-- client 응답 설정 -->
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+	<bean class="org.springframework.web.servlet.view.BeanNameViewResolver">
+		<property name="order" value="0"/>
+	</bean>
+	<bean id="jsonView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+	   	<property name="contentType" value="application/json;charset=UTF-8"></property>
+	</bean>
+
+	<aop:aspectj-autoproxy />
+
+
+<!--	&lt;!&ndash; SWAGGER &ndash;&gt;-->
+<!--	<bean id="swagger2Config" class="springfox.documentation.swagger2.configuration.Swagger2DocumentationConfiguration" />-->
+<!--	<mvc:resources location="classpath:/META-INF/resources/" mapping="swagger-ui.html" />-->
+<!--	<mvc:resources location="classpath:/META-INF/resources/webjars/" mapping="/webjars/**" />-->
+
+
+<!--
+
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+
+<context:component-scan base-package="com.miraeasset" />
+
+<bean id="handlerMapping"
+		class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping">
+  <property name="order" value="1" /> 
+</bean>
+
+-->
+
+</beans>
+

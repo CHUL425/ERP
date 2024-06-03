@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="brob_mapper">
+
+    <select id="selectList00GA02N101"
+            resultType="com.miraeasset.biz.br.ob.vo.BROB1000U0Out00VO">
+        /* brob_mapper.selectList00GA02N101 */
+        SELECT A.CMN_CD_VL AS OFCBLD_TCD
+             , A.CMN_CD_VL_DEF_CN AS OFCBLD_TCD_NM
+             , B.*
+        FROM GA09C302 A
+           , GA02N101 B
+       WHERE A.CD_KND_NO = 'OFCBLD_TCD'
+         AND A.CMN_CD_VL = B.OFCBLD_TCD(+)
+    </select>
+
+    <select id="selectOne00GA02N101"
+            parameterType="com.miraeasset.biz.br.ob.vo.BROB1000U0In00VO"
+            resultType="com.miraeasset.biz.br.ob.vo.BROB1000U0Out00VO">
+        /* brob_mapper.selectOne00GA02N101 */
+        SELECT (SELECT CMN_CD_VL_DEF_CN
+                FROM AT09C302
+                WHERE CD_KND_NO = 'OFCBLD_TCD'
+                  AND CMN_CD_VL = A.OFCBLD_TCD) AS OFCBLD_TCD_NM,
+               A.*
+        FROM GA02N101 A
+        WHERE OFCBLD_TCD = #{ofcbldTcd}
+    </select>
+
+    <insert id="merge00GA02N101"
+            parameterType="com.miraeasset.biz.br.ob.vo.BROB1000U0Out00VO">
+        /* brob_mapper.merge00GA02N101 */
+        MERGE INTO GA02N101 A
+        USING DUAL
+        ON (
+            A.OFCBLD_TCD = #{ofcbldTcd}
+            )
+        WHEN MATCHED THEN
+            UPDATE
+            SET A.BLD_NM            = #{bldNm},
+                A.ADR               = #{adr},
+                A.RGN_NM            = #{rgnNm},
+                A.UGR_BLDFLR_VL     = #{ugrBldflrVl},
+                A.GRU_BLDFLR_VL     = #{gruBldflrVl},
+                A.BLD_STRC_NM       = #{bldStrcNm},
+                A.ETC_ATCL_Q        = #{etcAtclQ},
+                A.CMPLT_DT          = #{cmpltDt},
+                A.LAND_AR           = #{landAr},
+                A.BLD_GAR           = #{bldGar},
+                A.BLD_AR            = #{bldAr},
+                A.MT_EMP_TNOP1      = #{mtEmpTnop1},
+                A.MT_EMP_TNOP2      = #{mtEmpTnop2},
+                A.MT_EMP_TNOP3      = #{mtEmpTnop3},
+                A.MT_EMP_TNOP4      = #{mtEmpTnop4},
+                A.UGR_PARKING_ABL_Q = #{ugrParkingAblQ},
+                A.GRU_PARKING_ABL_Q = #{gruParkingAblQ},
+                A.ETC_USE_AR        = #{etcUseAr},
+                A.GRT_A             = #{grtA},
+                A.MLY_RENTC         = #{mlyRentc},
+                A.MLY_MCST          = #{mlyMcst},
+                A.FILE_NO           = #{fileNo},
+                A.OPTR_ID           = #{optrId},
+                A.OPRT_CHNL_CD      = #{oprtChnlCd},
+                A.OPRT_ORZ_CD       = #{oprtOrzCd},
+                A.OPRT_IP_ADR       = #{oprtIpAdr},
+                A.OPRT_DTTM         = SYSDATE
+        WHEN NOT MATCHED THEN
+            INSERT
+            VALUES (#{ofcbldTcd},
+                    #{bldNm},
+                    #{adr},
+                    #{rgnNm},
+                    #{ugrBldflrVl},
+                    #{gruBldflrVl},
+                    #{bldStrcNm},
+                    #{etcAtclQ},
+                    #{cmpltDt},
+                    #{landAr},
+                    #{bldGar},
+                    #{bldAr},
+                    #{mtEmpTnop1},
+                    #{mtEmpTnop2},
+                    #{mtEmpTnop3},
+                    #{mtEmpTnop4},
+                    #{ugrParkingAblQ},
+                    #{gruParkingAblQ},
+                    #{etcUseAr},
+                    #{grtA},
+                    #{mlyRentc},
+                    #{mlyMcst},
+                    #{fileNo},
+                    #{optrId},
+                    #{oprtChnlCd},
+                    #{oprtOrzCd},
+                    #{oprtIpAdr},
+                    SYSDATE)
+    </insert>
+</mapper>

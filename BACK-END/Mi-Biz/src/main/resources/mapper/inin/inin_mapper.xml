@@ -1,0 +1,1273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="inin_mapper">
+	
+	<select id="selectTodayBzPstt" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In00VO" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0Out00VO">
+		/* ININ1000V0.selectTodayBzPstt : Today's 업무현황 */
+		<![CDATA[  
+		WITH T1 AS (
+					SELECT A.APRV_WRRPT_MT_NO
+				         , A.APRV_RNK
+				         , n210.ORZ_RPTV_EPNO
+				         , ( CASE WHEN A.APRV_UNIT_HR_OSDT_CD IS NOT NULL THEN n311.DFA_EPNO ELSE NULL END ) AS DFA_EPNO
+				      FROM ( SELECT A.APRV_WRRPT_MT_NO
+				                  , MIN(A.APRV_RNK) AS APRV_RNK
+				               FROM GA09N607 A
+				              WHERE A.APRV_DTTM IS NULL
+				                AND A.DCFC_PCD IN ('01', '02') /* 01.결재, 02.협조 */
+				                AND EXISTS (SELECT 1 FROM GA09N606 B WHERE A.APRV_WRRPT_MT_NO = B.APRV_WRRPT_MT_NO AND B.APRV_SCD IN ('01','02'))
+				              GROUP BY APRV_WRRPT_MT_NO
+				            ) Z
+				     INNER JOIN GA09N607 A ON (Z.APRV_WRRPT_MT_NO = A.APRV_WRRPT_MT_NO AND Z.APRV_RNK = A.APRV_RNK)
+				      LEFT OUTER JOIN CB01N210 n210 ON (A.APRV_UNIT_GRP_CD = n210.ORZ_CD)
+				      LEFT OUTER JOIN
+				      ( 
+		                  SELECT EPNO, DFA_EPNO
+		                  FROM
+		                  (
+		                    SELECT DISTINCT EPNO, HR_PST_CD AS DFA_EPNO
+		                      FROM CB01N311
+		                     WHERE TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN APTM_STRT_DT AND APTM_END_DT
+		                       AND HR_APTM_CD LIKE '%132'
+		                       AND APTM_SRNO = 0
+		                       AND HR_PST_CD = #{epno} -- 로그인 사번
+		                  ) z
+					   ) n311 ON (n210.ORZ_RPTV_EPNO = n311.EPNO)
+				     WHERE -- 로그인 유저 기준 필터링
+				         ( A.APRV_UNIT_TCD = '06'
+				           AND
+				           #{hrOsdtCd} IN ( SELECT REGEXP_SUBSTR(hrOsdtCd, '[^,]+', 1, LEVEL) hrOsdtCd   -- 로그인 직책
+				                              FROM (SELECT A.APRV_UNIT_HR_OSDT_CD AS hrOsdtCd FROM DUAL)
+				                           CONNECT BY LEVEL <= REGEXP_COUNT(hrOsdtCd, '[^,]+'))
+				           AND              
+				           #{hrOsdtCd} = (SELECT HR_OSDT_CD
+				                            FROM CB01N310 
+				                           WHERE BLNG_ORZ_CD = A.APRV_UNIT_GRP_CD
+				                             AND EPNO = #{epno}
+				                          )
+				           AND
+				           A.APRV_UNIT_GRP_CD = #{blngOrzCd}  -- 로그인 ORZ_CD
+				          )
+				          OR
+				          (
+				            A.APRV_UNIT_TCD = '05'
+				            AND
+				            A.APRV_UNIT_GRP_CD = #{blngOrzCd} -- 로그인 ORZ_CD
+				           )
+				          OR
+				          (
+				            A.APRV_UNIT_TCD = '10'
+				            AND
+				            EXISTS (SELECT 1 FROM GA09N209 WHERE PSIT_MENU_ID = A.APRV_UNIT_DL_VL AND EPNO = #{epno})
+				           )
+				          OR
+				          (
+				            -- 승인자를 미리 정하는 경우
+				            A.APRV_UNIT_TCD = '90'
+				            AND
+				            A.APRV_EPNO = #{epno}
+				          )
+				          OR
+				          (
+				        	-- 신청조직 기준 상위조직인경우
+				        	A.APRV_UNIT_TCD = '95'
+				        	AND
+				            #{hrOsdtCd} IN ( SELECT REGEXP_SUBSTR(hrOsdtCd, '[^,]+', 1, LEVEL) hrOsdtCd   -- 로그인 직책
+				                               FROM (SELECT A.APRV_UNIT_HR_OSDT_CD AS hrOsdtCd FROM DUAL)
+				                            CONNECT BY LEVEL <= REGEXP_COUNT(hrOsdtCd, '[^,]+'))
+				            AND              
+				            #{hrOsdtCd} = (SELECT HR_OSDT_CD
+				                             FROM CB01N310 
+				                            WHERE BLNG_ORZ_CD = A.APRV_UNIT_GRP_CD
+				                              AND EPNO = #{epno}
+				                           )
+				            AND
+				            A.APRV_UNIT_GRP_CD = #{blngOrzCd}  -- 로그인 ORZ_CD
+				          )
+				          OR
+				          ( -- 대결 케이스 확인 : 로그인 사번 이용 체크
+				            A.APRV_UNIT_TCD IN ('06','95')
+				            AND
+				            A.APRV_UNIT_HR_OSDT_CD IS NOT NULL
+				            AND
+				            n311.DFA_EPNO = #{epno}
+				           )
+				)
+		SELECT (MAX(CNT1) + MAX(CNT2)) AS AL_CNT
+             , MAX(CNT1) AS NPRC_CNT -- 미처리건수
+             , MAX(CNT2) AS PRC_CNT -- 처리건수
+             , ROUND( NVL((MAX(CNT2) / NULLIF(MAX(CNT1) + MAX(CNT2), 0)) * 100, 0) ,2) AS PRC_PCTL_VL
+		  FROM (
+		        --미처리
+				SELECT COUNT(1) CNT1
+		             , NULL  AS CNT2
+		             , 1     AS GROUPBY
+				  FROM T1
+				     , GA09N606 T2 -- 결재정보
+					 , GA09N607 T3 -- 결재정보상세
+					 , GA01N101 T4 -- 임대신청
+				     , CB01N310 T5 -- 직원
+				 WHERE 1=1
+				   AND T1.APRV_WRRPT_MT_NO = T2.APRV_WRRPT_MT_NO
+				   AND T1.APRV_WRRPT_MT_NO = T3.APRV_WRRPT_MT_NO 
+				   AND T1.APRV_RNK         = T3.APRV_RNK
+				   AND T1.APRV_WRRPT_MT_NO = T4.APRV_WRRPT_MT_NO
+				   AND T5.EPNO(+)          = T2.WRRPT_EPNO
+				   AND T4.RQS_SCD          = '05'
+				   AND T4.RQS_DT BETWEEN TO_CHAR(SYSDATE-14, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+				   AND T3.APRV_RTRN_TCD    IS NULL
+
+				 	UNION ALL
+
+				 	--처리완료
+					SELECT
+						0  AS CNT1
+					,	COUNT(1) AS CNT2
+					,	1     AS GROUPBY
+					FROM
+					(
+						SELECT
+							a.APRV_WRRPT_MT_NO
+						FROM
+						(
+							SELECT b.APRV_WRRPT_MT_NO
+							FROM GA09N607 b
+							WHERE b.APRV_DTTM BETWEEN TO_DATE(TO_CHAR(SYSDATE-14, 'YYYYMMDD') || ' 00:00:00', 'YYYYMMDD HH24:MI:SS') AND TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD') || ' 23:59:59', 'YYYYMMDD HH24:MI:SS')
+								AND
+								(
+									b.APRV_EPNO = #{epno}
+									OR
+									b.SBAP_EPNO = #{epno}
+									OR
+									(
+										b.APRV_UNIT_TCD = '10'
+										AND
+										b.APRV_UNIT_DL_VL = (SELECT PSIT_MENU_ID FROM GA09N209 WHERE EPNO = #{epno} AND PSIT_MENU_ID = b.APRV_UNIT_DL_VL)
+									)
+								)
+							GROUP BY b.APRV_WRRPT_MT_NO
+						) a
+						INNER JOIN GA01N101 b ON (a.APRV_WRRPT_MT_NO = b.APRV_WRRPT_MT_NO AND b.RQS_SCD IN ('05','10','15','30','35','99'))
+					) z
+
+			    )
+		    GROUP BY GROUPBY	       
+		]]>
+	</select>
+	
+	<!-- rqam_mapper 승인대기 동일한 조회쿼리(rqam) -->
+	<sql id="selectAprvList_MainQry">
+		WITH CTE_TB_MAIN AS
+		(
+			SELECT
+				a.APRV_UNIT_TCD
+			,	a.APRV_WRRPT_MT_NO
+			,	a.APRV_RNK
+			,	a.APRV_DL_RNK
+			,	b.WRRPT_DT
+			,	b.APRV_PCD
+			,	b.APRV_WRRPT_ORZ_CD
+			,	(CASE
+					WHEN a.APRV_UNIT_TCD = '05' THEN t05.EPNO
+					WHEN a.APRV_UNIT_TCD = '07' THEN SUBSTR(t07.ORZ_RPTV_EPNO,0,7)  /*07 결재단위구분코드 추가에 따른 수정*/
+					WHEN a.APRV_UNIT_TCD = '10' THEN t10.EPNO
+					WHEN a.APRV_UNIT_TCD = '90' THEN a.APRV_EPNO
+					ELSE t95.EPNO
+				END) AS APV_EPNO
+			,	a.RQS_TTL_NM
+			,	a.RCT_NO
+			FROM
+			(
+				SELECT
+					n607.*
+				,	n101.RQS_TTL_NM
+				,	n101.RCT_NO
+				FROM
+					(
+						SELECT A.APRV_WRRPT_MT_NO, MIN(A.APRV_RNK) AS APRV_RNK
+						FROM GA09N607 A
+						WHERE
+							A.APRV_DTTM IS NULL
+							AND A.DCFC_PCD IN ('01', '02')	/* 01.결재, 02.협조 */
+							AND
+							EXISTS ( SELECT 1
+									 FROM GA09N606 B
+									 WHERE A.APRV_WRRPT_MT_NO = B.APRV_WRRPT_MT_NO AND B.APRV_SCD IN ('01', '02') )
+						GROUP BY APRV_WRRPT_MT_NO
+					) Z
+					INNER JOIN GA01N101 n101 ON (Z.APRV_WRRPT_MT_NO = n101.APRV_WRRPT_MT_NO AND n101.RQS_SCD = '05')
+					INNER JOIN GA09N607 n607 ON (Z.APRV_WRRPT_MT_NO = n607.APRV_WRRPT_MT_NO AND Z.APRV_RNK = n607.APRV_RNK)
+			) a
+			INNER JOIN GA09N606 b ON (a.APRV_WRRPT_MT_NO = b.APRV_WRRPT_MT_NO)
+			LEFT OUTER JOIN CB01N310 t95 ON (
+				/* APRV_UNIT_TCD ('06','94','95') */
+				a.APRV_UNIT_GRP_CD = t95.BLNG_ORZ_CD AND t95.HR_OSDT_CD IS NOT NULL AND t95.HR_HLDO_CD = 'A'
+				AND a.APRV_UNIT_HR_OSDT_CD LIKE '%' || t95.HR_OSDT_CD || '%'
+			)
+			LEFT OUTER JOIN GA09N209 t10 ON (
+				/* APRV_UNIT_TCD ('10') */
+				t10.PSIT_MENU_ID = a.APRV_UNIT_DL_VL
+			)
+			LEFT OUTER JOIN CB01N310 t05 ON (
+				/* APRV_UNIT_TCD ('05') */
+				a.APRV_UNIT_TCD = '05' AND t05.BLNG_ORZ_CD = a.APRV_UNIT_GRP_CD AND t05.HR_HLDO_CD = 'A'
+			)
+			LEFT OUTER JOIN CB01N210 t07 ON (  /*07 결재단위구분코드 추가에 따른 수정*/
+				/* APRV_UNIT_TCD ('07') */
+				a.APRV_UNIT_TCD = '07' AND t07.ORZ_CD = a.APRV_UNIT_GRP_CD 
+			)
+		)
+		, CTE_TB_APV AS
+		(
+			SELECT
+				ROW_NUMBER() OVER (ORDER BY a.WRRPT_DT DESC, a.RCT_NO DESC) AS RNUM
+			,	a.APRV_WRRPT_MT_NO
+			,	a.APRV_RNK
+			,	a.WRRPT_DT
+			,	a.RCT_NO
+			FROM
+				CTE_TB_MAIN a
+				LEFT OUTER JOIN
+				(
+					SELECT EPNO, DFA_EPNO
+					FROM
+					(
+						SELECT /*+ CACHE(a) */
+							a.EPNO, a.HR_PST_CD AS DFA_EPNO
+						FROM
+							CB01N311 a
+						WHERE
+							TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN a.APTM_STRT_DT AND a.APTM_END_DT
+						   AND a.HR_APTM_CD LIKE '%132'
+						   AND a.APTM_SRNO = 0
+						   AND a.HR_PST_CD = #{epno}
+					) z
+					GROUP BY EPNO, DFA_EPNO
+				) b ON (a.APV_EPNO = b.EPNO)
+				INNER JOIN GA01N101 n101 ON (a.APRV_WRRPT_MT_NO = n101.APRV_WRRPT_MT_NO)
+			WHERE
+				(
+					a.APV_EPNO = #{epno}
+					OR
+					b.DFA_EPNO = #{epno}
+				)
+			GROUP BY
+				a.APRV_WRRPT_MT_NO
+			,	a.APRV_RNK
+			,	a.WRRPT_DT
+			,	a.RCT_NO
+			ORDER BY
+				a.WRRPT_DT DESC, a.RCT_NO DESC
+		)
+	</sql>
+	
+	<select id="selectTodayBzChprList" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In00VO" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0Out00VO">
+		/* ININ1000V0.selectTodayBzChprList : Today's 나의업무 조회 */
+		<include refid="selectAprvList_MainQry" />
+		<![CDATA[  
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT ROW_NUMBER() OVER(ORDER BY T4.RQS_DT DESC, T4.RCT_NO DESC , ROWNUM DESC) AS RNUM 
+			     , COUNT(1) OVER()  AS AL_CNT
+			     , T4.UNIF_RQS_PCD
+			     , (SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T4.UNIF_RQS_PCD) AS UNIF_RQS_PCD_NM
+			     , T4.UNIF_RQS_TCD
+			     , (SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T4.UNIF_RQS_TCD) AS UNIF_RQS_TCD_NM
+			     , T4.RQS_ORZ_CD
+			     , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T4.RQS_ORZ_CD) AS RQS_ORZ_NM
+			     , T4.RQS_EPNO
+			     , (SELECT EP_NM FROM CB01N310 WHERE EPNO = T4.RQS_EPNO) AS RQS_EPNM
+			     , T4.RQS_DT
+			     , T4.RCT_NO
+				 , T4.APRV_WRRPT_MT_NO
+				 , T4.APRV_WRRPT_ORZ_CD
+				 , T1.APRV_RNK
+				 , T2.APRV_PCD
+			  FROM CTE_TB_APV T1
+			     , GA09N606 T2 -- 결재정보
+				 , GA09N607 T3 -- 결재정보상세
+				 , GA01N101 T4 -- 임대신청
+			     , CB01N310 T5 -- 직원
+			 WHERE 1=1
+			   AND T1.APRV_WRRPT_MT_NO = T2.APRV_WRRPT_MT_NO
+			   AND T1.APRV_WRRPT_MT_NO = T3.APRV_WRRPT_MT_NO 
+			   AND T1.APRV_RNK         = T3.APRV_RNK
+			   AND T1.APRV_WRRPT_MT_NO = T4.APRV_WRRPT_MT_NO
+			   AND T5.EPNO(+)          = T2.WRRPT_EPNO
+			   AND T4.RQS_SCD          = '05'
+			   AND T3.APRV_RTRN_TCD    IS NULL
+			   AND T2.APRV_PCD         = NVL(#{aprvPcd} , T2.APRV_PCD) /* 업무구분 */
+			 ORDER BY T4.RQS_DT DESC, T4.RCT_NO DESC
+		]]>
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[<]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>
+	</select>
+	
+	<select id="selectBdgtList" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In01VO" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0Out01VO">
+		/* ININ1000V0.selectBdgtList : 예산집행금액 및 집행율 */
+			WITH T1 AS (
+	            SELECT A.ENFC_A AS ENFC_A      -- 집행금액
+	                 , B.BDGT_FMTN_A AS BDGT_FMTN_A -- 편성금액
+	              FROM (
+	                    SELECT SUBSTR(#{yrDyEndDt}, 0 , 4) AS BAS_YM
+						      , SUM(NVL(A.TDAY_ACMA_A,0) - NVL(B.TDAY_ACMA_A,0)) / 100000 AS ENFC_A
+						   FROM (
+						         SELECT A.ACSJ_CD
+						              , SUM(A.TDAY_ACMA_A) / 1000 AS TDAY_ACMA_A
+						           FROM AT01N201 A
+						              , GA04C400 B
+						          WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD   
+						            AND A.TR_DT = #{yrDyEndDt}
+						            AND A.CO_CD = '005'
+						            AND A.ACTG_FILD_CD = '100'
+						            AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+						          GROUP BY A.ACSJ_CD
+						         ) A
+						      , (
+						         SELECT A.ACSJ_CD
+						              , SUM(A.TDAY_ACMA_A) / 1000 AS TDAY_ACMA_A
+						           FROM AT01N201 A
+						              , GA04C400 B
+						           WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD   
+						             AND A.TR_DT = #{yrDyStrtDt}
+						             AND A.CO_CD = '005'
+						             AND A.ACTG_FILD_CD = '100'
+						             AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+						           GROUP BY A.ACSJ_CD  
+						         ) B
+						  WHERE A.ACSJ_CD = B.ACSJ_CD(+)
+	             ) A
+	           , (SELECT (SUM(BDGT_FMTN_A) / 1000) / 100000 AS BDGT_FMTN_A
+	                   , SUBSTR(MAX(BAS_YM), 0 , 4) BAS_YM
+	                FROM GA01N401
+	                WHERE BAS_YM like SUBSTR(#{yrDyEndDt}, 0, 4) || '%'
+	             ) B /* 예산관리 */
+	       WHERE 1=1
+	         AND A.BAS_YM  = B.BAS_YM
+		)
+		SELECT NVL(ROUND((ENFC_A / DECODE(BDGT_FMTN_A, 0, NULL, BDGT_FMTN_A)) * 100), 0) AS ENFCR -- 집행률
+		     , ROUND(NVL(BDGT_FMTN_A, 0), 2)           AS BDGT_FMTN_A -- 편성금액
+		     , ROUND(NVL(ENFC_A, 0), 2)                AS ENFC_A      -- 집행금액
+		     , ROUND(NVL(BDGT_FMTN_A - ENFC_A, 0), 2)  AS BDGT_BALA   -- 예산잔액
+		  FROM T1
+			
+	</select>
+	
+	<select id="selectYlyBdgtList" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In01VO" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0Out02VO">
+		/* ININ1000V0.selectYlyBdgtList : 연간집행금액 */
+			WITH T1 AS (
+			            SELECT A.BAS_YM                          -- 년월
+			                 , SUM(A.ENFC_A) / 100000 AS ENFC_A      -- 집행금액
+			                 , SUM(B.BDGT_FMTN_A) AS BDGT_FMTN_A -- 편성금액
+			              FROM (
+			                    SELECT SUBSTR(#{yrDyEndDt}, 0 , 4) AS BAS_YM
+			                          , A.ACSJ_CD
+			                          , SUM(NVL(A.TDAY_ACMA_A,0) - NVL(B.TDAY_ACMA_A,0)) / 1000 AS ENFC_A
+			                       FROM AT01N201 A, AT01N201 B
+			                      WHERE A.TR_DT = #{yrDyEndDt}
+			                        AND B.TR_DT = #{yrDyStrtDt}
+			                        AND A.ACSJ_CD = B.ACSJ_CD
+			                        AND A.SP_ORZ_CD = B.SP_ORZ_CD
+			                        AND A.CO_CD = '005'
+                                    AND A.ACTG_FILD_CD = '100'
+			                        AND A.SP_ORZ_CD = 'S03001'
+			                        /* 5레벨 기준 조직관리비, 소모품비, 소액자산리스료, 일반인쇄비, 차량임차료 */
+			                        AND A.ACSJ_CD IN ('5270041000', '5270161400', '5270320100', '5270161800', '5270162700')
+			                      GROUP BY A.ACSJ_CD
+			             ) A
+			           , (SELECT B.ACSJ_CD    AS ACSJ_CD
+                               , B.ACSJ_CD_NM AS ACSJ_CD_NM
+                               , A.BDGT_FMTN_A -- 편성금액 => SUM(편성금액) = 연간예산
+                               , A.BAS_YM
+                            FROM (SELECT A.CO_CD
+                                       , A.ACSJ_CD
+                                       , A.ACTG_BAS_CD 
+                                       , A.ACSJ_CD_NM
+                                       , A.HRK_ACSJ_CD 
+                                       , C.BDGT_FMTN_A
+                                       , C.BAS_YM
+                                    FROM AT01C001 A
+                                       , GA04C400 B
+                                       , (SELECT ACTG_ACSJ_CD
+                                               , (BDGT_FMTN_A / 1000) / 100000 AS BDGT_FMTN_A
+                                               , SUBSTR(BAS_YM, 0 , 4) AS BAS_YM
+                                            FROM GA01N401
+                                           WHERE BAS_YM like SUBSTR(#{yrDyEndDt}, 0, 4) || '%'
+                                          ) C /* 예산관리 */
+                                   WHERE A.CO_CD = '005'
+                                     AND ACTG_BAS_CD = 'G009'
+                                     AND A.ACSJ_CD = B.ACTG_ACSJ_CD
+                                     AND A.ACSJ_CD = C.ACTG_ACSJ_CD(+)
+                                  ) A
+                               , AT01C001 B
+                               , AT01C001 C
+                           WHERE A.CO_CD = B.CO_CD
+                             AND B.CO_CD = C.CO_CD(+)
+                             AND A.ACTG_BAS_CD = B.ACTG_BAS_CD
+                             AND B.ACTG_BAS_CD = C.ACTG_BAS_CD(+)
+                             AND A.HRK_ACSJ_CD = B.ACSJ_CD
+                             AND B.HRK_ACSJ_CD = C.ACSJ_CD(+)
+			             ) B /* 예산관리 */
+			       WHERE 1=1
+			         AND A.ACSJ_CD = B.ACSJ_CD(+)
+			         AND A.BAS_YM  = B.BAS_YM(+)
+			       GROUP BY A.BAS_YM
+			    )
+			    SELECT NVL(ROUND(ENFC_A / NULLIF(BDGT_FMTN_A, 0) * 100, 2), 0) AS YLY_ENFCR
+                     , NVL(BDGT_FMTN_A * TO_CHAR(TO_DATE(#{yrDyEndDt}), 'Q') / 4, 0) AS ACCM_ASN_A
+                     , NVL(ROUND(ENFC_A / NULLIF(BDGT_FMTN_A * TO_CHAR(TO_DATE(#{yrDyEndDt}), 'Q') / 4, 0), 2), 0) * 100 AS ASN_CMP_ENFCR
+                     , NVL(ENFC_A, 0) AS ENFC_A
+                     , NVL(BDGT_FMTN_A, 0) AS BDGT_FMTN_A
+			      FROM (
+					    SELECT ROUND(NVL(ENFC_A, 0), 2)      AS ENFC_A        -- 집행금액
+					         , ROUND(NVL(BDGT_FMTN_A, 0), 2) AS BDGT_FMTN_A   -- 편성금액   
+					      FROM T1
+			            )
+	</select>
+	
+	<select id="selectGeafRctPstt" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In02VO" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0Out04VO">
+		/* ININ1000V0.selectGeafRctPstt : 총무접수현황 */
+		SELECT AL_CNT               AS AL_CNT          /* 전체건수 */
+		     , UNIF_RQS_PCD         AS UNIF_RQS_PCD    /* 통합신청유형코드  */
+		     , UNIF_RQS_PCD_NM      AS UNIF_RQS_PCD_NM /* 통합신청유형명 */
+		     , UNIF_RQS_CNT         AS UNIF_RQS_CNT    /* 통합신청건수 */
+		  FROM (
+		        SELECT SUM(NVL(T2.UNIF_RQS_CNT, 0)) OVER(ORDER BY RQS_SCD) AS AL_CNT          /* 전체건수 */
+		             , NVL(T2.UNIF_RQS_PCD, T1.CMN_CD_VL)           AS UNIF_RQS_PCD    /* 통합신청유형코드  */
+		             , NVL(T2.UNIF_RQS_PCD_NM, T1.CMN_CD_VL_DEF_CN) AS UNIF_RQS_PCD_NM /* 통합신청유형명 */
+		             , NVL(T2.UNIF_RQS_CNT, 0)                      AS UNIF_RQS_CNT    /* 통합신청건수 */
+		          FROM GA09C302 T1
+		             , (SELECT A.UNIF_RQS_PCD     AS UNIF_RQS_PCD    /* 통합신청유형코드  */
+		                     , B.CMN_CD_VL_DEF_CN AS UNIF_RQS_PCD_NM /* 통합신청유형명 */
+		                     , count(1)           AS UNIF_RQS_CNT    /* 통합신청건수 */
+		                     , MAX(A.RQS_SCD)     AS RQS_SCD
+		                  FROM GA01N101 A
+		                     , GA09C302 B
+		                 WHERE A.RQS_SCD = '05' 
+		                   /* 당일포함 2주 기간 미처리 접수건 조회 */
+		                   AND A.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}
+		                   AND A.UNIF_RQS_PCD = B.CMN_CD_VL
+		                   AND B.CD_KND_NO = 'UNIF_RQS_PCD'
+		                  GROUP BY A.UNIF_RQS_PCD, B.CMN_CD_VL_DEF_CN
+		                 ) T2
+		          WHERE T1.CMN_CD_VL = T2.UNIF_RQS_PCD(+)
+		            AND T1.CD_KND_NO = 'UNIF_RQS_PCD'
+		        )
+		  ORDER BY UNIF_RQS_PCD
+	</select>
+	
+	<select id="selectNewCntcPstt" parameterType="com.miraeasset.biz.ga.cm.vo.GACM1000U0In00VO" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0Out05VO">
+		/* ININ1000V0.selectNewCntcPstt : 신규계약현황 */
+		SELECT * FROM (
+		SELECT T1.CNTC_NM
+				     , T1.CNTC_STRT_DT
+				  FROM GA01N303	T1 -- 계약서관리
+				     , AT05C010 T2 -- 거래처
+				     , ( 
+				        SELECT CNRT_MT_NO
+				             , CNRT_KCD
+				             , ACTG_ACSJ_CD
+				             , ACSJ_CD_NM
+				             , CNT
+				        FROM (
+				             SELECT RANK() OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD ORDER BY ACTG_ACSJ_CD) AS RN
+				                  , COUNT(1) OVER(PARTITION BY A.CNRT_MT_NO , A.CNRT_KCD) AS CNT
+				                  , A.CNRT_MT_NO 
+				                  , A.CNRT_KCD 
+				                  , A.ACTG_ACSJ_CD
+				                  , B.ACSJ_CD_NM 
+				               FROM GA01N304	A -- 계약서별계정과목코드
+				                  , AT01C001    B -- 계정과목코드
+				              WHERE B.ACSJ_CD  (+)= A.ACTG_ACSJ_CD 
+				                AND B.ACTG_BAS_CD = 'G009'
+				                AND B.ACSJ_GCD    IN ('4', '5', '6') /* 4,5,6레벨 계정과목만 */   
+				                AND A.CNRT_KCD    = '01' /* 계약서종류코드 01:계약서관리 02:RE100 */
+				            )
+				            WHERE RN = 1
+				      ) T4 -- 계약서별계정과목     
+				  WHERE 1=1
+				    AND T2.DELP_CD     (+)= T1.DELP_CD
+				    AND T4.CNRT_MT_NO  (+)= T1.CNRT_MT_NO 
+				    AND T1.DEL_YN         = '0'
+				    AND T1.CNTC_STRT_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+				  ORDER BY CNTC_STRT_DT DESC
+		)
+		WHERE ROWNUM <![CDATA[<=]]> 5
+
+	</select>
+	
+	<select id="selectGeafBusiBdgt2" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In02VO" resultType="com.miraeasset.biz.in.in.vo.ININ2000V0Out00VO">
+		WITH T1 AS (
+            SELECT A.ACSJ_CD
+			     , NVL(A.TDAY_ACMA_A,0) - NVL(B.TDAY_ACMA_A,0) AS ENFC_A
+			   FROM (
+			         SELECT A.ACSJ_CD
+			              , SUM(A.TDAY_ACMA_A) / 1000 AS TDAY_ACMA_A
+			           FROM AT01N201 A
+                          , GA04C400 B
+                      WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD    
+			            AND A.TR_DT = #{qryEndDt}
+			            AND A.CO_CD = '005'
+			            AND A.ACTG_FILD_CD = '100'
+			            AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			          GROUP BY A.ACSJ_CD
+			         ) A
+			      , (
+			         SELECT A.ACSJ_CD
+			              , SUM(A.TDAY_ACMA_A) / 1000 AS TDAY_ACMA_A
+			           FROM AT01N201 A
+                          , GA04C400 B
+                      WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD    
+			            AND A.TR_DT = #{qryStrtDt}
+			            AND A.CO_CD = '005'
+			            AND A.ACTG_FILD_CD = '100'
+			            AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			          GROUP BY A.ACSJ_CD  
+			         ) B
+			  WHERE A.ACSJ_CD = B.ACSJ_CD(+)
+	),
+	 T3 AS (
+    	    SELECT C.ACSJ_CD    AS ACSJ4_CD
+                 , C.ACSJ_CD_NM AS ACSJ4_CD_NM
+                 , B.ACSJ_CD    AS ACSJ5_CD
+                 , B.ACSJ_CD_NM AS ACSJ5_CD_NM
+                 , A.ACSJ_CD    AS ACSJ6_CD
+                 , A.ACSJ_CD_NM AS ACSJ6_CD_NM
+                 , A.TTLZ_BAS_ORZ_CD
+                 , A.BDGT_FMTN_A
+              FROM (SELECT A.CO_CD
+                         , A.ACSJ_CD
+                         , A.ACTG_BAS_CD 
+                         , A.ACSJ_CD_NM
+                         , A.HRK_ACSJ_CD 
+                         , A.ACSJ_GCD
+                         , B.TTLZ_BAS_ORZ_CD
+                         , C.BDGT_FMTN_A
+                      FROM AT01C001 A
+                         , GA04C400 B
+                         , (SELECT ACTG_ACSJ_CD
+                                 , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+                              FROM GA01N401
+                             WHERE BAS_YM like SUBSTR(#{qryEndDt}, 0, 4) || '%'
+                             GROUP BY ACTG_ACSJ_CD
+                          ) C /* 예산관리 */
+                     WHERE A.CO_CD = '005'
+                       AND ACTG_BAS_CD = 'G009'
+                       AND A.ACSJ_CD = B.ACTG_ACSJ_CD
+                       AND A.ACSJ_CD = C.ACTG_ACSJ_CD(+)
+                    ) A
+                 , AT01C001 B
+                 , AT01C001 C
+             WHERE A.CO_CD = B.CO_CD
+               AND B.CO_CD = C.CO_CD(+)
+               AND A.ACTG_BAS_CD = B.ACTG_BAS_CD
+               AND B.ACTG_BAS_CD = C.ACTG_BAS_CD(+)
+               AND A.HRK_ACSJ_CD = B.ACSJ_CD
+               AND B.HRK_ACSJ_CD = C.ACSJ_CD(+)
+    )
+	SELECT *
+	  FROM (
+            /* 총합계 */ 
+            SELECT ROUND(ENFC_A / 100000, 2)     AS ENFC_A
+                 , BDGT_FMTN_A AS BDGT_FMTN_A
+                 , ENFCR AS ENFCR
+              FROM (SELECT SUM(ENFC_A)      AS ENFC_A
+                         , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+                         , NVL(ROUND((SUM(ENFC_A) / NULLIF(SUM(BDGT_FMTN_A), 0)) * 100), 0)  AS ENFCR
+                         , MAX(L_SORT) AS L_SORT
+                      FROM (SELECT A.ACSJ4_CD     AS L_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ4_CD_NM, '[^ ]+', 1, 2) AS L_ACSJ_NM
+                                 , A.ACSJ5_CD     AS M_ACSJ_CD
+                                 , REGEXP_SUBSTR(A.ACSJ5_CD_NM, '[^ ]+', 1, 2) AS M_ACSJ_NM
+                                 , A.ACSJ6_CD     AS S_ACSJ_CD
+                                 , A.ACSJ6_CD_NM  AS S_ACSJ_NM
+                                 , A.TTLZ_BAS_ORZ_CD AS ORZ_CD
+                                 , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.TTLZ_BAS_ORZ_CD) AS ORZ_NM
+                                 /* 5270162801 - 차량보험료가 합계에서 제외됨 */
+                                 , F.ENFC_A      AS ENFC_A      /* 집행금액 */
+                                 , A.BDGT_FMTN_A AS BDGT_FMTN_A /* 예산편성금액 */
+                                 , 17 AS L_SORT
+                              FROM T3 A
+                                 , T1 F /* 당해년도 */
+                             WHERE A.ACSJ6_CD = F.ACSJ_CD(+)
+                            )
+                     GROUP BY L_SORT
+                    )
+	)
+	</select>
+	
+	
+	<select id="selectGeafBusiBdgt" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In02VO" resultType="com.miraeasset.biz.in.in.vo.ININ2000V0Out00VO">
+		/* ININ2000V0.selectNewCntcPstt : 총무사업예산 */
+		WITH T1 AS (
+		    SELECT C.ACSJ_CD    AS ACSJ4_CD
+		         , C.ACSJ_CD_NM AS ACSJ4_CD_NM
+		         , B.ACSJ_CD    AS ACSJ5_CD
+		         , B.ACSJ_CD_NM AS ACSJ5_CD_NM
+		         , A.ACSJ_CD    AS ACSJ6_CD
+		         , A.ACSJ_CD_NM AS ACSJ6_CD_NM
+		         , A.TTLZ_BAS_ORZ_CD
+		         , A.BDGT_FMTN_A -- 편성금액 => SUM(편성금액) = 연간예산
+		      FROM (SELECT A.CO_CD
+		                 , A.ACSJ_CD
+		                 , A.ACTG_BAS_CD 
+		                 , A.ACSJ_CD_NM
+		                 , A.HRK_ACSJ_CD 
+		                 , A.ACSJ_GCD
+		                 , B.TTLZ_BAS_ORZ_CD
+		                 , C.BDGT_FMTN_A
+		              FROM AT01C001 A
+		                 , GA04C400 B
+		                 , (SELECT ACTG_ACSJ_CD
+		                         , SUM(BDGT_FMTN_A) / 1000 AS BDGT_FMTN_A
+		                      FROM GA01N401
+		                     WHERE BAS_YM like SUBSTR(#{qryEndDt}, 0, 4) || '%'
+		                     GROUP BY ACTG_ACSJ_CD
+		                  ) C /* 예산관리 */
+		             WHERE A.CO_CD = '005'
+		               AND ACTG_BAS_CD = 'G009'
+		               AND A.ACSJ_CD = B.ACTG_ACSJ_CD
+		               AND A.ACSJ_CD = C.ACTG_ACSJ_CD(+)
+		            ) A
+		         , AT01C001 B
+		         , AT01C001 C
+		     WHERE A.CO_CD = B.CO_CD
+		       AND B.CO_CD = C.CO_CD(+)
+		       AND A.ACTG_BAS_CD = B.ACTG_BAS_CD
+		       AND B.ACTG_BAS_CD = C.ACTG_BAS_CD(+)
+		       AND A.HRK_ACSJ_CD = B.ACSJ_CD
+		       AND B.HRK_ACSJ_CD = C.ACSJ_CD(+)
+		),
+		T2 AS (
+		   SELECT A.ACSJ_CD
+			      , NVL(A.TDAY_ACMA_A,0) - NVL(B.TDAY_ACMA_A,0) AS ENFC_A
+			   FROM (
+			         SELECT ACSJ_CD
+			              , SUM(TDAY_ACMA_A) / 1000 AS TDAY_ACMA_A
+			           FROM AT01N201 A
+                          , GA04C400 B
+                      WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD
+			            AND A.TR_DT = #{qryEndDt}
+			            AND A.CO_CD = '005'
+			            AND A.ACTG_FILD_CD = '100'
+			            AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			          GROUP BY A.ACSJ_CD
+			         ) A
+			      , (
+			         SELECT A.ACSJ_CD
+			              , SUM(A.TDAY_ACMA_A) / 1000 AS TDAY_ACMA_A
+			           FROM AT01N201 A
+                          , GA04C400 B
+                      WHERE A.ACSJ_CD = B.ACTG_ACSJ_CD
+			            AND A.TR_DT = #{qryStrtDt}
+			            AND A.CO_CD = '005'
+			            AND A.ACTG_FILD_CD = '100'
+			            AND A.SP_ORZ_CD  LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			          GROUP BY A.ACSJ_CD  
+			         ) B
+			  WHERE A.ACSJ_CD = B.ACSJ_CD(+)
+		)
+		/* 계산식
+		 * 연간예산(A) : (연 편성금액 합) / 100000
+		 * 배정(B) : (해당년도 편성금액 / 현재 분기) / 100000
+		 * 집행(C) : (해당년도 현재 분기까지 누적 집행금액) / 100000
+		 * 배정대비(C/B)
+		 * 연간대비(C/A)
+		 * 예산잔액(A-C)
+		 */
+		SELECT BZ_TP_NM
+		     , YLY_BDGT_A
+		     , ASN_A
+		     , ENFC_A
+		     , CASE WHEN #{bzTp} = '4' AND BZ_TP_NM = '합계' THEN ROUND(ENFC_A / NULLIF(ASN_A, 0) * 100, 2)
+                    ELSE ASN_CMP_R END AS ASN_CMP_R
+             , CASE WHEN #{bzTp} = '4' AND BZ_TP_NM = '합계' THEN ROUND(ENFC_A / NULLIF(YLY_BDGT_A, 0) * 100, 2)
+                    ELSE YLY_CMP_R END AS YLY_CMP_R 
+		     , BDGT_BALA
+		  FROM (
+		        SELECT NVL(X.BZ_TP_NM, '합계')                  AS BZ_TP_NM  /* 업무구분명 */  
+		             , SUM(NVL(ROUND(X.YLY_BDGT_A, 2), 0))      AS YLY_BDGT_A /* 연간예산 */
+		             , SUM(NVL(ROUND(X.ASN_A, 2), 0))           AS ASN_A     /* 배정 */
+		             , SUM(NVL(ROUND(X.ENFC_A, 2), 0))          AS ENFC_A    /* 집행 */
+		             , SUM(NVL(ROUND(X.ASN_CMP_R * 100, 2), 0)) AS ASN_CMP_R /* 배정대비 */
+		             , SUM(NVL(ROUND(X.YLY_CMP_R * 100, 2), 0)) AS YLY_CMP_R /* 연간대비 */
+		             , SUM(NVL(ROUND(X.BDGT_BALA, 2), 0))       AS BDGT_BALA /* 예산잔액 */
+		          FROM (
+		                SELECT CASE WHEN BZ_TP_NM = '1' THEN '전체편성'
+		                            WHEN BZ_TP_NM = '2' THEN '감가상각비 제외'
+		                            WHEN BZ_TP_NM = '3' THEN ACSJ_CD_NM
+		                            WHEN BZ_TP_NM = '4' THEN SUBSTR(ACSJ_CD_NM, INSTR(ACSJ_CD_NM, '.') + 2)
+		                        END                                                                AS BZ_TP_NM   /* 업무구분명 */  
+		                     , NVL(Z.BDGT_FMTN_A / 100000, 0)                                      AS YLY_BDGT_A /* 연간예산 */
+		                     , NVL((Z.BDGT_FMTN_A * TO_CHAR(TO_DATE(#{qryEndDt}), 'Q') / 4 ) / 100000, 0) AS ASN_A      /* 배정 */
+                             , NVL(Z.ENFC_A / 100000, 0)                                                  AS ENFC_A     /* 집행 */
+                             , NVL((NVL(Z.ENFC_A / 100000, 0)) / NULLIF(NVL((Z.BDGT_FMTN_A * TO_CHAR(TO_DATE(#{qryEndDt}), 'Q') / 4 ) / 100000, 0), 0), 0) AS ASN_CMP_R /* 배정대비 */
+                             , NVL((NVL(Z.ENFC_A / 100000, 0)) / NULLIF(NVL(Z.BDGT_FMTN_A / 100000, 0), 0), 0) AS YLY_CMP_R /* 연간대비 */
+                             , NVL(NVL(Z.BDGT_FMTN_A / 100000, 0) - NVL(Z.ENFC_A / 100000, 0), 0)              AS BDGT_BALA /* 예산잔액 */
+		                  FROM (
+		                        /* 예산집행 및 집행율 - 전체 */
+		                        SELECT '1'                AS BZ_TP_NM    /* 업무구분명 */
+		                             , ''                 AS ACSJ5_CD
+		                             , ''                 AS ACSJ_CD_NM
+		                             , SUM(A.BDGT_FMTN_A) AS BDGT_FMTN_A /* 편성금액 */
+		                             , SUM(B.ENFC_A)      AS ENFC_A      /* 집행금액 */
+		                          FROM T1 A
+		                             , T2 B
+		                         WHERE A.ACSJ6_CD = B.ACSJ_CD(+)
+		                           AND 1 = #{bzTp}
+		                         UNION ALL
+		                        /* 예산집행 및 집행율 - 감가상각비 제외 */ 
+		                        SELECT '2'                AS BZ_TP_NM    /* 업무구분명 */
+		                             , ''                 AS ACSJ5_CD
+		                             , ''                 AS ACSJ_CD_NM
+		                             , SUM(A.BDGT_FMTN_A) AS BDGT_FMTN_A /* 편성금액 */
+		                             , SUM(B.ENFC_A)      AS ENFC_A      /* 집행금액 */
+		                          FROM T1 A
+		                             , T2 B
+		                         WHERE A.ACSJ6_CD = B.ACSJ_CD(+)
+		                           /* 감가상각비_건물, 감가상각비_일반비품, 감가상각비_차량, 감가상각비_투자부동산, 감가상각비_사용권자산_부동산 제외 */
+		                           AND A.ACSJ5_CD NOT IN ('5270100100', '5270100200', '5270100400', '5270100900', '5270101000', '5270101200')
+		                           AND 2 = #{bzTp}
+		                         UNION ALL
+		                        /* 예상집행금액 차트용 */ 
+		                        SELECT '3'                AS BZ_TP_NM    /* 업무구분명 */
+		                             , ''                 AS ACSJ5_CD
+		                             , CASE WHEN BZ_TP = '1' THEN '전체 - 감각상각비 포함' 
+		                                    WHEN BZ_TP = '2' THEN '전체 - 감각상각비 제외' 
+		                                END AS ACSJ_CD_NM 
+		                             , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A /* 편성금액 */
+		                             , SUM(ENFC_A)      AS ENFC_A      /* 집행금액 */
+		                          FROM (
+		                                /* 예산집행 및 집행율 - 전체 */
+		                                SELECT '1'                AS BZ_TP       /* 업무구분 */
+		                                     , SUM(A.BDGT_FMTN_A) AS BDGT_FMTN_A /* 편성금액 */
+		                                     , SUM(B.ENFC_A)      AS ENFC_A      /* 집행금액 */
+		                                  FROM T1 A
+		                                     , T2 B
+		                                 WHERE A.ACSJ6_CD = B.ACSJ_CD(+)
+		                                 UNION ALL
+		                                /* 예산집행 및 집행율 - 감가상각비 제외 */ 
+		                                SELECT '2'                AS BZ_TP       /* 업무구분 */
+		                                     , SUM(A.BDGT_FMTN_A) AS BDGT_FMTN_A /* 편성금액 */
+		                                     , SUM(B.ENFC_A)      AS ENFC_A      /* 집행금액 */
+		                                  FROM T1 A
+		                                     , T2 B
+		                                 WHERE A.ACSJ6_CD = B.ACSJ_CD(+)
+		                                   /* 감가상각비_건물, 감가상각비_일반비품, 감가상각비_차량, 감가상각비_투자부동산, 감가상각비_사용권자산_부동산 제외 */
+		                                   AND A.ACSJ5_CD NOT IN ('5270100100', '5270100200', '5270100400', '5270100900', '5270101000', '5270101200')
+		                                )
+		                         WHERE 1=1 
+		                           AND 3 = #{bzTp}
+		                         GROUP BY BZ_TP
+		                         UNION ALL
+		                        /* 예산집행 및 집행율 - 소모품, 리스료 비용 관리 */ 
+		                        SELECT '4'                AS BZ_TP_NM    /* 업무구분명 */
+		                             , A.ACSJ5_CD
+		                             , MAX(A.ACSJ5_CD_NM) AS ACSJ_CD_NM
+		                             , SUM(A.BDGT_FMTN_A) AS BDGT_FMTN_A /* 편성금액 */
+		                             , SUM(B.ENFC_A)      AS ENFC_A      /* 집행금액 */
+		                          FROM T1 A
+		                             , T2 B
+		                         WHERE A.ACSJ6_CD = B.ACSJ_CD(+)
+		                           /* 조직관리비, 소모품비, 소액자산리스료, 일반인쇄비, 차량임차료 */
+		                           AND A.ACSJ5_CD IN ('5270041000', '5270161400', '5270320100', '5270161800', '5270162700')
+		                           AND 4 = #{bzTp}
+		                         GROUP BY A.ACSJ5_CD
+		                        ) z
+		                  WHERE BZ_TP_NM = #{bzTp}
+		                ) X
+		            GROUP BY ROLLUP(X.BZ_TP_NM)
+		)
+		WHERE ROWNUM <![CDATA[<=]]> CASE WHEN #{bzTp} IN ('1', '2') THEN 1
+		                    WHEN #{bzTp} = '3' THEN 2
+		                ELSE ROWNUM END
+	</select>
+
+	<select id="selectYlyBdgtEnfc" parameterType="com.miraeasset.biz.in.in.vo.ININ1000V0In02VO" resultType="com.miraeasset.biz.in.in.vo.ININ2000V0Out01VO">
+		/* ININ2000V0.selectYlyBdgtEnfc : 연간예산집행추이 - 차트 */
+		WITH T1 AS (
+			SELECT TO_CHAR(TO_DATE(A.Q_END), 'YYYY') AS YR
+				 , A.QTR
+				 , TO_CHAR(TO_DATE(A.Q_END)-1, 'YYYYMMDD') AS Q_STR
+				 , A.Q_END
+				 , B.ACSJ_CD
+				 , REGEXP_SUBSTR(B.ACSJ_CD_NM, '[^ ]+', 1, 2) AS ACSJ_CD_NM
+				 , 'S03001' AS SP_ORZ_CD
+			FROM (
+					 SELECT QTR
+						  , Q_END
+					 FROM (
+							  SELECT QTR
+								   , CASE WHEN QTR = DYBF_QTR AND SUBSTR(Q_END, 0, 4) = SUBSTR(DYBF, 0, 4) THEN DYBF
+										  WHEN QTR > DYBF_QTR AND SUBSTR(Q_END, 0, 4) = SUBSTR(DYBF, 0, 4) THEN ''
+										  ELSE Q_END END Q_END
+							  FROM (
+									   SELECT TO_CHAR(ADD_MONTHS(TRUNC(YRBF, 'Y'), LEVEL*3) -1, 'Q')        AS QTR
+											, TO_CHAR(ADD_MONTHS(TRUNC(YRBF, 'Y'), LEVEL*3) -1, 'YYYYMMDD') AS Q_END
+											, TO_CHAR(SYSDATE-1, 'YYYYMMDD')                                AS DYBF
+											, TO_CHAR(SYSDATE-1, 'Q')                                       AS DYBF_QTR
+									   FROM (SELECT SYSDATE - (INTERVAL '2' YEAR) AS YRBF FROM DUAL)
+									   CONNECT BY LEVEL <![CDATA[<=]]> 12
+								   )
+							  ORDER BY 2 DESC
+						  )
+					 WHERE ROWNUM <![CDATA[<=]]> 10
+				 ) A
+					 LEFT OUTER JOIN AT01C001 B
+									 ON ( ACTG_BAS_CD = 'G009'
+										 AND ACSJ_CD IN ('5270041000', '5270161400', '5270320100', '5270161800', '5270162700')
+										 )
+			WHERE A.Q_END IS NOT NULL
+		), AT01N201G AS (
+			SELECT C.HRK_ACSJ_CD AS ACSJ_CD, A.SP_ORZ_CD, A.TR_DT
+				 , SUM(TDAY_ACMA_A) AS TDAY_ACMA_A
+			FROM AT01N201 A
+			   , GA04C400 B
+			   , (SELECT * FROM AT01C001 WHERE CO_CD = '005' AND ACTG_BAS_CD = 'G009') C
+			WHERE 1=1
+			  AND A.CO_CD = '005'
+			  AND A.ACTG_BAS_CD IN ('G000', 'G009')
+			  AND A.ACSJ_CD = B.ACTG_ACSJ_CD
+			  AND A.ACTG_FILD_CD = '100'
+			  AND A.SP_ORZ_CD LIKE CASE WHEN B.TTLZ_BAS_ORZ_CD = '000000' THEN '%' ELSE B.TTLZ_BAS_ORZ_CD END
+			  AND A.FNL_DVN_CD = '100'
+			  AND A.TR_DT BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE, -30), 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+			  AND C.ACSJ_CD = B.ACTG_ACSJ_CD
+			  AND C.HRK_ACSJ_CD IN ('5270041000', '5270161400', '5270320100', '5270161800', '5270162700')
+			GROUP BY C.HRK_ACSJ_CD, A.SP_ORZ_CD, A.TR_DT
+		)
+		SELECT YR
+			 , QTR || 'Q' AS QTR
+			 , ACSJ_CD
+			 , ACSJ_CD_NM
+			 , ENFC_R
+		FROM (
+				 SELECT A.YR
+					  , A.QTR
+					  , A.ACSJ_CD
+					  , A.ACSJ_CD_NM
+					  , ROUND(A.ENFC_A / NULLIF(B.BDGT_FMTN_A, 0) * 100, 2) AS ENFC_R
+				 FROM (
+					 SELECT X.YR
+						  , X.QTR
+						  , X.ACSJ_CD
+						  , X.ACSJ_CD_NM
+						  , CASE WHEN X.QTR = '1' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT1_ENFC_A
+								 WHEN X.QTR = '2' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT2_ENFC_A
+								 WHEN X.QTR = '3' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT3_ENFC_A
+								 WHEN X.QTR = '4' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT4_ENFC_A
+						 END ENFC_A
+					 FROM T1 X
+						, (
+						 SELECT YR
+							  , ACSJ_CD
+							  , SUM(QT1_ENFC_A) AS QT1_ENFC_A
+							  , SUM(QT2_ENFC_A) AS QT2_ENFC_A
+							  , SUM(QT3_ENFC_A) AS QT3_ENFC_A
+							  , SUM(QT4_ENFC_A) AS QT4_ENFC_A
+						 FROM (
+								  SELECT A.ACSJ_CD
+									   , MAX(A.ACSJ_CD_NM) AS ACSJ_CD_NM
+									   , A.YR
+									   , A.QTR
+									   , NVL(SUM(B.TDAY_ACMA_A), 0) AS BF_ENFC_A
+									   , NVL(SUM(C.TDAY_ACMA_A), 0) AS AF_ENFC_A
+									   , NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0) AS ENFC_A
+									   , DECODE(A.QTR, '1', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT1_ENFC_A
+									   , DECODE(A.QTR, '2', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT2_ENFC_A
+									   , DECODE(A.QTR, '3', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT3_ENFC_A
+									   , DECODE(A.QTR, '4', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT4_ENFC_A
+								  FROM T1       A
+									 , (
+									  SELECT A.ACSJ_CD
+										   , SUM(B.TDAY_ACMA_A) AS TDAY_ACMA_A
+										   , A.Q_END AS TR_DT
+									  FROM T1        A
+										 , AT01N201G B
+									  WHERE A.ACSJ_CD   = B.ACSJ_CD(+)
+										AND A.Q_END     = B.TR_DT(+)
+										AND A.SP_ORZ_CD = B.SP_ORZ_CD(+)
+									  GROUP BY A.ACSJ_CD, A.Q_END
+								  ) B
+									 , (
+									  SELECT A.ACSJ_CD
+										   , SUM(B.TDAY_ACMA_A) AS TDAY_ACMA_A
+										   , A.Q_STR AS TR_DT
+									  FROM T1        A
+										 , AT01N201G B
+									  WHERE A.ACSJ_CD   = B.ACSJ_CD(+)
+										AND A.Q_STR     = B.TR_DT(+)
+										AND A.SP_ORZ_CD = B.SP_ORZ_CD(+)
+									  GROUP BY A.ACSJ_CD, A.Q_STR
+								  ) C
+								  WHERE A.ACSJ_CD   = B.ACSJ_CD(+)
+									AND A.ACSJ_CD   = C.ACSJ_CD(+)
+									AND A.Q_END     = B.TR_DT(+)
+									AND A.Q_STR     = C.TR_DT(+)
+								  GROUP BY A.ACSJ_CD, A.YR, A.QTR
+								  ORDER BY A.ACSJ_CD, A.YR, A.QTR
+							  )
+						 GROUP BY YR, ACSJ_CD
+						 ORDER BY YR, ACSJ_CD
+					 ) Y
+					 WHERE X.ACSJ_CD = Y.ACSJ_CD
+					   AND X.YR      = Y.YR
+					 ORDER BY YR
+							, QTR
+							, ACSJ_CD
+				 ) A
+					, (
+					 SELECT SUBSTR(BAS_YM, 0, 4) AS YR
+						  , B.HRK_ACSJ_CD AS ACTG_ACSJ_CD
+						  , (SUM(BDGT_FMTN_A)) AS BDGT_FMTN_A
+					 FROM GA01N401 A
+						, AT01C001 B
+					 WHERE A.ACTG_ACSJ_CD = B.ACSJ_CD
+					   AND B.ACTG_BAS_CD = 'G009'
+					   AND B.HRK_ACSJ_CD IN ('5270041000', '5270161400', '5270320100', '5270161800', '5270162700')
+					 GROUP BY SUBSTR(BAS_YM, 0, 4), B.HRK_ACSJ_CD
+					 ORDER BY SUBSTR(BAS_YM, 0, 4), B.HRK_ACSJ_CD
+				 ) B
+				 WHERE A.YR      = B.YR(+)
+				   AND A.ACSJ_CD = B.ACTG_ACSJ_CD(+)
+				   AND 1 = #{bzTp}
+				 UNION ALL
+				 SELECT X.YR
+					  , X.QTR
+					  , '' AS ACSJ_CD
+					  , '' AS ACSJ_CD_NM
+					  --             , SUM(ENFC_A) AS ENFC_R
+					  --             , SUM(BDGT_FMTN_A) AS BDGT_FMTN_A
+					  , ROUND((SUM(ENFC_A) / NULLIF(SUM(BDGT_FMTN_A), 0)) * 100, 2) AS TOTAL_ENFC_R
+				 FROM (
+					 SELECT YR
+						  , QTR
+						  , SUM(ENFC_A) AS ENFC_A
+					 FROM (
+							  SELECT X.YR
+								   , X.QTR
+								   , X.ACSJ_CD
+								   , X.ACSJ_CD_NM
+								   , CASE WHEN X.QTR = '1' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT1_ENFC_A
+										  WHEN X.QTR = '2' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT2_ENFC_A
+										  WHEN X.QTR = '3' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT3_ENFC_A
+										  WHEN X.QTR = '4' AND X.ACSJ_CD = Y.ACSJ_CD THEN QT3_ENFC_A
+								  END ENFC_A
+							  FROM T1 X
+								 , (
+								  SELECT YR
+									   , ACSJ_CD
+									   , SUM(QT1_ENFC_A) AS QT1_ENFC_A
+									   , SUM(QT2_ENFC_A) AS QT2_ENFC_A
+									   , SUM(QT3_ENFC_A) AS QT3_ENFC_A
+									   , SUM(QT4_ENFC_A) AS QT4_ENFC_A
+								  FROM (
+										   SELECT A.ACSJ_CD
+												, MAX(A.ACSJ_CD_NM) AS ACSJ_CD_NM
+												, A.YR
+												, A.QTR
+												, NVL(SUM(B.TDAY_ACMA_A), 0) AS BF_ENFC_A
+												, NVL(SUM(C.TDAY_ACMA_A), 0) AS AF_ENFC_A
+												, NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0) AS ENFC_A
+												, DECODE(A.QTR, '1', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT1_ENFC_A
+												, DECODE(A.QTR, '2', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT2_ENFC_A
+												, DECODE(A.QTR, '3', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT3_ENFC_A
+												, DECODE(A.QTR, '4', NVL(SUM(B.TDAY_ACMA_A - C.TDAY_ACMA_A), 0)) AS QT4_ENFC_A
+										   FROM T1       A
+											  , (
+											   SELECT A.ACSJ_CD
+													, SUM(B.TDAY_ACMA_A) AS TDAY_ACMA_A
+													, A.Q_END AS TR_DT
+											   FROM T1        A
+												  , AT01N201G B
+											   WHERE A.ACSJ_CD   = B.ACSJ_CD(+)
+												 AND A.Q_END     = B.TR_DT(+)
+												 AND A.SP_ORZ_CD = B.SP_ORZ_CD(+)
+											   GROUP BY A.ACSJ_CD, A.Q_END
+										   ) B
+											  , (
+											   SELECT A.ACSJ_CD
+													, SUM(B.TDAY_ACMA_A) AS TDAY_ACMA_A
+													, A.Q_STR AS TR_DT
+											   FROM T1        A
+												  , AT01N201G B
+											   WHERE A.ACSJ_CD   = B.ACSJ_CD(+)
+												 AND A.Q_STR     = B.TR_DT(+)
+												 AND A.SP_ORZ_CD = B.SP_ORZ_CD(+)
+											   GROUP BY A.ACSJ_CD, A.Q_STR
+										   ) C
+										   WHERE A.ACSJ_CD   = B.ACSJ_CD(+)
+											 AND A.ACSJ_CD   = C.ACSJ_CD(+)
+											 AND A.Q_END     = B.TR_DT(+)
+											 AND A.Q_STR     = C.TR_DT(+)
+										   GROUP BY A.ACSJ_CD, A.YR, A.QTR
+										   ORDER BY A.ACSJ_CD, A.YR, A.QTR
+									   )
+								  GROUP BY YR, ACSJ_CD
+								  ORDER BY YR, ACSJ_CD
+							  ) Y
+							  WHERE X.ACSJ_CD = Y.ACSJ_CD
+								AND X.YR      = Y.YR
+							  ORDER BY YR
+									 , QTR
+									 , ACSJ_CD
+						  )
+					 GROUP BY YR, QTR
+				 ) X
+					, (
+					 SELECT SUBSTR(BAS_YM, 0, 4) AS YR
+						  , (SUM(BDGT_FMTN_A)) AS BDGT_FMTN_A
+					 FROM GA01N401 A
+						, AT01C001 B
+					 WHERE A.ACTG_ACSJ_CD = B.ACSJ_CD
+					   AND B.ACTG_BAS_CD = 'G009'
+					   AND B.HRK_ACSJ_CD IN ('5270041000', '5270161400', '5270320100', '5270161800', '5270162700')
+					 GROUP BY SUBSTR(BAS_YM, 0, 4)
+					 ORDER BY SUBSTR(BAS_YM, 0, 4)
+				 ) Z
+				 WHERE X.yr = z.yr(+)
+				   AND 2 = #{bzTp}
+				 GROUP BY X.YR
+						, X.QTR
+			 )
+		ORDER BY YR,  QTR, ACSJ_CD
+	</select>
+	
+	<select id="selectBfQtrDt" parameterType="String" resultType="com.miraeasset.biz.in.in.vo.ININ1000V0In02VO">
+		/* ININ2000V0.selectBfQtrDt : 현재 시스템일자기준 이전 분기일자 조회 - 차트 */
+		SELECT QTR
+		      , QRY_STRT_DT
+		      , QRY_END_DT
+		   FROM (
+		         SELECT QTR 
+		              , CASE WHEN END_DT = TO_CHAR(SYSDATE, 'YYYYMMDD') THEN ''
+		                     ELSE STRT_DT END QRY_STRT_DT
+		              , CASE WHEN END_DT = TO_CHAR(SYSDATE, 'YYYYMMDD') THEN ''
+		                     ELSE END_DT END QRY_END_DT
+		           FROM (
+		                 SELECT QTR
+		                      , CASE WHEN ( SUBSTR(END_DT, 0, 4) = TO_CHAR(SYSDATE, 'YYYY') AND QTR = TO_CHAR(SYSDATE, 'Q') ) THEN TO_CHAR(SYSDATE-1, 'YYYYMMDD')
+		                             ELSE STRT_DT END AS STRT_DT
+		                      , CASE WHEN ( SUBSTR(END_DT, 0, 4) = TO_CHAR(SYSDATE, 'YYYY') AND QTR = TO_CHAR(SYSDATE, 'Q') ) THEN TO_CHAR(SYSDATE, 'YYYYMMDD')
+		                             ELSE END_DT END AS END_DT
+		                   FROM (
+		                         SELECT LEVEL AS QTR
+		                              , TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'Y'), (LEVEL*3)) -2, 'YYYYMMDD') STRT_DT
+		                              , TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'Y'), (LEVEL*3)) -1, 'YYYYMMDD') END_DT
+		                           FROM DUAL
+		                          CONNECT BY LEVEL <![CDATA[<=]]> 4        
+		                         )
+		                   ORDER BY 3 DESC
+		                 )
+		          WHERE ROWNUM <![CDATA[<=]]> 2
+		          )
+		  WHERE QRY_END_DT IS NOT NULL
+	
+	</select>
+	
+	<sql id="selectAprvList_MainQry_REF">
+	/*승인대기 - 사전참조만 적용*/
+		WITH CTE_TB_MAIN AS
+		(
+			SELECT
+				a.APRV_UNIT_TCD
+			,	a.APRV_WRRPT_MT_NO
+			,	a.APRV_RNK
+			,	a.APRV_DL_RNK
+			,	b.WRRPT_DT
+			,	b.APRV_PCD
+			,	b.APRV_WRRPT_ORZ_CD
+			,   SUBSTR(t07.ORZ_RPTV_EPNO,0,7) AS APV_EPNO
+			,	a.RQS_TTL_NM
+			,	a.RCT_NO
+			FROM
+			(
+				SELECT
+					n607.*
+				,	n101.RQS_TTL_NM
+				,	n101.RCT_NO
+				FROM
+					(
+						SELECT A.APRV_WRRPT_MT_NO, MIN(A.APRV_RNK) AS APRV_RNK
+						FROM GA09N607 A
+						WHERE
+							A.APRV_DTTM IS NULL
+							AND A.DCFC_PCD ='09' /*사전참조*/
+							AND
+							EXISTS ( SELECT 1
+									 FROM GA09N606 B
+									 WHERE A.APRV_WRRPT_MT_NO = B.APRV_WRRPT_MT_NO AND B.APRV_SCD IN ('01', '02') )
+						GROUP BY APRV_WRRPT_MT_NO
+					) Z
+					INNER JOIN GA01N101 n101 ON (Z.APRV_WRRPT_MT_NO = n101.APRV_WRRPT_MT_NO)
+					INNER JOIN GA09N607 n607 ON (Z.APRV_WRRPT_MT_NO = n607.APRV_WRRPT_MT_NO AND Z.APRV_RNK = n607.APRV_RNK)
+				WHERE n101.UNIF_RQS_PCD = '05'
+			) a
+			INNER JOIN GA09N606 b ON (a.APRV_WRRPT_MT_NO = b.APRV_WRRPT_MT_NO)
+			LEFT OUTER JOIN CB01N210 t07 ON (
+				/*[20240419] 추가결재선 94 포함*/
+				a.APRV_UNIT_TCD IN ('07','94') AND t07.ORZ_CD = a.APRV_UNIT_GRP_CD 
+			)
+		)
+		, CTE_TB_APV AS
+		(
+			SELECT
+				ROW_NUMBER() OVER (ORDER BY a.WRRPT_DT DESC, a.RCT_NO DESC) AS RNUM
+			,	a.APRV_WRRPT_MT_NO
+			,	a.APRV_RNK
+			,	a.WRRPT_DT
+			,	a.RCT_NO
+			FROM
+				CTE_TB_MAIN a
+				LEFT OUTER JOIN
+				(
+					SELECT EPNO, DFA_EPNO
+					FROM
+					(
+						SELECT /*+ CACHE(a) */
+							a.EPNO, a.HR_PST_CD AS DFA_EPNO
+						FROM
+							CB01N311 a
+						WHERE
+							TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN a.APTM_STRT_DT AND a.APTM_END_DT
+						   AND a.HR_APTM_CD LIKE '%132'
+						   AND a.APTM_SRNO = 0
+						   AND a.HR_PST_CD = #{epno}
+					) z
+					GROUP BY EPNO, DFA_EPNO
+				) b ON (a.APV_EPNO = b.EPNO)
+				INNER JOIN GA01N101 n101 ON (a.APRV_WRRPT_MT_NO = n101.APRV_WRRPT_MT_NO)
+			WHERE
+				(
+					a.APV_EPNO = #{epno}
+					OR
+					b.DFA_EPNO = #{epno}
+				)
+			GROUP BY
+				a.APRV_WRRPT_MT_NO
+			,	a.APRV_RNK
+			,	a.WRRPT_DT
+			,	a.RCT_NO
+			ORDER BY
+				a.WRRPT_DT DESC, a.RCT_NO DESC
+		)
+	</sql>
+	
+	<select id="selectXempApvPstt" parameterType="com.miraeasset.biz.in.in.vo.ININ2000V0VO2" resultType="com.miraeasset.biz.in.in.vo.ININ2000V0VO2">
+		/* ININ2000V0.selectXempApvPstt : 임직원승인현황 조회 */
+		
+		<include refid="selectAprvList_MainQry_REF" /> 
+		
+		, T2 AS (
+		    SELECT A.APRV_WRRPT_MT_NO
+		         , A.APRV_RNK
+		         , A.APRV_EPNO
+		         , C.EP_NM AS APRV_EPNM
+		         , A.SBAP_YN
+		         , A.SBAP_EPNO
+		         , TO_CHAR(A.APRV_DTTM, 'YYYYMMDD') AS APRV_DT
+		      FROM GA09N607 A
+		         , (
+		            SELECT APRV_WRRPT_MT_NO
+		                 , MAX(APRV_RNK) AS APRV_RNK
+		              FROM GA09N607
+		             WHERE APRV_DTTM IS NOT NULL 
+		               AND DCFC_PCD IN ('00','01','02') /*사전참조제외*/
+		             GROUP BY APRV_WRRPT_MT_NO
+		            ) B
+		         , CB01N310 C   
+		     WHERE A.APRV_WRRPT_MT_NO = B.APRV_WRRPT_MT_NO
+		       AND A.APRV_RNK         = B.APRV_RNK
+		       AND (CASE WHEN  A.SBAP_YN='1' THEN A.SBAP_EPNO ELSE A.APRV_EPNO END)=C.EPNO(+)
+		)
+		
+		SELECT * FROM (
+		SELECT * FROM (
+			SELECT RQS_SCD_NM
+			     , UNIF_RQS_PCD_NM
+			     , RQS_TTL_NM
+			     , APRV_EPNM
+			     , RQS_DT
+			     , APRV_DT
+			     /* 2023.10.31 요건 변경 */
+	             , RCT_NO
+	             , APRV_WRRPT_MT_NO 
+	             , APRV_WRRPT_ORZ_CD 
+			     , ROW_NUMBER() OVER(ORDER BY RQS_DT DESC) AS RNUM 
+				 , COUNT(1) OVER()  AS AL_CNT
+				 /* 2023.11.08 요건 변경 */
+				 , APRV_RNK
+				 , APRV_RNK AS APRV_DL_RNK
+			     , SBAP_YN
+			     /* 2023.11.14 요건 변경 */
+			     , APRV_PCD
+			  FROM (
+			        /* 신청현황 */ 
+			        SELECT A.RQS_SCD
+			               , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = A.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM
+			             , A.UNIF_RQS_PCD
+			             , (SELECT CMN_CD_VL_DEF_CN || '신청서' FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = A.UNIF_RQS_PCD AND ROWNUM = 1) UNIF_RQS_PCD_NM
+			             , A.RQS_TTL_NM
+			             /* 2023.11.16 요건 변경 승인안된건은 승인자 공백 표시*/
+			             , C.APRV_EPNM   
+			             , A.RQS_DT
+			             , C.APRV_DT
+			             /* 2023.10.31 요건 변경 */
+			             , A.RCT_NO
+			             , A.APRV_WRRPT_MT_NO 
+			             , A.APRV_WRRPT_ORZ_CD
+			             , NULL AS APRV_RNK
+			             , C.SBAP_YN
+			             /* 2023.11.14 요건 변경 */
+                         , (SELECT K.APRV_PCD FROM GA09N606 K WHERE K.APRV_WRRPT_MT_NO = A.APRV_WRRPT_MT_NO) AS APRV_PCD
+			          from GA01N101 A
+			             , T2       C
+			         where A.APRV_WRRPT_MT_NO = C.APRV_WRRPT_MT_NO(+)
+			           AND A.RQS_SCD <![CDATA[<>]]> '00'
+			           AND A.RQS_EPNO = #{epno} 
+			           AND A.RQS_DT BETWEEN TO_CHAR(SYSDATE-14, 'YYYYMMDD')  AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+			           AND 1 = #{bzTp} /* 1.신청현황 2.승인현황 3.사전참조 */
+			         UNION ALL
+			        /* 사전참조 탭 - 미확인*/ 
+			        SELECT A.RQS_SCD
+			             , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = A.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM
+			             , A.UNIF_RQS_PCD
+			             , (SELECT CMN_CD_VL_DEF_CN || '신청서' FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = A.UNIF_RQS_PCD AND ROWNUM = 1) UNIF_RQS_PCD_NM
+			             , A.RQS_TTL_NM
+			             , (SELECT EP_NM FROM CB01N310 WHERE EPNO = A.RQS_EPNO) AS RQS_EPNM
+			             , A.RQS_DT
+			             , NULL AS APRV_DT
+			             /* 2023.10.31 요건 변경 */
+			             , A.RCT_NO
+			             , A.APRV_WRRPT_MT_NO 
+			             , A.APRV_WRRPT_ORZ_CD 
+			             , B.APRV_RNK
+                         , NULL AS SBAP_YN
+                         /* 2023.11.14 요건 변경 */
+                         , (SELECT K.APRV_PCD FROM GA09N606 K WHERE K.APRV_WRRPT_MT_NO = A.APRV_WRRPT_MT_NO) AS APRV_PCD
+			          FROM GA01N101 A
+			             , CTE_TB_APV B
+			         where A.APRV_WRRPT_MT_NO = B.APRV_WRRPT_MT_NO
+			           AND 3 = #{bzTp} /* 1.신청현황 2.승인현황 3.사전참조 */ 
+			           AND A.RQS_DT BETWEEN TO_CHAR(SYSDATE-14, 'YYYYMMDD')  AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+			        )
+		WHERE RQS_SCD != '00' /* 임시저장 제외 */
+		ORDER BY RQS_DT DESC
+		       , APRV_WRRPT_MT_NO DESC,RCT_NO DESC /* 2023.11.16 요건 변경 */
+		<if test='pageSize == null or pageSize == 0 '>
+			) Z 
+			) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			) Z WHERE RNUM <![CDATA[<]]>= ( #{pageIndex} + #{pageSize} )
+			) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>
+	</select>
+	
+</mapper>

@@ -1,0 +1,721 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gasr_mapper">
+	
+	<select id="selectListGA01N501" parameterType="com.miraeasset.biz.ga.sr.vo.GASR1000U0In00VO" resultType="com.miraeasset.biz.ga.sr.vo.GASR1000U0Out00VO">
+		/* GASR1000U0.selectListGA01N501 = 인장조제관리 목록조회 */			
+		SELECT T1.SAL_MT_NO                          /*인감관리번호     */
+		     , T1.HOBR_TCD                            /*본지점구분코드   */
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'HOBR_TCD' AND CMN_CD_VL = TRIM(T1.HOBR_TCD) AND ROWNUM = 1 ) AS HOBR_TCD_NM     
+		     , T1.SAL_TCD                           /*인장구분코드      */
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_TCD' AND CMN_CD_VL = TRIM(T1.SAL_TCD) AND ROWNUM = 1 ) AS SAL_TCD_NM     
+		     , T1.SAL_PCD                           /*인장유형코드      */
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = TRIM(T1.SAL_PCD) AND ROWNUM = 1 ) AS SAL_PCD_NM     
+		     , T1.SAL_NM                             /*인감명         */
+		     , T1.SAL_DL_NM                          /*인감상세명       */
+		     , T1.FILE_NO                             /*파일번호       */
+		     , T1.MT_ORZ_CD                           /*관리조직코드     */
+		     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.MT_ORZ_CD AND ROWNUM = 1 ) AS MT_ORZ_NM
+		     , T1.RCT_DT                              /*접수일자        */
+		     , T1.MAKG_DT                             /*제작일자        */
+		     , T1.SAL_MAKG_RSN_CN                     /*제작사유내용      */
+		     , T1.WTDW_DT                             /*회수일자         */
+		     , T1.SAL_WTDW_RSN_CN                     /*회수사유내용      */
+		     , T1.DSUS_DT                             /*폐기일자         */
+		     , T1.CHNG_DT                             /*변경일자         */
+		     , T1.SAL_CHNG_RSN_CN                     /*변경사유내용      */
+		     , T1.SEAL_SCD                            /*인감상태코드      */
+		     , T1.SAL_MEMO_CN                         /*인장메모내용*/
+		     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SEAL_SCD' AND CMN_CD_VL = TRIM(T1.SEAL_SCD) AND ROWNUM = 1 ) AS SEAL_SCD_NM     
+		     , #{totCnt} AS TOT_CNT
+		  FROM GA01N501	T1 -- 인감조제관리  
+		 <include refid="selectListGA01N501_Where" />  
+		 ORDER BY T1.RCT_DT DESC, T1.MAKG_DT DESC, T1.CHNG_DT DESC, T1.WTDW_DT DESC, T1.DSUS_DT DESC, T1.OPRT_DTTM DESC /*이슈39 요청*/
+	     OFFSET #{pageIndex} ROWS FETCH NEXT #{pageSize} ROWS ONLY 	
+	</select>	
+		
+	<sql id="selectListGA01N501_Where">
+		 WHERE 1=1
+		   AND T1.HOBR_TCD    LIKE '%' || TRIM( #{hobrTcd}  )  || '%' /* 본지점구분코드 */
+		   
+		   /* 2023.10.04 기획서의 조회기준값변경으로 인한 인장유형 다건 조회처리 추가 */
+		   <if test='salPcd != null and salPcd != ""'>
+		    /* 인장유형코드  */
+			AND T1.SAL_PCD IN
+				<foreach collection="arrSalPcd" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+				</foreach>
+			</if>
+		   
+		   AND T1.MT_ORZ_CD   LIKE '%' || TRIM( #{mtOrzCd}  )  || '%' /* 관리조직코드 */
+		   AND T1.SEAL_SCD    LIKE '%' || TRIM( #{sealScd}  )  || '%' /* 인감상태코드 */
+
+			<if test=' strArrSealScd != null and strArrSealScd != "" '>
+				AND T1.SEAL_SCD IN <foreach collection="arrSealScd" item="itm" index="index" open="(" close=")" separator=","> #{itm} </foreach>
+			</if>
+	</sql>
+	
+	<select id="selectListGA01N501_Cnt" parameterType="com.miraeasset.biz.ga.sr.vo.GASR1000U0In00VO" resultType="com.miraeasset.biz.ga.sr.vo.GASR1000U0Out00VO">
+		SELECT
+			COUNT(*) AS TOT_CNT
+		FROM
+			GA01N501 T1
+		<include refid="selectListGA01N501_Where" />
+	</select>
+	
+	<select id="selectInfoGA01N501BySalPcd" parameterType="com.miraeasset.biz.ga.sr.vo.GASR1000U0In00VO" resultType="com.miraeasset.biz.ga.sr.vo.GASR1000U0Out11VO">
+		/* GASR1000U0.selectInfoGA01N501BySalPcd = 인장조제관리 인장유형 통계정보조회 */
+			SELECT NVL(SUM(HO_SAL_PCD_CNT),0) AS HO_SAL_PCD_CNT
+			     , NVL(SUM(BR_SAL_PCD_CNT),0) AS BR_SAL_PCD_CNT
+			     , NVL(SUM(HO_SAL_PCD_A_CNT),0) AS HO_SAL_PCD_A_CNT
+			     , NVL(SUM(HO_SAL_PCD_B_CNT),0) AS HO_SAL_PCD_B_CNT
+			     , NVL(SUM(HO_SAL_PCD_C_CNT),0) AS HO_SAL_PCD_C_CNT
+			     , NVL(SUM(HO_SAL_PCD_D_CNT),0) AS HO_SAL_PCD_D_CNT
+			     , NVL(SUM(HO_SAL_PCD_E_CNT),0) AS HO_SAL_PCD_E_CNT
+			     , NVL(SUM(BR_SAL_PCD_C_CNT),0) AS BR_SAL_PCD_C_CNT
+			     , NVL(SUM(BR_SAL_PCD_D_CNT),0) AS BR_SAL_PCD_D_CNT    
+			  FROM (
+			        SELECT T1.HOBR_TCD 
+			             , T1.SAL_PCD
+			             , CASE WHEN T1.HOBR_TCD = '01' AND T1.SAL_PCD = 'A' THEN COUNT(1) END AS HO_SAL_PCD_A_CNT
+			             , CASE WHEN T1.HOBR_TCD = '01' AND T1.SAL_PCD = 'B' THEN COUNT(1) END AS HO_SAL_PCD_B_CNT
+			             , CASE WHEN T1.HOBR_TCD = '01' AND T1.SAL_PCD = 'C' THEN COUNT(1) END AS HO_SAL_PCD_C_CNT
+			             , CASE WHEN T1.HOBR_TCD = '01' AND T1.SAL_PCD = 'D' THEN COUNT(1) END AS HO_SAL_PCD_D_CNT
+			             , CASE WHEN T1.HOBR_TCD = '01' AND T1.SAL_PCD = 'E' THEN COUNT(1) END AS HO_SAL_PCD_E_CNT
+			             , CASE WHEN T1.HOBR_TCD = '01' AND T1.SAL_PCD IN ('A','B','C','D','E') THEN COUNT(1) END AS HO_SAL_PCD_CNT
+			             , CASE WHEN T1.HOBR_TCD = '02' THEN COUNT(1) END AS BR_SAL_PCD_CNT
+			             , CASE WHEN T1.HOBR_TCD = '02' AND T1.SAL_PCD = 'C' THEN COUNT(1) END AS BR_SAL_PCD_C_CNT
+			             , CASE WHEN T1.HOBR_TCD = '02' AND T1.SAL_PCD = 'D' THEN COUNT(1) END AS BR_SAL_PCD_D_CNT          
+			          FROM GA01N501	T1 -- 인감조제관리  
+			          <include refid="selectListGA01N501_Where" /> 
+			         GROUP BY T1.HOBR_TCD , T1.SAL_PCD
+			  )
+	</select>		
+	
+	<select id="selectInfoGA01N501BySalScd" parameterType="com.miraeasset.biz.ga.sr.vo.GASR1000U0In00VO" resultType="com.miraeasset.biz.ga.sr.vo.GASR1000U0Out13VO">
+		   /* GASR1000U0.selectInfoGA01N501BySalPcd = 인장조제관리 인장상태 통계정보조회 */
+			SELECT NVL(SUM(RCT_SEAL_SCD_CNT),0)       AS RCT_SEAL_SCD_CNT
+			     , NVL(SUM(REG_SEAL_SCD_CNT),0)       AS REG_SEAL_SCD_CNT
+			     , NVL(SUM(USED_SEAL_SCD_CNT),0)      AS USED_SEAL_SCD_CNT
+			     , NVL(SUM(CHNG_SEAL_SCD_CNT),0)      AS CHNG_SEAL_SCD_CNT
+			     , NVL(SUM(WDRAL_ING_SEAL_SCD_CNT),0) AS WDRAL_ING_SEAL_SCD_CNT
+                 , NVL(SUM(WDRAL_SEAL_SCD_CNT),0)     AS WDRAL_SEAL_SCD_CNT
+			     , NVL(SUM(DSUS_ING_SEAL_SCD_CNT),0)  AS DSUS_ING_SEAL_SCD_CNT
+			     , NVL(SUM(DSUS_SEAL_SCD_CNT),0)      AS DSUS_SEAL_SCD_CNT
+                 , NVL(SUM(CNCL_SEAL_SCD_CNT),0)      AS CNCL_SEAL_SCD_CNT
+			  FROM (
+			        SELECT T1.SEAL_SCD
+			             , CASE WHEN T1.SEAL_SCD = '02' THEN COUNT(1) END AS RCT_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '05' THEN COUNT(1) END AS REG_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '10' THEN COUNT(1) END AS USED_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '15' THEN COUNT(1) END AS CHNG_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '25' THEN COUNT(1) END AS WDRAL_ING_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '30' THEN COUNT(1) END AS WDRAL_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '35' THEN COUNT(1) END AS DSUS_ING_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '40' THEN COUNT(1) END AS DSUS_SEAL_SCD_CNT
+                         , CASE WHEN T1.SEAL_SCD = '90' THEN COUNT(1) END AS CNCL_SEAL_SCD_CNT
+			          FROM GA01N501	T1 -- 인감조제관리  
+			          <include refid="selectListGA01N501_Where" /> 
+			         GROUP BY  T1.SEAL_SCD
+                     )
+	</select>
+	
+	
+	<select id="selectListSealSalg" resultType="com.miraeasset.biz.ga.sr.vo.GASR1000U0Out12VO">
+		/* GASR1000U0.selectListSealSalg = 인장조제관리 목록조회 */
+			SELECT SAL_MT_NO
+			     , SAL_PCD_NM || ' / ' || SAL_DL_NM AS SAL_MT_NM
+			FROM (
+			      SELECT SAL_MT_NO 
+			           , SAL_PCD
+			           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = T1.SAL_PCD AND ROWNUM = 1 ) AS SAL_PCD_NM  
+			           , SAL_DL_NM
+			        FROM GA01N501	T1 -- 인장조제관리
+			       WHERE MT_ORZ_CD = 'S03001'
+			         AND HOBR_TCD = '01'
+			         AND SAL_TCD NOT IN('09','14') 
+			         AND SEAL_SCD = '10'
+			       ORDER BY SAL_PCD,SAL_DL_NM
+			    ) 	
+	</select>	
+	
+	<select id="selectListSealDoc" resultType="com.miraeasset.biz.ga.sr.vo.GASR1000U0Out12VO">
+		/* GASR1000U0.selectListSealDoc = 인장조제관리 목록조회 */
+			SELECT SAL_MT_NO
+			     , SAL_PCD_NM || ' / ' || SAL_DL_NM AS SAL_MT_NM
+			FROM (
+			      SELECT SAL_MT_NO 
+			           , SAL_PCD
+			           , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = T1.SAL_PCD AND ROWNUM = 1 ) AS SAL_PCD_NM  
+			           , SAL_DL_NM
+			        FROM GA01N501	T1 -- 인장조제관리
+			       WHERE MT_ORZ_CD = 'S03001'
+			         AND HOBR_TCD = '01'
+			         AND SAL_PCD = 'A' -- A:법인인감 
+			         AND SEAL_SCD = '10' 
+			       ORDER BY SAL_PCD,SAL_DL_NM
+			    ) 	
+	</select>		
+	
+
+	<select id="selectGA01N501PK" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N501VO">
+		/* GASR1000U0.selectGA01N501PK = 인장조제관리 상세조회 */
+							
+				SELECT T1.SAL_MT_NO                          /*인감관리번호      */
+				     , T1.HOBR_TCD                            /*본지점구분코드    */
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'HOBR_TCD' AND CMN_CD_VL = TRIM(T1.HOBR_TCD) AND ROWNUM = 1 ) AS HOBR_TCD_NM     
+				     , T1.SAL_TCD                           /*인장구분코드     */
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_TCD' AND CMN_CD_VL = TRIM(T1.SAL_TCD) AND ROWNUM = 1 ) AS SAL_TCD_NM     
+				     , T1.SAL_PCD                           /*인장유형코드     */
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = TRIM(T1.SAL_PCD) AND ROWNUM = 1 ) AS SAL_PCD_NM     
+				     , T1.SAL_NM                             /*인감명            */
+				     , T1.SAL_DL_NM                          /*인감상세명        */
+				     , T1.FILE_NO                             /*파일번호          */
+				     , T1.MT_ORZ_CD                           /*관리조직코드      */
+				     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.MT_ORZ_CD AND ROWNUM = 1 ) AS MT_ORZ_NM         
+				     , T1.MT_EPNO                             /*관리사원번호      */
+				     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.MT_EPNO AND ROWNUM = 1 ) AS MT_EP_NM    
+				     , T1.RCT_DT                              /*접수일자          */
+				     , T1.MAKG_DT                             /*제작일자          */
+				     , T1.SAL_MAKG_RSN_CN                     /*제작사유내용      */
+				     , T1.WTDW_DT                             /*회수일자          */
+				     , T1.SAL_WTDW_RSN_CN                     /*회수사유내용      */
+				     , T1.DSUS_DT                             /*폐기일자          */
+				     , T1.CHNG_DT                             /*변경일자          */
+				     , T1.SAL_CHNG_RSN_CN                     /*변경사유내용      */
+				     , T1.SEAL_SCD                            /*인감상태코드     */
+				     , T1.SAL_MEMO_CN                         /*인장메모내용*/
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SEAL_SCD' AND CMN_CD_VL = TRIM(T1.SEAL_SCD) AND ROWNUM = 1 ) AS SEAL_SCD_NM     
+                     , T5.RCT_DRFT_DOC_NO   /*접수기안문 */     
+					 , (CASE WHEN T1.SEAL_SCD='15' THEN T5.CHNG_DRFT_DOC_NO ELSE T5.REG_DRFT_DOC_NO END) AS REG_DRFT_DOC_NO  /*제작기안문 */
+					 , T5.WTDW_DRFT_DOC_NO   /*회수기안문 */
+					 , T5.DSUS_DRFT_DOC_NO   /*폐기기안문 */
+                     , T5.RCT_DRFT_DOC_TTL_NM   /*접수기안문 */  
+                     , (CASE WHEN T1.SEAL_SCD='15' THEN T5.CHNG_DRFT_DOC_TTL_NM ELSE T5.REG_DRFT_DOC_TTL_NM END) AS REG_DRFT_DOC_TTL_NM  /*제작기안문 */     
+                     , T5.WTDW_DRFT_DOC_TTL_NM   /*회수기안문 */  
+                     , T5.DSUS_DRFT_DOC_TTL_NM   /*폐기기안문 */         
+				  FROM GA01N501	T1 -- 인감조제관리  
+                  LEFT OUTER JOIN ( 
+                      SELECT SAL_MT_NO
+                           , RCT_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.RCT_DRFT_DOC_NO AND ROWNUM = 1) AS RCT_DRFT_DOC_TTL_NM   /*접수기안문 */   
+                           , REG_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.REG_DRFT_DOC_NO AND ROWNUM = 1) AS REG_DRFT_DOC_TTL_NM   /*제작기안문 */ 
+                           , WTDW_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.CHNG_DRFT_DOC_NO AND ROWNUM = 1) AS CHNG_DRFT_DOC_TTL_NM   /*변경기안문 */ 
+                           , CHNG_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.WTDW_DRFT_DOC_NO AND ROWNUM = 1) AS WTDW_DRFT_DOC_TTL_NM   /*회수기안문 */ 
+                           , DSUS_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.DSUS_DRFT_DOC_NO AND ROWNUM = 1) AS DSUS_DRFT_DOC_TTL_NM   /*폐기기안문 */    
+                       FROM (
+                        SELECT T2.SAL_MT_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060101' THEN DRFT_DOC_NO ELSE NULL END) AS RCT_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060102' THEN DRFT_DOC_NO ELSE NULL END) AS REG_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060103' THEN DRFT_DOC_NO ELSE NULL END) AS CHNG_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060104' THEN DRFT_DOC_NO ELSE NULL END) AS WTDW_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060105' THEN DRFT_DOC_NO ELSE NULL END) AS DSUS_DRFT_DOC_NO
+                         FROM GA01N509 T2
+                        WHERE T2.SAL_MT_NO = #{salMtNo }  /* 인감관리번호 */
+                        GROUP BY T2.SAL_MT_NO
+                            ) T4
+                    ) T5 ON T1.SAL_MT_NO = T5.SAL_MT_NO   
+				 WHERE 1=1
+				   AND T1.SAL_MT_NO  = #{salMtNo }  /* 인감관리번호 */
+	</select>			
+	
+	<insert id="insertGA01N501" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+		/* GASR1000U0.insertGA01N501 = 인장조제관리 신규등록 */					
+			INSERT INTO GA01N501	-- 인장조제관리
+			( SAL_MT_NO
+			, HOBR_TCD
+			, SAL_TCD
+			, SAL_PCD
+			, MT_ORZ_CD
+			, RCT_DT
+			, SEAL_SCD
+			, OPTR_ID
+			, OPRT_CHNL_CD
+			, OPRT_ORZ_CD
+			, OPRT_IP_ADR
+			, OPRT_DTTM
+			)
+			VALUES
+			( #{salMtNo    } 
+			, #{hobrTcd    } 
+			, #{salTcd     } 
+			, #{salPcd     }  
+			, #{mtOrzCd    } 
+			, TO_CHAR(SYSDATE, 'YYYYMMDD')
+			, #{sealScd    } 
+			, #{optrId     } 
+			, #{oprtChnlCd } 
+			, #{oprtOrzCd  } 
+			, #{oprtIpAdr  } 
+			, SYSDATE 
+			)	
+	</insert>	
+	
+	<insert id="insertGA01N509" parameterType="com.miraeasset.biz.common.meta.vo.GA01N509VO" >
+		/* GASR1000U0.insertGA01N509 기안문서정보 신규등록 */	
+			MERGE INTO GA01N509 	-- 인장조제관리_인장조제별기안문서  
+		    USING DUAL ON (SAL_MT_NO = #{salMtNo} 
+		                   AND UNIF_RQS_TCD = #{unifRqsTcd}
+		                   )
+			WHEN MATCHED THEN 
+			UPDATE SET DRFT_DOC_NO  = #{drftDocNo } 
+					 , OPTR_ID      = #{optrId     } 
+					 , OPRT_CHNL_CD = #{oprtChnlCd } 
+					 , OPRT_ORZ_CD  = #{oprtOrzCd  } 
+					 , OPRT_IP_ADR  = #{oprtIpAdr  } 
+					 , OPRT_DTTM    = SYSDATE 
+		   WHEN NOT MATCHED THEN 
+			INSERT
+			( SAL_MT_NO
+			, UNIF_RQS_TCD
+			, DRFT_DOC_NO
+			, OPTR_ID
+			, OPRT_CHNL_CD
+			, OPRT_ORZ_CD
+			, OPRT_IP_ADR
+			, OPRT_DTTM
+			)
+			VALUES
+			( #{salMtNo    } 
+			, #{unifRqsTcd } 
+			, #{drftDocNo } 
+			, #{optrId     } 
+			, #{oprtChnlCd } 
+			, #{oprtOrzCd  } 
+			, #{oprtIpAdr  } 
+			, SYSDATE 
+			)	
+	</insert>	
+
+	<insert id="insertGA01N503" parameterType="com.miraeasset.biz.common.meta.vo.GA01N503VO" >
+		/* GASR1000U0.insertGA01N503 인장신청_인장조제관리신청 신규등록 */					
+	
+			INSERT INTO GA01N503 -- 인장신청_인장조제관리신청
+			( RCT_NO           /*접수번호    */
+			, SAL_MT_NO        /*인장관리번호*/
+			, OPTR_ID          /*조작자ID    */
+			, OPRT_CHNL_CD     /*조작채널코드*/
+			, OPRT_ORZ_CD      /*조작조직코드*/
+			, OPRT_IP_ADR      /*조작IP주소  */
+			, OPRT_DTTM        /*조작일시    */
+			)                  
+			VALUES             
+			( #{rctNo      }   /*접수번호    */
+			, #{salMtNo    }   /*인장관리번호*/
+			, #{optrId     }   /*조작자ID    */
+			, #{oprtChnlCd }   /*조작채널코드*/
+			, #{oprtOrzCd  }   /*조작조직코드*/
+			, #{oprtIpAdr  }   /*조작IP주소  */
+			, SYSDATE
+			)	
+	</insert>	
+
+	<insert id="insertGA01H502" parameterType="com.miraeasset.biz.common.meta.vo.GA01H502VO" >
+		/* GASR1000U0.insertGA01H502 인장조제관리_인장조제관리이력 */				
+		<selectKey keyProperty="hstSeq" resultType="java.lang.Long" order="BEFORE">
+			SELECT NVL(MAX(HST_SEQ), 0) + 1 AS HST_SEQ 
+              FROM GA01H502
+             WHERE SAL_MT_NO = #{salMtNo}
+		</selectKey>
+			
+			INSERT INTO GA01H502(	-- 인장조제관리_인장조제관리이력
+                 SAL_MT_NO
+               , HST_SEQ
+               , HOBR_TCD
+               , SAL_PCD
+               , SAL_TCD
+               , SAL_NM
+               , SAL_DL_NM
+               , FILE_NO
+               , MT_ORZ_CD
+               , MT_EPNO
+               , MAKG_DT
+               , WTDW_DT
+               , DSUS_DT
+               , CHNG_DT
+               , SEAL_SCD
+               , OPTR_ID
+               , OPRT_CHNL_CD
+               , OPRT_ORZ_CD
+               , OPRT_IP_ADR
+               , OPRT_DTTM
+               , PAST_SAL_MT_NO
+               , SAL_MEMO_CN
+               , RCT_DT
+               , SAL_MAKG_RSN_CN
+               , SAL_WTDW_RSN_CN
+               , SAL_CHNG_RSN_CN
+			)
+			SELECT  SAL_MT_NO
+              	   , #{hstSeq}
+	               , HOBR_TCD
+	               , SAL_PCD
+	               , SAL_TCD
+	               , SAL_NM
+	               , SAL_DL_NM
+	               , FILE_NO
+	               , MT_ORZ_CD
+	               , MT_EPNO
+	               , MAKG_DT
+	               , WTDW_DT
+	               , DSUS_DT
+	               , CHNG_DT
+	               , SEAL_SCD
+                   , #{optrId     } 
+                   , #{oprtChnlCd } 
+                   , #{oprtOrzCd  } 
+                   , #{oprtIpAdr  } 
+                   , SYSDATE 
+	               , PAST_SAL_MT_NO
+	               , SAL_MEMO_CN
+	               , RCT_DT
+	               , SAL_MAKG_RSN_CN
+	               , SAL_WTDW_RSN_CN
+	               , SAL_CHNG_RSN_CN
+	     FROM GA01N501  
+	     WHERE SAL_MT_NO = #{salMtNo}           	
+	</insert>
+
+	<update id="updateGA01N501ByMAKG" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+
+		/* GASR1000U0.updateGA01N501ByWTDW = 인장조제관리 수정 - 제작]  */	
+			UPDATE GA01N501	-- 인장조제관리                              
+			   SET SAL_NM          = #{salNm       }   /* 인장명      */
+			     , SAL_DL_NM       = #{salDlNm     }   /* 인장상세명   */
+			     , FILE_NO         = #{fileNo      }   /* 파일번호    */
+			     , MAKG_DT         = #{makgDt      }   /* 제작일자    */
+			     , SAL_MAKG_RSN_CN = #{salMakgRsnCn}   /* 제작사유내용 */
+			     , SAL_MEMO_CN     = #{salMemoCn   }   /* 인장메모내용 */
+			     , SEAL_SCD        = #{sealScd     }   /* 인장상태코드 */                                                 
+			     , OPTR_ID       = #{optrId      }                       
+			     , OPRT_CHNL_CD  = #{oprtChnlCd  }                       
+			     , OPRT_ORZ_CD   = #{oprtOrzCd   }                       
+			     , OPRT_IP_ADR   = #{oprtIpAdr   }                       
+			     , OPRT_DTTM     = SYSDATE                               
+			 WHERE SAL_MT_NO     = #{salMtNo     }    /* 인장관리번호  */
+			    
+	</update>	
+	
+	<update id="updateGA01N501ByWTDW" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+
+		/* GASR1000U0.updateGA01N501ByWTDW = 인장조제관리 수정 - 회수  */	
+			UPDATE GA01N501	-- 인장조제관리                              
+			   SET WTDW_DT       = #{wtdwDt      }    /* 회수일자      */
+			     , SAL_WTDW_RSN_CN   = #{salWtdwRsnCn}    /* 회수사유내용  */
+			     , SEAL_SCD      = #{sealScd     }    /* 인장상태코드 */
+			                                                             
+			     , OPTR_ID       = #{optrId      }                       
+			     , OPRT_CHNL_CD  = #{oprtChnlCd  }                       
+			     , OPRT_ORZ_CD   = #{oprtOrzCd   }                       
+			     , OPRT_IP_ADR   = #{oprtIpAdr   }                       
+			     , OPRT_DTTM     = SYSDATE                               
+			 WHERE SAL_MT_NO     = #{salMtNo     }    /* 인장관리번호  */
+			    
+	</update>	
+	
+	<update id="updateGA01N501ByDSUS" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+
+		/* GASR1000U0.updateGA01N501ByDSUS = 인장조제관리 수정 - 폐기  */	
+			UPDATE GA01N501	-- 인장조제관리
+			   SET DSUS_DT         = #{dsusDt      }    /* 폐기일자      */  
+			     , SEAL_SCD        = #{sealScd     }    /* 인장상태코드 */
+			     
+			     , OPTR_ID       = #{optrId      }    
+			     , OPRT_CHNL_CD  = #{oprtChnlCd  }
+			     , OPRT_ORZ_CD   = #{oprtOrzCd   }
+			     , OPRT_IP_ADR   = #{oprtIpAdr   }
+			     , OPRT_DTTM     = SYSDATE
+			 WHERE SAL_MT_NO     = #{salMtNo     }    /* 인장관리번호  */
+
+	</update>				
+	
+	<update id="updateGA01N501ByCHNG" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+
+		/* GASR1000U0.updateGA01N501ByCHNG = 인장조제관리 수정 - (접수중)내용수정  */	
+			UPDATE GA01N501	-- 인장조제관리
+			   SET SEAL_SCD        = #{sealScd     }    /* 인장상태코드 */
+			     , CHNG_DT         = TO_CHAR(SYSDATE, 'YYYYMMDD')
+			     , SAL_CHNG_RSN_CN = #{salChngRsnCn}
+			     , OPTR_ID       = #{optrId      }    
+			     , OPRT_CHNL_CD  = #{oprtChnlCd  }
+			     , OPRT_ORZ_CD   = #{oprtOrzCd   }
+			     , OPRT_IP_ADR   = #{oprtIpAdr   }
+			     , OPRT_DTTM     = SYSDATE
+			 WHERE SAL_MT_NO     = #{salMtNo     }    /* 인장관리번호  */
+	</update>	
+				
+	<update id="updateGA01N501ByUPD" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+
+		/* GASR1000U0.updateGA01N501ByUPD = 인장조제관리 수정 - (사용중)내용수정  */	
+			UPDATE GA01N501	-- 인장조제관리
+			   SET SAL_NM          = #{salNm       }    /* 인장명       */
+			     , SAL_DL_NM       = #{salDlNm     }    /* 인장상세명   */
+			     , FILE_NO         = #{fileNo      }    /* 파일번호     */
+			     , SEAL_SCD        = #{sealScd     }    /* 인장상태코드 */
+			     , MAKG_DT         = #{makgDt      }    /* 제작일자      */
+			     , SAL_MAKG_RSN_CN = #{salMakgRsnCn}    /* 제작사유내용  */
+			     , SAL_MEMO_CN     = #{salMemoCn   }  
+			     , CHNG_DT         = TO_CHAR(SYSDATE, 'YYYYMMDD')
+			     , SAL_CHNG_RSN_CN = #{salChngRsnCn}
+			     , OPTR_ID         = #{optrId      }    
+			     , OPRT_CHNL_CD    = #{oprtChnlCd  }
+			     , OPRT_ORZ_CD     = #{oprtOrzCd   }
+			     , OPRT_IP_ADR     = #{oprtIpAdr   }
+			     , OPRT_DTTM       = SYSDATE
+			 WHERE SAL_MT_NO       = #{salMtNo     }    /* 인장관리번호  */
+ 
+	</update>	
+	
+	<update id="updateGA01N501Aprv" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+		<selectKey keyProperty="salMtNo" resultType="java.lang.String" order="BEFORE">
+			SELECT SAL_MT_NO
+              FROM GA01N503
+             WHERE RCT_NO = #{rctNo}
+		</selectKey>
+		
+		/* GASR1000U0.updateGA01N501Aprv : 인장조제 승인상태변경처리 - 승인*/
+		UPDATE GA01N501
+		   SET SEAL_SCD      = (SELECT CASE WHEN SEAL_SCD = '05' THEN '10'
+		                                    WHEN SEAL_SCD = '10' THEN '15'
+		                                    WHEN SEAL_SCD = '15' THEN '10'
+		                                    WHEN SEAL_SCD = '25' THEN '30'
+		                                    WHEN SEAL_SCD = '35' THEN '40'
+		                               ELSE '02' END AS SEAL_SCD       
+		                          FROM GA01N501
+		                         WHERE SAL_MT_NO = #{salMtNo} 
+		                        ) /* 인장상태코드 */    
+		     , OPTR_ID       = #{optrId      }    
+			 , OPRT_CHNL_CD  = #{oprtChnlCd  }
+			 , OPRT_ORZ_CD   = #{oprtOrzCd   }
+			 , OPRT_IP_ADR   = #{oprtIpAdr   }
+			 , OPRT_DTTM     = SYSDATE
+		 WHERE SAL_MT_NO     = #{salMtNo     }    /* 인장관리번호  */	 
+	</update>
+		
+	<update id="updateGA01N509Aprv" parameterType="com.miraeasset.biz.common.meta.vo.GA01N503VO" >
+		<selectKey keyProperty="salMtNo" resultType="java.lang.String" order="BEFORE">
+			SELECT SAL_MT_NO
+              FROM GA01N503
+             WHERE RCT_NO = #{rctNo}
+		</selectKey>
+		
+		/* GASR1000U0.updateGA01N509Aprv : 인장조제 승인 - 기안문수정(내용변경에서 사용중))*/
+		UPDATE GA01N509
+		  SET DRFT_DOC_NO = (SELECT DRFT_DOC_NO
+							  FROM GA01N509
+						   WHERE UNIF_RQS_TCD = '060103' /*내용수정*/
+						     AND SAL_MT_NO = #{salMtNo} 
+						     AND ROWNUM = 1
+		  					)
+		  	 , OPTR_ID       = #{optrId      }    
+			 , OPRT_CHNL_CD  = #{oprtChnlCd  }
+			 , OPRT_ORZ_CD   = #{oprtOrzCd   }
+			 , OPRT_IP_ADR   = #{oprtIpAdr   }
+			 , OPRT_DTTM     = SYSDATE
+	     WHERE SAL_MT_NO = #{salMtNo     }    /* 인장관리번호  */	
+		   AND UNIF_RQS_TCD = '060102'  /* 사용중 */	
+		   AND EXISTS (SELECT DRFT_DOC_NO
+					     FROM GA01N509
+					    WHERE UNIF_RQS_TCD = '060103' /*내용수정*/
+						  AND SAL_MT_NO = #{salMtNo} 
+						  AND ROWNUM = 1
+		  			    )
+	</update>
+	
+	<update id="updateGA01N501SealScd" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" >
+		/* GASR1000U0.updateGA01N501SealScd : 인장조제 승인상태변경처리 - 반려*/
+		UPDATE GA01N501
+		   SET SEAL_SCD      = (CASE WHEN #{sealScd} = '05' THEN '02' /* 인장상태코드 */  
+		                             WHEN #{sealScd} = '15' THEN '10'
+		                             WHEN #{sealScd} = '25' THEN '10'
+		                             WHEN #{sealScd} = '35' THEN '30'
+		                        ELSE '02' END)
+			 <if test='sealScd=="05"'> , MAKG_DT=NULL ,SAL_MAKG_RSN_CN=NULL ,SAL_MEMO_CN=NULL </if>
+			 <if test='sealScd=="15"'> , SAL_CHNG_RSN_CN=NULL </if>
+			 <if test='sealScd=="25"'> , WTDW_DT=NULL ,SAL_WTDW_RSN_CN=NULL </if>
+			 <if test='sealScd=="35"'> , DSUS_DT=NULL </if>
+			 , OPTR_ID       = #{optrId      }    
+			 , OPRT_CHNL_CD  = #{oprtChnlCd  }
+			 , OPRT_ORZ_CD   = #{oprtOrzCd   }
+			 , OPRT_IP_ADR   = #{oprtIpAdr   }
+			 , OPRT_DTTM     = SYSDATE
+		 WHERE SAL_MT_NO     = #{salMtNo     }    /* 인장관리번호  */	 
+	</update>
+
+	<update id="deleteGA01N509" parameterType="com.miraeasset.biz.common.meta.vo.GA01N509VO" >
+		/* GASR1000U0.deleteGA01N509 : 인장조제_인장조제별기안문서 삭제 - 반려시사용*/
+		DELETE 
+		FROM GA01N509 
+		WHERE SAL_MT_NO = #{salMtNo} 
+		  AND UNIF_RQS_TCD = #{unifRqsTcd}
+	</update>
+	
+	<update id="updateGA09N411UseYn" parameterType="com.miraeasset.biz.common.meta.vo.GA01N503VO" >
+	    /* GASR1000U0.updateGA09N411UseYn : 인장이미지 롤백처리*/
+	    BEGIN
+		   UPDATE GA09N411
+			  SET USE_YN = '0'  
+			WHERE FILE_NO = (SELECT FILE_NO 
+			                   FROM GA01N501
+			                  WHERE SAL_MT_NO = #{salMtNo}   /* 인장관리번호 */
+			                  )
+			  AND FILE_DL_NO  = '1'
+			  AND USE_YN = '1'
+		  ;  
+		  
+		   UPDATE GA09N411
+			  SET USE_YN = '1'  
+			WHERE FILE_NO = ( SELECT FILE_NO
+					            FROM GA01H502 
+					           WHERE SAL_MT_NO = #{salMtNo}   /* 인장관리번호  */	
+					             AND HST_SEQ = (SELECT MAX(HST_SEQ) 
+					                            FROM GA01H502 
+					                           WHERE SAL_MT_NO= #{salMtNo}   /* 인장관리번호  */	
+					                           GROUP BY SAL_MT_NO
+					                          )
+					           AND ROWNUM=1
+			                  )
+			  AND FILE_DL_NO  = '1'
+			  AND USE_YN = '0'
+		  ;  
+       END;  
+	</update>
+		
+	<update id="updateGA01N501Rtrn" parameterType="com.miraeasset.biz.common.meta.vo.GA01N503VO" >
+	    /* GASR1000U0.updateGA01N501Rtrn : 인장조제관리 데이터 롤백처리*/	
+        UPDATE GA01N501
+		   SET (
+		        SAL_NM, SAL_DL_NM, FILE_NO, MAKG_DT, SAL_MAKG_RSN_CN, SAL_MEMO_CN
+		       ) 
+		       = 
+		       (
+		        SELECT SAL_NM, SAL_DL_NM, FILE_NO, MAKG_DT, SAL_MAKG_RSN_CN, SAL_MEMO_CN
+		          FROM GA01H502 
+		         WHERE SAL_MT_NO = #{salMtNo}   /* 인장관리번호  */	
+		           AND HST_SEQ = (SELECT MAX(HST_SEQ) 
+		                            FROM GA01H502 
+		                           WHERE SAL_MT_NO= #{salMtNo}   /* 인장관리번호  */	
+		                           GROUP BY SAL_MT_NO
+		                          )
+		           AND ROWNUM=1
+		      )
+		 WHERE SAL_MT_NO = #{salMtNo}   /* 인장관리번호  */	
+	</update>
+	
+	
+    <select id="selectGA01N501Scd" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N501VO">
+		/* GASR1000U0.selectGA01N501Scd : 인장상태 조회*/
+		SELECT SAL_MT_NO, SEAL_SCD
+		 FROM GA01N501
+		WHERE SAL_MT_NO = (SELECT SAL_MT_NO
+			                 FROM GA01N503
+			                WHERE RCT_NO = #{rctNo}   /* 접수번호 */	
+			               ) 
+	</select>	
+	
+	<select id="selectGA01N501Aprv" parameterType="com.miraeasset.biz.common.meta.vo.GA01N501VO" resultType="com.miraeasset.biz.common.meta.vo.GA01N501VO">
+		/* GASR1000U0.selectGA01N501Aprv = 인장조제관리 상세조회 - 승인관리 */
+							
+				SELECT T1.SAL_MT_NO                          /*인감관리번호     */
+				     , T1.HOBR_TCD                           /*본지점구분코드   */
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'HOBR_TCD' AND CMN_CD_VL = TRIM(T1.HOBR_TCD) AND ROWNUM = 1 ) AS HOBR_TCD_NM     
+				     , T1.SAL_TCD                           /*인장구분코드     */
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_TCD' AND CMN_CD_VL = TRIM(T1.SAL_TCD) AND ROWNUM = 1 ) AS SAL_TCD_NM     
+				     , T1.SAL_PCD                           /*인장유형코드     */
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SAL_PCD' AND CMN_CD_VL = TRIM(T1.SAL_PCD) AND ROWNUM = 1 ) AS SAL_PCD_NM     
+				     , T1.SAL_NM                             /*인감명          */
+				     , T1.SAL_DL_NM                          /*인감상세명       */
+				     , T1.FILE_NO                             /*파일번호        */
+				     , T1.MT_ORZ_CD                           /*관리조직코드     */
+				     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.MT_ORZ_CD AND ROWNUM = 1 ) AS MT_ORZ_NM         
+				     , T1.MT_EPNO                             /*관리사원번호      */
+				     , ( SELECT EP_NM FROM CB01N310 WHERE EPNO = T1.MT_EPNO AND ROWNUM = 1 ) AS MT_EP_NM    
+				     , T1.RCT_DT                              /*접수일자         */
+				     , T1.MAKG_DT                             /*제작일자         */
+				     , T1.SAL_MAKG_RSN_CN                     /*제작사유내용      */
+				     , T1.WTDW_DT                             /*회수일자         */
+				     , T1.SAL_WTDW_RSN_CN                     /*회수사유내용      */
+				     , T1.DSUS_DT                             /*폐기일자         */
+				     , T1.CHNG_DT                             /*변경일자         */
+				     , T1.SAL_CHNG_RSN_CN                     /*변경사유내용      */
+				     , T1.SEAL_SCD                            /*인감상태코드      */
+				     , T1.SAL_MEMO_CN                         /*인장메모내용*/
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'SEAL_SCD' AND CMN_CD_VL = TRIM(T1.SEAL_SCD) AND ROWNUM = 1 ) AS SEAL_SCD_NM     
+                     , T5.RCT_DRFT_DOC_NO   /*접수기안문 */     
+					 , (CASE WHEN T1.SEAL_SCD='15' THEN T5.CHNG_DRFT_DOC_NO ELSE T5.REG_DRFT_DOC_NO END) AS REG_DRFT_DOC_NO  /*제작기안문 */
+					 , T5.WTDW_DRFT_DOC_NO   /*회수기안문 */
+					 , T5.DSUS_DRFT_DOC_NO   /*폐기기안문 */
+                     , T5.RCT_DRFT_DOC_TTL_NM   /*접수기안문 */  
+                     , (CASE WHEN T1.SEAL_SCD='15' THEN T5.CHNG_DRFT_DOC_TTL_NM ELSE T5.REG_DRFT_DOC_TTL_NM END) AS REG_DRFT_DOC_TTL_NM  /*제작기안문 */     
+                     , T5.WTDW_DRFT_DOC_TTL_NM   /*회수기안문 */  
+                     , T5.DSUS_DRFT_DOC_TTL_NM   /*폐기기안문 */     
+			         , '06' AS APRV_PCD   /*06.인장조제*/
+                     , T6.UNIF_RQS_RSN_CN AS RQS_RSN_CN  
+                     , T6.RCT_NO 
+                     , T6.APRV_WRRPT_MT_NO
+				  FROM GA01N501	T1 -- 인감조제관리  
+                  LEFT OUTER JOIN ( 
+                      SELECT SAL_MT_NO
+                           , RCT_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.RCT_DRFT_DOC_NO AND ROWNUM = 1) AS RCT_DRFT_DOC_TTL_NM   /*접수기안문 */   
+                           , REG_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.REG_DRFT_DOC_NO AND ROWNUM = 1) AS REG_DRFT_DOC_TTL_NM   /*제작기안문 */ 
+                           , WTDW_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.CHNG_DRFT_DOC_NO AND ROWNUM = 1) AS CHNG_DRFT_DOC_TTL_NM   /*변경기안문 */ 
+                           , CHNG_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.WTDW_DRFT_DOC_NO AND ROWNUM = 1) AS WTDW_DRFT_DOC_TTL_NM   /*회수기안문 */ 
+                           , DSUS_DRFT_DOC_NO
+                           , (SELECT T3.DRFT_DOC_TTL_NM FROM AT09N401 T3 WHERE T3.DRFT_DOC_NO=T4.DSUS_DRFT_DOC_NO AND ROWNUM = 1) AS DSUS_DRFT_DOC_TTL_NM   /*폐기기안문 */    
+                       FROM (
+                        SELECT T2.SAL_MT_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060101' THEN DRFT_DOC_NO ELSE NULL END) AS RCT_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060102' THEN DRFT_DOC_NO ELSE NULL END) AS REG_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060103' THEN DRFT_DOC_NO ELSE NULL END) AS CHNG_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060104' THEN DRFT_DOC_NO ELSE NULL END) AS WTDW_DRFT_DOC_NO
+                             , MAX(CASE WHEN T2.UNIF_RQS_TCD ='060105' THEN DRFT_DOC_NO ELSE NULL END) AS DSUS_DRFT_DOC_NO
+                         FROM GA01N509 T2
+                        WHERE T2.SAL_MT_NO = (SELECT SAL_MT_NO
+											    FROM GA01N503
+										       WHERE RCT_NO = #{rctNo}   /* 접수번호 */		
+			                        		 )
+                        GROUP BY T2.SAL_MT_NO
+                            ) T4
+                    ) T5 ON T1.SAL_MT_NO = T5.SAL_MT_NO 
+                 LEFT OUTER JOIN GA01N101 T6 ON T6.RCT_NO = #{rctNo}    /* 접수번호 */	 
+				 WHERE 1=1
+				   AND T1.SAL_MT_NO  = (SELECT SAL_MT_NO
+										  FROM GA01N503
+										 WHERE RCT_NO = #{rctNo}    /* 접수번호 */	
+			                        	)
+	</select>		
+	
+	
+	<select id="selectGA01N501MaxNo"  resultType="com.miraeasset.biz.common.meta.vo.GA01N501VO">
+		/* GASR1000U0.selectGA01N501MaxNo = 인장조제관리 MAX번호 조회 */
+	 	SELECT SAL_PCD||SAL_TCD AS SAL_PCD, MAX(SAL_MT_NO) AS SAL_MT_NO
+		  FROM GA01N501
+		GROUP BY SAL_PCD , SAL_TCD
+	</select>
+	
+	<update id="updateCmnByGA01N501" parameterType="java.util.HashMap">
+		/* GASR1000U0.updateCmnByGA01N501 = 인장관리번호 공통TABLE 수정 */
+		BEGIN
+		<foreach collection="list" item="item" open="" close=";" separator=";">
+			UPDATE GA09C302
+			   SET CD_DESC      = #{item.salMtNo}
+			     , OPTR_ID      = #{item.optrId      } 
+			     , OPRT_CHNL_CD = #{item.oprtChnlCd  }
+			     , OPRT_ORZ_CD  = #{item.oprtOrzCd   }
+			     , OPRT_IP_ADR  = #{item.oprtIpAdr   }
+			     , OPRT_DTTM    = SYSDATE
+		     WHERE CD_KND_NO='SAL_MT_NO'
+		       AND CMN_CD_VL = #{item.salPcd}
+		</foreach>
+		END;
+	</update>
+	
+</mapper>

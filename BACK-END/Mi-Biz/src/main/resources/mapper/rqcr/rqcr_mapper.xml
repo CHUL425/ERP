@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rqcr_mapper">
+	
+	<select id="selectList" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U0In00VO" resultType="com.miraeasset.biz.rq.cr.vo.RQCR1000U0Out00VO">
+		/* RQCR1000U0.selectList : 공사신청 목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+				SELECT ROW_NUMBER() OVER(ORDER BY A.RQS_DT DESC, A.RCT_NO DESC) AS RNUM     
+				     , COUNT(1) OVER()                                    AS AL_CNT         /* 전체건수 */     
+				     , A.RCT_NO                                           AS RCT_NO         /* 접수번호 */
+				     , A.UNIF_RQS_PCD                                     AS UNIF_RQS_PCD        /* 신청유형코드 = 10.공사 */
+				     , E.CMN_CD_VL_DEF_CN                                 AS UNIF_RQS_PCD_NM     /* 신청유형명 */
+				     , A.UNIF_RQS_DL_PCD                                  AS UNIF_RQS_DL_PCD     /* 신청상세유형코드 = 구분 */
+				     , F.CMN_CD_VL_DEF_CN                                 AS UNIF_RQS_DL_PCD_NM  /* 신청상세유형명 */
+				     , A.UNIF_RQS_TCD                                     AS UNIF_RQS_TCD        /* 신청구분코드 = 유형 */
+				     , G.CMN_CD_VL_DEF_CN                                 AS UNIF_RQS_TCD_NM     /* 신청구분명 */
+				     , A.RQS_TTL_NM                                       AS RQS_TTL_NM     /* 신청제목명 */ 
+				     , A.UNIF_RQS_RSN_CN                                  AS RQS_RSN_CN     /* 신청사유내용 */
+				     , B.PBCO_LOC_NM                                      AS PBCO_LOC_NM    /* 공사위치명 */
+				     , B.PBCO_DL_LOC_NM                                   AS PBCO_DL_LOC_NM /* 공사상세위치명 */ 
+				     , A.HOPE_DT                                          AS HOPE_DT        /* 희망일자 */   
+				     , A.RQS_ORZ_CD                                       AS RQS_ORZ_CD     /* 신청부서코드 */
+				     , C.ORZ_NM                                           AS RQS_ORZ_NM /* 신청부서명 */
+				     , A.RQS_EPNO                                         AS RQS_EPNO       /* 신청자번호 */ 
+				     , D.EP_NM                                            AS RQS_EP_NM      /* 신청자명 */
+				     ,    CASE WHEN TRIM(D.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(D.HNDP_BZPR_TLNO) || ') ' END
+				       || CASE WHEN TRIM(D.HNDP_MTNO)      IS NOT NULL THEN TRIM(D.HNDP_MTNO)                     END
+				       || CASE WHEN TRIM(D.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(D.HNDP_ITNO)              END
+				       AS RQS_EP_HNDP_TLNO /* 신청자 휴대폰전화번호 */			         
+				     , A.RQS_DT                                           AS RQS_DT         /* 신청일자 */
+				     , A.CMPN_DT                                          AS CMPN_DT        /* 완료일자 */
+				     , A.APRV_WRRPT_MT_NO                                 AS APRV_WRRPT_MT_NO  /* 결재상신관리번호 */
+				     , A.APRV_WRRPT_ORZ_CD                                AS APRV_WRRPT_ORZ_CD /* 결재상신조직코드 */
+				     , A.RQS_SCD                                          AS RQS_SCD        /* 신청상태코드 */
+				     , H.CMN_CD_VL_DEF_CN                                 AS RQS_SCD_NM     /* 신청상태명 */  
+				  FROM GA01N101 A -- 임대신청
+				     , GA01N103 B -- 공사신청
+				     , CB01N210 C -- 조직
+				     , CB01N310 D -- 직원
+				     , GA09C302 E -- 공통코드값(신청유형)
+				     , GA09C302 F -- 공통코드값(구분)
+				     , GA09C302 G -- 공통코드값(유형)
+				     , GA09C302 H -- 공통코드값(상태)
+				 WHERE 1=1
+				   AND A.RCT_NO     = B.RCT_NO
+				   AND A.RQS_ORZ_CD = C.ORZ_CD
+				   AND A.RQS_EPNO   = D.EPNO(+)
+				   AND A.UNIF_RQS_PCD    = E.CMN_CD_VL  /* 신청유형 */
+				   AND A.UNIF_RQS_PCD    = '01' /* 01. 공사 */
+				   AND E.CD_KND_NO  = 'UNIF_RQS_PCD'
+				   AND A.UNIF_RQS_DL_PCD = F.CMN_CD_VL  /* 구분 */
+				   AND F.CD_KND_NO  = 'UNIF_RQS_DL_PCD'
+				   AND A.UNIF_RQS_TCD    = G.CMN_CD_VL  /* 유형 */
+				   AND G.CD_KND_NO  = 'UNIF_RQS_TCD'
+				   AND A.RQS_SCD    = H.CMN_CD_VL(+)  /* 상태 */
+				   AND 'RQS_SCD'    = H.CD_KND_NO(+) 
+				   AND A.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 신청일자 */
+				   AND A.RCT_NO      LIKE '%' || TRIM( NVL(#{rctNo},' ') )     || '%' /* 신청번호 */
+				   /* 신청구분코드(분류 전체(default) /인테리어(유지보수) / 조명/전등 / 냉난방기구류 / 간판류(사인물) / 전자제품류 / 가구류 / 기타) */
+				   AND A.UNIF_RQS_DL_PCD  LIKE '%' || TRIM( NVL(#{unifRqsDlPcd},' ') )  || '%'
+				   AND A.UNIF_RQS_TCD     LIKE '%' || TRIM( NVL(#{unifRqsTcd},' ') )    || '%' /* 신청구분코드(신규/AS/철거/기타) */
+				   <if test='rqsScd != null and rqsScd != ""'>
+				    /* 신청상태 */
+					AND A.RQS_SCD IN
+						<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+						#{itm}
+						</foreach>
+					</if>				   
+				   AND (    (A.RQS_ORZ_CD  LIKE '%' || TRIM( NVL(#{rqsOrzNm},' ') )  || '%' /* 신청조직코드 */)
+				         OR (C.ORZ_NM      LIKE '%' || TRIM( NVL(#{rqsOrzNm},' ') )  || '%' /* 신청조직명 */)
+				        ) 
+				   AND (    (A.RQS_EPNO    LIKE '%' || TRIM( NVL(#{rqsEpNm},' ') )   || '%' /* 신청사번 */)
+				         OR (D.EP_NM       LIKE '%' || TRIM( NVL(#{rqsEpNm},' ') )   || '%' /* 신청자명 */)
+				        )                  
+				   AND NVL(A.RQS_TTL_NM,' ')  LIKE '%' || TRIM( NVL(#{rqsTtlNm},' ') )    || '%' /* 신청제목명-신청명 */     
+				 ORDER BY A.RQS_DT DESC, A.RCT_NO DESC
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>
+	
+	<select id="selectRqsStat" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U0In01VO" resultType="Map">
+		/* RQCR1000U0.selectRqsStat : 공사신청 상태요약정보 */
+		SELECT MAX(RQS_SCD_00) AS "rqsScd00"
+		     , MAX(RQS_SCD_05) AS "rqsScd05"
+		     , MAX(RQS_SCD_10) AS "rqsScd10"
+		     , MAX(RQS_SCD_15) AS "rqsScd15"
+		     , MAX(RQS_SCD_30) AS "rqsScd30"
+		     , MAX(RQS_SCD_35) AS "rqsScd35"
+		     , MAX(RQS_SCD_99) AS "rqsScd99"
+		  FROM (
+		        SELECT CASE WHEN A.RQS_SCD = '00' THEN COUNT(1) 
+			                ELSE 0
+			             END RQS_SCD_00
+			         , CASE WHEN A.RQS_SCD = '05' THEN COUNT(1) 
+			                ELSE 0
+			            END RQS_SCD_05
+			         , CASE WHEN A.RQS_SCD = '10' THEN COUNT(1) 
+			                ELSE 0
+			            END RQS_SCD_10
+			         , CASE WHEN A.RQS_SCD = '15' THEN COUNT(1) 
+			                ELSE 0
+			            END RQS_SCD_15
+			         , CASE WHEN A.RQS_SCD = '30' THEN COUNT(1) 
+			                ELSE 0
+			            END RQS_SCD_30
+			         , CASE WHEN A.RQS_SCD = '35' THEN COUNT(1) 
+			                ELSE 0
+			            END RQS_SCD_35
+			         , CASE WHEN A.RQS_SCD = '99' THEN COUNT(1) 
+			                ELSE 0
+			            END RQS_SCD_99
+		          FROM GA01N101 A -- 임대신청
+		             , GA01N103 B -- 공사신청
+		             , CB01N210 C -- 조직
+		             , CB01N310 D -- 직원
+		         WHERE 1=1
+		           AND A.RCT_NO     = B.RCT_NO
+		           AND A.RQS_ORZ_CD = C.ORZ_CD 
+		           AND A.RQS_EPNO   = D.EPNO(+)
+		           AND A.UNIF_RQS_PCD    = '01' /* 01. 공사 */
+		           AND A.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 신청일자 */
+		           AND A.RCT_NO      LIKE '%' || TRIM( NVL(#{rctNo},' ') )     || '%' /* 신청번호 */
+		           /* 신청구분코드(분류 전체(default) /인테리어(유지보수) / 조명/전등 / 냉난방기구류 / 간판류(사인물) / 전자제품류 / 가구류 / 기타) */
+		           AND A.UNIF_RQS_DL_PCD  LIKE '%' || TRIM( NVL(#{unifRqsDlPcd},' ') )  || '%'
+		           AND A.UNIF_RQS_TCD     LIKE '%' || TRIM( NVL(#{unifRqsTcd},' ') )    || '%' /* 신청구분코드(신규/AS/철거/기타) */
+		           <if test='rqsScd != null and rqsScd != ""'>
+				    /* 신청상태 */
+					AND A.RQS_SCD IN
+						<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+						#{itm}
+						</foreach>
+					</if>
+		           
+		               
+		        
+		           AND (    (A.RQS_ORZ_CD  LIKE '%' || TRIM( NVL(#{rqsOrzNm},' ') )  || '%' /* 신청조직코드 */)
+		                 OR (C.ORZ_NM      LIKE '%' || TRIM( NVL(#{rqsOrzNm},' ') )  || '%' /* 신청조직명 */)
+		                ) 
+		           AND (    (A.RQS_EPNO    LIKE '%' || TRIM( NVL(#{rqsEpNm},' ') )   || '%' /* 신청사번 */)
+				         OR (D.EP_NM       LIKE '%' || TRIM( NVL(#{rqsEpNm},' ') )   || '%' /* 신청자명 */)
+				        )                  
+		           AND NVL(A.RQS_TTL_NM,' ')  LIKE '%' || TRIM( NVL(#{rqsTtlNm},' ') )    || '%' /* 신청제목명-신청명 */   
+		         GROUP BY A.RQS_SCD
+		        )
+	</select>
+	
+	<select id="selectDtlList" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U0In02VO" resultType="com.miraeasset.biz.rq.cr.vo.RQCR1000U0Out02VO">
+		/* RQCR1000U0.selectDtlList : 공사신청목록상세 조회 */
+		SELECT A.RCT_NO
+		     , A.RQS_SCD
+		     , (SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CMN_CD_VL = A.RQS_SCD AND CD_KND_NO = 'RQS_SCD' /* 상태 */) AS RQS_SCD_NM     /* 신청상태명 */
+		     , A.RQS_TTL_NM
+		     , B.PBCO_LOC_NM
+		     , B.PBCO_DL_LOC_NM
+		     , B.PBCO_ORZ_CD
+             , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = B.PBCO_ORZ_CD) AS PBCO_ORZ_CD_NM  /* 공사조직코드명 */
+		     , A.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+		     , B.FILE_NO
+		     , A.HOPE_DT
+		     , A.RQS_ORZ_CD
+		     , (SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = A.RQS_ORZ_CD) AS RQS_ORZ_NM /* 신청부서명 */
+		     , A.RQS_EPNO
+		     , C.EP_NM AS RQS_EP_NM      /* 신청자명 */
+		     , CASE WHEN TRIM(C.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(C.HNDP_BZPR_TLNO) || ') ' END
+			   || CASE WHEN TRIM(C.HNDP_MTNO)   IS NOT NULL THEN TRIM(C.HNDP_MTNO)                     END
+			   || CASE WHEN TRIM(C.HNDP_ITNO)   IS NOT NULL THEN '-' || TRIM(C.HNDP_ITNO)              END
+			   AS RQS_EP_HNDP_TLNO /* 신청자 휴대폰전화번호 */			          
+		     , A.RQS_DT AS RQS_DT
+		     , A.CMPN_DT
+		     , A.APRV_WRRPT_MT_NO
+		     , A.APRV_WRRPT_ORZ_CD
+		     
+		     , A.UNIF_RQS_PCD                                     AS UNIF_RQS_PCD        /* 신청유형코드 = 10.공사 */
+		     , E.CMN_CD_VL_DEF_CN                                 AS UNIF_RQS_PCD_NM     /* 신청유형명 */
+		     , A.UNIF_RQS_DL_PCD                                  AS UNIF_RQS_DL_PCD     /* 신청상세유형코드 = 구분 */
+		     , F.CMN_CD_VL_DEF_CN                                 AS UNIF_RQS_DL_PCD_NM  /* 신청상세유형명 */
+		     , A.UNIF_RQS_TCD                                     AS UNIF_RQS_TCD        /* 신청구분코드 = 유형 */
+		     , G.CMN_CD_VL_DEF_CN                                 AS UNIF_RQS_TCD_NM     /* 신청구분명 */
+		  FROM GA01N101 A -- 임대신청 
+		     , GA01N103 B -- 공사신청
+		     , CB01N310 C -- 직원
+		     , GA09C302 E -- 공통코드값(신청유형)
+			 , GA09C302 F -- 공통코드값(구분)
+		     , GA09C302 G -- 공통코드값(유형)
+		 WHERE 1=1
+		   AND A.RCT_NO = B.RCT_NO
+		   AND A.UNIF_RQS_PCD = '01' /* 01. 공사 */
+		   AND A.RQS_EPNO = C.EPNO(+)
+		   
+		   AND A.UNIF_RQS_PCD    = E.CMN_CD_VL  /* 신청유형 */
+		   AND E.CD_KND_NO       = 'UNIF_RQS_PCD'
+		   AND A.UNIF_RQS_DL_PCD = F.CMN_CD_VL  /* 구분 */
+		   AND F.CD_KND_NO       = 'UNIF_RQS_DL_PCD'
+		   AND A.UNIF_RQS_TCD    = G.CMN_CD_VL  /* 유형 */
+		   AND G.CD_KND_NO       = 'UNIF_RQS_TCD'
+		   
+		   AND A.RCT_NO = #{rctNo}
+		   AND ROWNUM  = 1
+	
+	</select>
+	
+	<insert id="insertRqcr" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U01VO">
+		/* RQCR1000U0.insertRqcr : 공사신청 등록/임시저장 */
+
+		INSERT INTO GA01N101 /* 신청관리 */
+			( RQS_DT             /* 신청일자 */
+			, RCT_NO             /* 접수번호 */
+			, UNIF_RQS_PCD            /* 신청유형코드 */
+			, UNIF_RQS_DL_PCD         /* 신청상세유형코드 */
+			, UNIF_RQS_TCD            /* 신청구분코드 */
+			, RQS_ORZ_CD         /* 신청조직코드 */
+			, RQS_EPNO           /* 신청사원번호 */
+			, RQS_TTL_NM         /* 신청제목명 */
+			, UNIF_RQS_RSN_CN    /* 신청사유내용 */
+			, HOPE_DT            /* 희망일자 */
+			, CMPN_DT            /* 완료일자 */
+			, RQS_SCD            /* 신청상태코드 */
+			, OPTR_ID            /* 조작자ID */
+			, OPRT_CHNL_CD       /* 조작채널코드 */
+			, OPRT_ORZ_CD        /* 조작조직코드 */
+			, OPRT_IP_ADR        /* 조작IP주소 */
+			, OPRT_DTTM          /* 조작일시 */
+		)
+		VALUES
+			( #{rqsDt       }     /* 신청일자 */
+			, #{rctNo       }     /* 접수번호 */
+			, #{unifRqsPcd      }     /* 신청유형코드 */
+			, #{unifRqsDlPcd    }     /* 신청상세유형코드 */
+			, #{unifRqsTcd      }     /* 신청구분코드 */
+			, #{rqsOrzCd    }     /* 신청조직코드 */
+			, #{rqsEpno     }     /* 신청사원번호 */
+			, #{rqsTtlNm    }     /* 신청제목명 */
+			, #{rqsRsnCn    }     /* 신청사유내용 */
+			, #{hopeDt      }     /* 희망일자 */
+			, #{cmpnDt      }     /* 완료일자 */
+			, #{rqsScd      }     /* 신청상태코드 */
+			, #{optrId      }     /* 조작자ID */
+			, #{oprtChnlCd  }     /* 조작채널코드 */
+			, #{oprtOrzCd   }     /* 조작조직코드 */
+			, #{oprtIpAdr   }     /* 조작IP주소 */
+			, SYSDATE             /* 조작일시 */
+		)
+	</insert>
+	
+	<insert id="insertRqcrDtl" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U02VO">
+		/* RQCR1000U0.insertRqcrDtl : 공사신청상세 등록/임시저장  */
+		INSERT INTO GA01N103 /* 공사신청 */
+		        ( RCT_NO         /* 접수번호 */
+		        , PBCO_ORZ_CD    /* 공사조직코드 */
+		        , PBCO_LOC_NM    /* 공사위치명 */
+		        , PBCO_DL_LOC_NM /* 공사상세위치명 */
+		        , FILE_NO        /* 파일번호 */
+		        , OPTR_ID        /* 조작자ID */
+		        , OPRT_CHNL_CD   /* 조작채널코드 */
+		        , OPRT_ORZ_CD    /* 조작조직코드 */
+		        , OPRT_IP_ADR    /* 조작IP주소 */
+		        , OPRT_DTTM      /* 조작일시 */ 
+		        )
+		        VALUES
+		        ( #{rctNo       } /* 접수번호 */
+		        , #{pbcoOrzCd   } /* 공사조직코드 */
+		        , #{pbcoLocNm   } /* 공사위치명 */
+		        , #{pbcoDlLocNm } /* 공사상세위치명 */
+		        , #{fileNo      } /* 파일번호 */
+		        , #{optrId      } /* 조작자ID */
+				, #{oprtChnlCd  } /* 조작채널코드 */
+				, #{oprtOrzCd   } /* 조작조직코드 */
+				, #{oprtIpAdr   } /* 조작IP주소 */
+				, SYSDATE         /* 조작일시 */ 
+		        )
+	</insert>
+	
+	<update id="updateRqcr" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U03VO" >
+		/* RQCR1000U0.updateRqcr : 공사신청 임시저장 -> 신청 */
+
+		UPDATE GA01N101 /* 신청관리 */
+		   SET UNIF_RQS_TCD          = #{unifRqsTcd       }
+		     , UNIF_RQS_PCD          = #{unifRqsPcd       }
+		     , UNIF_RQS_DL_PCD       = #{unifRqsDlPcd     }
+		     , RQS_ORZ_CD       = #{rqsOrzCd     }
+		     , RQS_EPNO         = #{rqsEpno      }
+		     , RQS_TTL_NM       = #{rqsTtlNm     }
+		     , UNIF_RQS_RSN_CN  = #{rqsRsnCn     }
+		     , HOPE_DT          = #{hopeDt       }
+		     , CMPN_DT          = #{cmpnDt       }
+		     , RQS_SCD          = #{rqsScd       }
+             , RQS_DT           = TO_CHAR(SYSDATE, 'YYYYMMDD')
+		     , OPTR_ID          = #{optrId       }
+		     , OPRT_CHNL_CD     = #{oprtChnlCd   }
+		     , OPRT_ORZ_CD      = #{oprtOrzCd    }
+		     , OPRT_IP_ADR      = #{oprtIpAdr    }
+		     , OPRT_DTTM        = SYSDATE      
+		 WHERE RCT_NO = #{rctNo}
+	</update>
+	
+	<update id="updateRqcrDtl" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U04VO" >
+	/* RQCR1000U0.updateRqcrDtl : 공사신청상세 임시저장 -> 신청 */
+	UPDATE GA01N103 /* 공사신청 */ 
+	   SET PBCO_ORZ_CD    = #{pbcoOrzCd   } /* 공사조직코드 */
+		 , PBCO_LOC_NM    = #{pbcoLocNm   } /* 공사위치명 */
+		 , PBCO_DL_LOC_NM = #{pbcoDlLocNm } /* 공사상세위치명 */
+		 , FILE_NO        = #{fileNo      } /* 파일번호 */
+		 , OPTR_ID        = #{optrId      } /* 조작자ID */
+		 , OPRT_CHNL_CD   = #{oprtChnlCd  } /* 조작채널코드 */
+		 , OPRT_ORZ_CD    = #{oprtOrzCd   } /* 조작조직코드 */
+		 , OPRT_IP_ADR    = #{oprtIpAdr   } /* 조작IP주소 */
+		 , OPRT_DTTM      = SYSDATE         /* 조작일시 */ 
+	 WHERE 1=1
+	   AND RCT_NO = #{rctNo}
+	</update>
+	
+	<delete id="deleteRqcr" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U05VO" >
+		/* RQCR1000U0.deleteRqcr : 공사신청 임시저장인경우 -> 삭제 */
+		DELETE FROM GA01N101 /* 신청관리 */
+		 WHERE 1=1
+		   AND RCT_NO = #{rctNo}
+	</delete>
+	
+	<delete id="deleteRqcrDtl" parameterType="com.miraeasset.biz.rq.cr.vo.RQCR1000U05VO" >
+		/* RQCR1000U0.deleteRqcrDtl : 공사신청상세 임시저장인경우 -> 삭제 */
+		DELETE FROM GA01N103 /* 공사신청 */
+		 WHERE 1=1
+		   AND RCT_NO = #{rctNo}
+	</delete>
+	
+	<select id="insertGA01N103ReApplyByRctNo" parameterType="Map">
+		/* RQCR1000U0.insertGA01N103ReApplyByRctNo : 공사신청 반려 건 자동 재신청 */
+		BEGIN
+			INSERT INTO GA01N101
+			(
+				RCT_NO, RQS_SCD, RQS_DT, UNIF_RQS_PCD, UNIF_RQS_DL_PCD, UNIF_RQS_TCD, RQS_ORZ_CD, RQS_EPNO, RQS_TTL_NM, UNIF_RQS_RSN_CN, HOPE_DT, CMPN_DT, APRV_WRRPT_MT_NO, APRV_WRRPT_ORZ_CD,
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				#{rctNo} AS RCT_NO
+			,	'00' AS RQS_SCD
+			,	TO_CHAR(SYSDATE,'YYYYMMDD') AS RQS_DT
+			,	UNIF_RQS_PCD
+			,	UNIF_RQS_DL_PCD
+			,	UNIF_RQS_TCD
+			,	RQS_ORZ_CD
+			,	RQS_EPNO
+			,	RQS_TTL_NM
+			,	UNIF_RQS_RSN_CN
+			,	HOPE_DT
+			,	NULL AS CMPN_DT
+			,	NULL AS APRV_WRRPT_MT_NO
+			,	NULL AS APRV_WRRPT_ORZ_CD
+
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N101
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+
+
+			INSERT INTO GA01N103
+			(
+				RCT_NO, PBCO_ORZ_CD, PBCO_LOC_NM, PBCO_DL_LOC_NM, FILE_NO, 
+				OPTR_ID, OPRT_CHNL_CD, OPRT_ORZ_CD, OPRT_IP_ADR, OPRT_DTTM
+			)
+			SELECT
+				#{rctNo} AS RCT_NO
+			,	PBCO_ORZ_CD
+			,	PBCO_LOC_NM
+            ,   PBCO_DL_LOC_NM 
+			,   FILE_NO 
+            
+			,	#{optrId      }
+			,	#{oprtChnlCd  }
+			,	#{oprtOrzCd   }
+			,	#{oprtIpAdr   }
+			,	SYSDATE
+			FROM
+				GA01N103
+			WHERE
+				RCT_NO = #{prevRctNo}
+			;
+
+		END
+		;
+	</select>
+		
+</mapper>

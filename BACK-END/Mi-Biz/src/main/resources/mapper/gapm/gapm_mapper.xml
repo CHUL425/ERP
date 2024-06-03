@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gapm_mapper">
+	
+	<select id="selectListGA01N203" parameterType="com.miraeasset.biz.ga.pm.vo.GAPM1000U0In00VO" resultType="com.miraeasset.biz.ga.pm.vo.GAPM1000U0Out00VO">
+		/* GAPM1000U0.selectListGA01N203 = 정기주차권관리 목록조회 */
+			SELECT * FROM (
+			SELECT * FROM (					
+				SELECT ROW_NUMBER() OVER(ORDER BY T1.VHC_NO, ROWNUM DESC) AS RNUM     
+				     , COUNT(1) OVER()  AS AL_CNT                               /* 전체건수      */     
+				     , CASE WHEN T4.BLD_TCD IS NULL THEN ' '
+                            ELSE ( SELECT CMN_CD_VL_NM FROM CB03C111 WHERE CMN_CD = 'BLD_TCD' AND CMN_CD_VL = T4.BLD_TCD AND ROWNUM = 1 ) || ' ' || T4.BLDFLR_NO || '층' 
+                        END AS BLD_NM
+				     , T1.VHC_NO
+				     , T1.CHF_TCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CHF_TCD' AND CMN_CD_VL = T1.CHF_TCD AND ROWNUM = 1 ) AS CHF_TCD_NM    
+				     , T1.VHC_PCD
+				     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'VHC_PCD' AND CMN_CD_VL = T1.VHC_PCD AND ROWNUM = 1 ) AS VHC_PCD_NM    
+				     , T1.USER_EPNO
+				     , CASE WHEN T1.VHC_PCD = '01' THEN '업무용'
+				            ELSE T2.EP_NM 
+				        END AS USER_EP_NM
+				     , T1.USER_ORZ_CD
+				     , T3.ORZ_NM AS USER_ORZ_NM
+				     , ( SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO='HRM_008' AND HR_CMN_CD = T2.HR_PST_CD AND ROWNUM = 1) AS HR_PST_NM  
+				     , T1.NTE_CN
+				
+				  FROM GA01N203 T1 -- 정기주차관리
+				     , CB01N310 T2 -- 직원
+				     , CB01N210 T3 -- 조직
+				     , SA09N110 T4 -- 근무위치				     
+				 WHERE 1=1
+				   AND T2.EPNO   (+)= T1.USER_EPNO     
+				   AND T3.ORZ_CD (+)= T1.USER_ORZ_CD
+                   AND T4.ORZ_CD (+)= T1.USER_ORZ_CD				   
+				   AND NVL(T1.CHF_TCD     ,' ')   LIKE '%' || TRIM( NVL(#{chfTcd   },' ') )     || '%' /* 유무료구분코드 */		
+				   AND NVL(T1.USER_ORZ_CD ,' ')   LIKE '%' || TRIM( NVL(#{userOrzCd},' ') )     || '%' /* 사용자조직코드 */		
+				   AND NVL(T1.USER_EPNO   ,' ')   LIKE '%' || TRIM( NVL(#{userEpno },' ') )     || '%' /* 사용자사원번호 */		
+				   AND NVL(T1.VHC_NO      ,' ')   LIKE '%' || TRIM( NVL(#{vhcNo    },' ') )     || '%' /* 차량번호 */			
+				   
+				 ORDER BY T1.VHC_NO   
+
+			  -- 'PAGING START' = 'PAGEINDEX, PAGESIZE'
+
+		<if test='pageSize == null or pageSize == 0 '>
+			  ) Z 
+			  ) ZZ 		
+		</if>
+		<if test='pageSize > 0'>
+			  ) Z WHERE RNUM <![CDATA[ < ]]>= ( #{pageIndex} + #{pageSize} )
+			  ) ZZ WHERE RNUM > ( #{pageIndex})			 
+		</if>		  
+		  
+			  -- 'PAGING END' = 'PAGEINDEX, PAGESIZE' 	 	
+	</select>
+	
+	<select id="selectGA01N203PK" parameterType="com.miraeasset.biz.ga.pm.vo.GAPM1000U0In01VO" resultType="com.miraeasset.biz.ga.pm.vo.GAPM1000U0Out01VO">
+		/* GAPM1000U0.selectGA01N203PK = 업체관리 상세조회(PK) */
+		SELECT  T1.VHC_NO
+		      , CASE WHEN T4.BLD_TCD IS NULL THEN ' '
+		             ELSE ( SELECT CMN_CD_VL_NM FROM CB03C111 WHERE CMN_CD = 'BLD_TCD' AND CMN_CD_VL = T4.BLD_TCD AND ROWNUM = 1 ) || ' ' || T4.BLDFLR_NO || '층' 
+		         END AS BLD_NM
+		      , T1.CHF_TCD
+		      , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'CHF_TCD' AND CMN_CD_VL = T1.CHF_TCD AND ROWNUM = 1 ) AS CHF_TCD_NM  
+		      , T1.VHC_PCD
+		      , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'VHC_PCD' AND CMN_CD_VL = T1.VHC_PCD AND ROWNUM = 1 ) AS VHC_PCD_NM    
+		      , T1.USER_EPNO
+		      , CASE WHEN T1.VHC_PCD = '01' THEN '업무용'
+		             ELSE T2.EP_NM 
+		         END AS USER_EP_NM		      
+		      , T1.USER_ORZ_CD
+		      , ( SELECT CD_STD_NM FROM CB01C111 WHERE HR_CMN_CD_KND_NO='HRM_008' AND HR_CMN_CD = T2.HR_PST_CD AND ROWNUM = 1) AS HR_PST_NM  
+		      , T3.ORZ_NM AS USER_ORZ_NM
+		      , T1.NTE_CN
+		
+		   FROM GA01N203 T1 -- 정기주차관리
+		      , CB01N310 T2 -- 직원
+		      , CB01N210 T3 -- 조직
+		      , SA09N110 T4 -- 근무위치		      
+		   WHERE 1=1
+		    AND T2.EPNO   (+)= T1.USER_EPNO     
+		    AND T3.ORZ_CD (+)= T1.USER_ORZ_CD
+		    AND T4.ORZ_CD (+)= T1.USER_ORZ_CD		    
+		    AND T1.VHC_NO    = #{vhcNo    } /* 차량번호 */	 
+
+	</select>		
+	
+	<insert id="insertGA01N203" parameterType="com.miraeasset.biz.common.meta.vo.GA01N203VO" >
+		/* GAPM1000U0.insertGA01N203 = 정기주차권관리 신규등록 */	
+			INSERT INTO GA01N203 -- 정기주차권관리
+			(
+			  VHC_NO           /*차량번호      */
+			, CHF_TCD          /*유무료구분코드  */
+			, VHC_PCD          /*차량유형코드  */
+			, USER_EPNO        /*사용자사원번호*/
+			, USER_ORZ_CD      /*사용자조직코드*/
+			, NTE_CN           /*비고내용      */
+			, OPTR_ID          /*조작자ID      */
+			, OPRT_CHNL_CD     /*조작채널코드  */
+			, OPRT_ORZ_CD      /*조작조직코드  */
+			, OPRT_IP_ADR      /*조작IP주소    */
+			, OPRT_DTTM        /*조작일시      */
+			)
+			VALUES
+			(
+			  #{vhcNo      }   /*차량번호      */  
+			, #{chfTcd     }   /*유무료구분코드  */  
+			, #{vhcPcd     }   /*차량유형코드  */  
+			, #{userEpno   }   /*사용자사원번호*/  
+			, #{userOrzCd  }   /*사용자조직코드*/  
+			, #{nteCn      }   /*비고내용      */  
+			, #{optrId     }   /*조작자ID      */  
+			, #{oprtChnlCd }   /*조작채널코드  */  
+			, #{oprtOrzCd  }   /*조작조직코드  */  
+			, #{oprtIpAdr  }   /*조작IP주소    */  
+			, SYSDATE          /*조작일시      */  
+			)
+	</insert>	
+		
+	<update id="updateGA01N203" parameterType="com.miraeasset.biz.common.meta.vo.GA01N203VO" >
+
+		/* GAPM1000U0.updateGA01N203 = 정기주차권관리 수정(PK) */	
+			UPDATE GA01N203 -- 정기주차권관리 
+			   SET CHF_TCD        = #{chfTcd     }   /*유무료구분코드  */   
+			     , VHC_PCD        = #{vhcPcd     }   /*차량유형코드  */   
+			     , USER_EPNO      = #{userEpno   }   /*사용자사원번호*/   
+			     , USER_ORZ_CD    = #{userOrzCd  }   /*사용자조직코드*/   
+			     , NTE_CN         = #{nteCn      }   /*비고내용      */   
+			     , OPTR_ID        = #{optrId     }   /*조작자ID      */   
+			     , OPRT_CHNL_CD   = #{oprtChnlCd }   /*조작채널코드  */   
+			     , OPRT_ORZ_CD    = #{oprtOrzCd  }   /*조작조직코드  */   
+			     , OPRT_IP_ADR    = #{oprtIpAdr  }   /*조작IP주소    */   
+			     , OPRT_DTTM      = SYSDATE          /*조작일시      */   
+			 WHERE VHC_NO         = #{vhcNo      }   /*차량번호      */
+			    
+	</update>		
+	
+	<update id="deleteGA01N203" parameterType="com.miraeasset.biz.common.meta.vo.GA01N203VO" >
+
+		/* GAPM1000U0.deleteGA01N203 = 정기주차권관리 삭제 */	
+			DELETE GA01N203 -- 정기주차권관리 
+			 WHERE VHC_NO         = #{vhcNo      }   /*차량번호      */
+			    
+	</update>			
+		
+	<select id="selectParkCntInfo" resultType="com.miraeasset.biz.ga.pm.vo.GAPM1000U0Out11VO">
+		/* GAPM1000U0.selectParkCntInfo = 정기주차권관리 주차대수요약 */
+		
+			WITH T_PARK AS
+			(
+			SELECT T1.CD_DESC AS FREE_PARK_CNT
+			     , T2.CD_DESC AS PAID_PARK_CNT
+			     , TO_NUMBER(NVL(T1.CD_DESC,0)) + TO_NUMBER(NVL(T2.CD_DESC,0)) AS ALL_PARK_CNT
+			  FROM GA09C302	T1 -- 공통코드값 무료
+			     , GA09C302	T2 -- 공통코드값 유료	
+			 WHERE T1.CD_KND_NO = 'TOT_PARK_CNT'
+			   AND T1.CMN_CD_VL = '01'
+			   AND T2.CD_KND_NO = T1.CD_KND_NO
+			   AND T2.CMN_CD_VL = '02'
+			)
+			, T_PSES AS
+			(
+			    SELECT NVL(MAX(FREE_PSES_CNT),0) AS FREE_PSES_CNT
+			        ,  NVL(MAX(PAID_PSES_CNT),0) AS PAID_PSES_CNT
+			    FROM(    
+			    SELECT CASE WHEN CHF_TCD = '01' THEN COUNT(1) 
+			                ELSE 0
+			            END AS FREE_PSES_CNT
+			         , CASE WHEN CHF_TCD = '02' THEN COUNT(1)
+			                ELSE 0
+			            END AS PAID_PSES_CNT        
+			         , CHF_TCD
+			      FROM GA01N203	T1 -- 정기주차관리
+			     GROUP BY CHF_TCD
+			    )
+			)
+			SELECT T1.FREE_PARK_CNT
+			     , T1.PAID_PARK_CNT
+			     , T1.ALL_PARK_CNT
+			     , T2.FREE_PSES_CNT
+			     , T2.PAID_PSES_CNT
+			     , TO_NUMBER(NVL(T2.FREE_PSES_CNT,0)) + TO_NUMBER(NVL(T2.PAID_PSES_CNT,0)) AS ALL_PSES_CNT
+			  FROM T_PARK T1
+			     , T_PSES T2			
+	</select>
+
+	<delete id="deleteAllGA01N203">
+		/* GAPM1000U0.deleteAllGA01N203 = 정기주차권관리 전체삭제 */
+		DELETE GA01N203
+	</delete>
+			
+</mapper>

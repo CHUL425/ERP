@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rqnr_mapper">
+
+	<select id="selectEpInfo" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0In00VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0Out00VO" >
+		/* RQNR1000U0.selectEpInfo = 사용자 정보 조회 */
+		<include refid="selectListGA01N101BySeal_With"/>
+		  SELECT EMP_NO       AS EPNO
+		       , EMP_NM       AS NL_NM
+		       , EMP_NM_ENG   AS ENG_NM
+		       , NMCRD_TCD 
+		       , NMCRD_TCD_NM
+		       , POS_CD       AS JRNK_CD
+		       , POS_NM       AS NL_JRNK_NM
+		       , POS_NM_ENG   AS ENG_JRNK_NM
+		       , DUTY_CD      AS OSDT_CD
+		       , DUTY_NM      AS NL_OSDT_NM
+		       , DUTY_NM_ENG  AS ENG_OSDT_NM
+		        ,ORG_CD       AS ORZ_CD
+		       , ORG_NM       AS ORZ_NM
+		       , ORG_NM_ENG   AS ENG_ORZ_NM
+		       , ZPCD 
+		       , ADR          AS WKP_ADR_ECP_VL
+		       , ENG_ADR      AS ENG_WKP_ADR_ECP_VL
+		       , EMP_OFC_TLNO 
+		       , FAX_NO       AS RV_FAX_TLNO
+		       , CELL_NO
+		       , EMAL_ADR 
+		       , DECODE(ORZ_CD, NULL, 'N', 'Y') AS WM_YN
+		       , ORG_UP1_CD     AS FILD_ORZ_CD
+		       , ORG_UP1_NM     AS FILD_ORZ_NM
+		       , ORG_UP1_NM_ENG AS ENG_FILD_ORZ_NM
+		   FROM (
+		    SELECT A.EPNO                       AS EMP_NO          /* 사원번호        */
+		         , A.EP_NM                      AS EMP_NM          /* 사원명          */
+		         , A.EP_ENG_NM                  AS EMP_NM_ENG      /* 사원명영문      */
+		         , LTRIM(A.EP_IDFY_TCD,'0')     AS NMCRD_TCD
+		         , H.CD_DESC                    AS NMCRD_TCD_NM
+		         , A.HR_PST_CD                  AS POS_CD          /* 직위코드        */
+		         , REPLACE(REPLACE(DECODE(HR_PST_CD,'81',(SELECT CD_STD_NM         /* 20210604. 정연호. 직위코드가 81기타일경우 인사코드 MBO_001로 변경 */
+		                                      FROM CB01C111 /* 인사공통코드 */
+		                                     WHERE HR_CMN_CD_KND_NO = 'MBO_001'
+		                                       AND HR_CMN_CD = A.HR_EP_TCD
+		                                   ), E.CMN_CD_VL_DEF_CN),CHR(10),''),CHR(13),'') AS POS_NM          /* 직위명          */
+		         , TRIM(E.CMN_CD_VL_ENG_NM)     AS POS_NM_ENG      /* 직위영문명      */
+		         , A.HR_OSDT_CD                 AS DUTY_CD         /* 직책코드        */
+		         , CASE WHEN B.ORZ_NM LIKE '투자센터%WM'                      THEN REPLACE(F.CMN_CD_VL_DEF_CN,'지점장','투자센터장') /* 투자센터이면 지점장  -> 투자센터장 */
+		                  WHEN B.ORZ_NM LIKE '%WM%팀' AND B.ORZ_CD LIKE 'W%' THEN REPLACE(F.CMN_CD_VL_DEF_CN,'WM팀장','팀장')        /* WM%팀이면    WM팀장  -> 팀장 */
+		                  WHEN B.ORZ_NM LIKE '%WM' AND B.ORZ_CD LIKE '2%'   THEN REPLACE(F.CMN_CD_VL_DEF_CN,'WM센터장','지점장')     /* %WM이면    WM센터장  -> 지점장 */
+		                  ELSE F.CMN_CD_VL_DEF_CN
+		           END                          AS DUTY_NM         /* 직책명         20191128 수정 */
+		         , TRIM(F.CMN_CD_VL_ENG_NM)     AS DUTY_NM_ENG     /* 직책영문명      */
+		         , B.ORZ_CD                     AS ORG_CD          /* 부점코드        */
+		         , CASE WHEN B.ORZ_NM LIKE '투자센터%WM'                                                 THEN REPLACE(B.ORZ_NM,'WM','')    /* 투자센터이면 WM제외 */
+		                  WHEN B.ORZ_NM LIKE '%WM%팀' AND B.ORZ_CD LIKE 'W%' AND C.ORZ_NM LIKE '%투자센터%' THEN REPLACE(C.ORZ_NM,'WM','')    /* 투자센터WM%팀이면    소속은 투자센터WM */
+		                  WHEN B.ORZ_NM LIKE '%WM%팀' AND B.ORZ_CD LIKE 'W%'                             THEN REPLACE(C.ORZ_NM,'(총괄)','')  /* WM%팀이면    소속은 상위 */
+		                  ELSE REPLACE(B.ORZ_NM,'(총괄)','')
+		           END                          AS ORG_NM          /* 부점명           */
+		         , B.ORZ_ENG_NM                 AS ORG_NM_ENG      /* 부점명영문       */
+		         , C.ORZ_CD                     AS ORG_UP1_CD      /* 부점상위1코드   */
+                 , REPLACE(C.ORZ_NM,'(총괄)','') AS ORG_UP1_NM      /* 부점상위1명     */
+                 , C.ORZ_ENG_NM                 AS ORG_UP1_NM_ENG  /* 부점상위1명영문 */
+		         
+		         , A.EMP_OFC_TLNO                    AS EMP_OFC_TLNO    /* 직통번호    */
+		         , G.FAX_RTN||G.FAX_MTNO||G.FAX_ITNO AS FAX_NO          /* 팩스번호    */
+		           , CASE WHEN A.HNDP_BZPR_TLNO IS NOT NULL AND A.HNDP_MTNO IS NOT NULL AND A.HNDP_ITNO IS NOT NULL
+		                  THEN A.HNDP_BZPR_TLNO||'-'||A.HNDP_MTNO||'-'||A.HNDP_ITNO
+		                  ELSE A.HNDP_BZPR_TLNO||A.HNDP_MTNO||A.HNDP_ITNO 
+		            END AS CELL_NO             /* 휴대폰번호      */
+		         , A.EMAL_ADR                  /* 이메일주소      */
+		         , G.ZPCD                      /* 우편번호        */
+		         , G.ADR                       /* 주소            */
+		         , G.ENG_ADR                  
+		         , I.ORZ_CD 
+		      FROM CB01N310 A /* 인사사원정보 */
+		         , CB01N210 B /* 인사부점정보 */
+		         , CB01N210 C /* 인사부점정보(상위부점용) */
+		         , CB01N210 D /* 인사부점정보(상위부점용) */
+		         , AT09C302 E /* 코드(직위용) */
+		         , AT09C302 F /* 코드(직책용) */
+		         , CB01N211 G /* 조직주소 */
+		         , GA09C302 H
+		         , TAB2 I
+		     WHERE A.BLNG_ORZ_CD   = B.ORZ_CD
+		       AND B.HRK_ORZ_CD    = C.ORZ_CD(+)
+		       AND C.HRK_ORZ_CD    = D.ORZ_CD(+)
+		       AND A.HR_PST_CD     = E.CMN_CD_VL(+)
+		       AND A.HR_OSDT_CD    = F.CMN_CD_VL(+)
+		       AND B.ORZ_CD        = G.ORZ_CD(+)
+		       AND E.CD_KND_NO(+)  = 'JRNK_TCD'       /* 직급코드 */
+		       AND F.CD_KND_NO(+)  = 'NL_OSDT_NM'   /* 직책코드 */
+		       AND H.CD_KND_NO(+)  = 'NMCRD_TCD' 
+		       AND H.CMN_CD_VL(+)  = LTRIM(A.EP_IDFY_TCD,'0')
+		       AND A.EPNO          = #{epno}
+		       AND A.BLNG_ORZ_CD   = I.ORZ_CD(+)
+		      )
+	</select>
+	
+	<sql id="selectListGA01N101BySeal_With">
+		WITH TAB1 AS (
+	        SELECT *
+	         FROM (
+	            SELECT ROWNUM AS RNUM
+	                , MAX(ROWNUM) OVER ()  AS MAXROW
+	                , COL_NM, COL_VAL
+	             FROM (
+	                    SELECT  HR_LEVL1_ORZ_CD
+	                          , HR_LEVL2_ORZ_CD
+	                          , HR_LEVL3_ORZ_CD 
+	                          , HR_LEVL4_ORZ_CD 
+	                          , HR_LEVL5_ORZ_CD
+	                          , HR_LEVL6_ORZ_CD
+	                          , HR_LEVL7_ORZ_CD
+	                          , HR_LEVL8_ORZ_CD
+	                          , HR_LEVL9_ORZ_CD
+	                    FROM INNOV2.CB01N112  
+	                    WHERE HR_NEW_ORZ_CD = (SELECT NVL(HR_ORZ_CD,HR_NEW_ORZ_CD) 
+	                                             FROM CB01N310 
+	                                            WHERE EPNO=(select ORZ_RPTV_EPNO from CB01N210 where ORZ_CD = '20110X')   /*WM영업부문 20110X*/
+	                                              AND ROWNUM=1
+	                                            ) 
+	                      AND LKOU_DT>TO_CHAR(SYSDATE, 'YYYYMMDD')  
+	              ) 
+	              UNPIVOT 
+	              (
+	              COL_VAL FOR COL_NM IN (HR_LEVL1_ORZ_CD,HR_LEVL2_ORZ_CD,HR_LEVL3_ORZ_CD,HR_LEVL4_ORZ_CD,HR_LEVL5_ORZ_CD,HR_LEVL6_ORZ_CD,HR_LEVL7_ORZ_CD,HR_LEVL8_ORZ_CD,HR_LEVL9_ORZ_CD)
+	              )
+	           )  
+	          WHERE RNUM = MAXROW
+          )
+          , TAB2 AS (
+                SELECT DISTINCT A.ORZ_CD 
+                FROM INNOV2.CB01N112 A
+                WHERE (A.HR_LEVL1_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL2_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL3_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL4_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL5_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL6_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL7_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL8_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                       OR A.HR_LEVL9_ORZ_CD IN ( SELECT COL_VAL FROM TAB1)
+                      )
+                 AND LKOU_DT>TO_CHAR(SYSDATE, 'YYYYMMDD') 
+         )
+	</sql>
+	
+	<select id="selectEpLcnsList" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0In00VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0Out01VO" >
+		/* RQNR1000U0.selectEpLcnsList = 사용자 자격증 조회 */
+		  SELECT A.EPNO
+		       , A.HR_QLFC_LICNS_KCD AS LCNS_CD
+               , B.CD_STD_NM         AS LCNS_NM
+          FROM CB01N410 A /* 사원자격면허 */  
+             , CB01C111 B /* 인사공통코드 */
+         WHERE A.HR_QLFC_LICNS_KCD = B.HR_CMN_CD
+           AND B.HR_CMN_CD_KND_NO  = 'HRM_120'
+           AND A.EPNO = #{epno} 
+        
+UNION ALL SELECT #{epno} AS EPNO, 'A010001' AS LCNS_CD, '도로교통 안전관리자' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010002' AS LCNS_CD, '삭도교통 안전관리자' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010003' AS LCNS_CD, '선박교통 안전관리자' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010004' AS LCNS_CD, '철도교통 안전관리자' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010005' AS LCNS_CD, '택시운전면허' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010006' AS LCNS_CD, '항공교통 안전관리자' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010007' AS LCNS_CD, '항만하역교통안전관리자' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010008' AS LCNS_CD, '공인중개사' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A010009' AS LCNS_CD, '감정평가사' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A020001' AS LCNS_CD, '기능 검정원 및 강사' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A020002' AS LCNS_CD, '원동기운전면허' AS LCNS_NM FROM DUAL
+UNION ALL SELECT #{epno} AS EPNO, 'A020003' AS LCNS_CD, '자동차운전면허1종(대형)' AS LCNS_NM FROM DUAL
+	</select>
+	
+	
+	<sql id="selectAdrList_select">
+        SELECT 
+            <if test='cond != null and cond != ""'> /*+ INDEX(A (LGL_EMDG_NM, ZPCD)) */ </if>
+              A.RADDR_ADR_CD AS zpcd_seq
+            , A.ZPCD         AS zpcd
+            , A.SIDO_NM      AS adr1
+            , A.SGG_NM       AS adr2
+            , A.LGL_EMDG_NM  AS adr3
+            , A.STET_NM      AS adr4
+            , A.BDNO         AS adr5
+            , A.BDSNO        AS adr6
+            , TRIM(
+                   TRIM(A.SIDO_NM)                                             /* 시도명            */
+                 ||DECODE(TRIM(A.SGG_NM), NULL, NULL, ' '||TRIM(A.SGG_NM))     /* 시군구명          */
+                 ||' ' || TRIM(A.STET_NM)                                      /* 도로명            */
+                 ||' ' || TO_NUMBER(A.BDNO)                                    /* 건물본번호         */
+                 ||DECODE(A.BDSNO, '0', NULL, '-'|| TO_NUMBER(A.BDSNO)))       AS all_adr
+            , #{totCnt} AS TOT_CNT
+         FROM CS04N011 A     /* 도로명주소   AT06N004-> CS04N011 */
+        WHERE 1=1 
+        <if test='cond != null and cond != ""'>
+         AND (   A.ZPCD like ('%' || #{cond} || '%')
+               OR A.LGL_EMDG_NM like ('%' || #{cond} || '%')
+               OR A.STET_NM||' '||A.BDNO like ('%' || #{cond} || '%'))
+        </if>
+        AND TRIM(RADDR_ADR_CD) > NVL(TRIM('0'), ' ')
+        ORDER BY A.RADDR_ADR_CD
+	</sql>
+	<select id="selectAdrList" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0In00VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0Out02VO" >
+		/* RQNR1000U0.selectAdrList = 주소 조회 */
+		SELECT ZPCD_SEQ, ZPCD, ALL_ADR AS ADR, TOT_CNT
+          FROM (
+                <include refid="selectAdrList_select" />
+                OFFSET #{pageIndex} ROWS FETCH NEXT #{pageSize} ROWS ONLY 
+                )
+	</select>
+	<select id="selectAdrList_CNT" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR1000U0In00VO" resultType="int" >
+		/* RQNR1000U0.selectAdrList = 주소 조회(총건수) */
+		SELECT COUNT(1) AS TOT_CNT
+          FROM (
+                <include refid="selectAdrList_select" />
+                )
+	</select>
+	
+	
+	<delete id="deleteGA03N102ByRctNo" parameterType="String" >
+		/* RQNR1000U0.deleteGA03N102ByRctNo = 구매_명함 신청물품_GA03N102 접수번호기준 삭제  */	
+		DELETE GA03N102 WHERE RCT_NO =  #{rctNo}
+	</delete>		
+	<insert id="insertGA03N102" parameterType="com.miraeasset.biz.common.meta.vo.GA03N102VO" >
+		/* RQNR1000U0.insertGA03N102 = 구매_명함 신청물품_GA03N102 신규등록  */	
+		INSERT INTO GA03N102 (
+		   RCT_NO
+		 , PCH_RQS_ATCL_SEQ
+		 , ATCL_TCD
+		 , ATCL_CD
+		 , DELP_CD
+		 , EPNO
+		 , RQS_RQM_PTCR_CN
+		 , PCH_PR
+		 , PCH_Q
+		 , PCH_SMTL_A
+		 , OPTR_ID
+		 , OPRT_CHNL_CD
+		 , OPRT_ORZ_CD
+		 , OPRT_IP_ADR
+		 , OPRT_DTTM
+		) 
+		 VALUES (
+		  #{rctNo        } 
+		, #{pchRqsAtclSeq}
+		, #{atclTcd      }
+		, #{atclCd       }
+		, #{delpCd       }
+		, #{epno         }
+		, #{rqsRqmPtcrCn }
+		, #{pchPr        }
+		, #{pchQ         }
+		, #{pchSmtlA     }
+		, #{optrId       } 
+		, #{oprtChnlCd   } 
+		, #{oprtOrzCd    } 
+		, #{oprtIpAdr    } 
+		, SYSDATE
+		)	
+	</insert>
+	
+	
+	<delete id="deleteGA03N104ByRctNo" parameterType="String" >
+		/* RQNR1000U0.deleteGA03N104ByRctNo = 명함신청_GA03N104 접수번호기준 삭제  */	
+		DELETE GA03N104 WHERE RCT_NO =  #{rctNo}
+	</delete>		
+  
+	<insert id="insertGA03N104" parameterType="com.miraeasset.biz.common.meta.vo.GA03N104VO" >
+		/* RQNR1000U0.insertGA03N104 = 명함신청_GA03N104 신규등록  */	
+		INSERT INTO GA03N104 (
+		   RCT_NO
+		 , INQ_ORZ_CD
+		 , INQ_LOC_NM
+		 , INQ_DL_LOC_NM
+		 , OPTR_ID
+		 , OPRT_CHNL_CD
+		 , OPRT_ORZ_CD
+		 , OPRT_IP_ADR
+		 , OPRT_DTTM
+		) 
+		 VALUES (
+		  #{rctNo      }
+		, #{inqOrzCd   }
+		, #{inqLocNm   }
+		, #{inqDlLocNm }
+		, #{optrId     } 
+		, #{oprtChnlCd } 
+		, #{oprtOrzCd  } 
+		, #{oprtIpAdr  } 
+		, SYSDATE
+		)	
+	</insert>
+	
+	
+	<delete id="deleteGA03N105ByRctNo" parameterType="String" >
+		/* RQNR1000U0.deleteGA03N105ByRctNo = 명함상세_GA03N105 접수번호기준 삭제  */	
+		DELETE GA03N105 WHERE RCT_NO =  #{rctNo}
+	</delete>		
+  
+	<insert id="insertGA03N105" parameterType="com.miraeasset.biz.common.meta.vo.GA03N105VO" >
+		/* RQNR1000U0.insertGA03N105 = 명함상세_GA03N105 신규등록  */	
+		INSERT INTO GA03N105 (
+		  	  RCT_NO
+			, PCH_RQS_ATCL_SEQ
+			, ATCL_TCD
+			, ATCL_CD
+			, EPNO
+			, NMCRD_PCD
+			, NMCRD_TCD
+			, NL_BLNG_NM
+			, ENG_BLNG_NM
+			, NL_JRNK_NM
+			, ENG_JRNK_NM
+			, NL_OSDT_NM
+			, ENG_OSDT_NM
+			, TITL_NM
+			, NL_NM
+			, ENG_NM
+			, ZPCD
+			, WKP_ADR_ECP_VL
+			, ENG_WKP_ADR_ECP_VL
+			, RTN
+			, MTNO
+			, ITNO
+			, HNDP_BZPR_TLNO
+			, HNDP_MTNO
+			, HNDP_ITNO
+			, RV_FAX_TLNO
+			, EMAIL_ADR
+			, HR_QLFC_LICNS_KCD
+			, LCNS_NM
+			, NTE_CN
+			, OPTR_ID
+			, OPRT_CHNL_CD
+			, OPRT_ORZ_CD
+			, OPRT_IP_ADR
+			, OPRT_DTTM
+		) 
+		 VALUES (
+		  #{rctNo} 
+		, #{pchRqsAtclSeq}
+		, #{atclTcd}
+		, #{atclCd}
+		, #{epno}
+		, #{nmcrdPcd}
+		, #{nmcrdTcd}
+		, #{orzNm}
+		, #{engOrzNm}
+		, #{nlJrnkNm}
+		, #{engJrnkNm}
+		, #{nlOsdtNm}
+		, #{engOsdtNm}
+		, #{titlNm}
+		, #{nlNm}
+		, #{engNm}
+		, #{zpcd}
+		, #{wkpAdrEcpVl}
+		, #{engWkpAdrEcpVl}
+		, SUBSTR(#{rtn},0,4) 
+		, SUBSTR(#{mtno},0,4) 
+		, SUBSTR(#{itno},0,4) 
+		, SUBSTR(#{hndpBzprTlno},0,4) 
+		, SUBSTR(#{hndpMtno},0,4) 
+		, SUBSTR(#{hndpItno},0,4) 
+		, #{rvFaxTlno}
+		, #{emalAdr}
+		, #{lcnsCd}
+		, #{lcnsNm}
+		, #{nteCn}
+		, #{optrId} 
+		, #{oprtChnlCd} 
+		, #{oprtOrzCd} 
+		, #{oprtIpAdr} 
+		, SYSDATE
+		)	
+	</insert>
+	
+	
+	
+	
+	<sql id="selectListGA03N102_Where">
+	   WHERE T1.RQS_DT BETWEEN #{qryStrtDt} AND #{qryEndDt}  /* 조회기간*/
+	     AND T1.UNIF_RQS_PCD = #{unifRqsPcd}  /* 신청유형코드 01:공사 02:구매 03:렌탈 04:명함 05:인감 */
+	     
+	     <if test='rqsEpno != null and rqsEpno != ""'>
+         AND T1.RQS_EPNO    LIKE '%' || TRIM( NVL(#{rqsEpno},' ') )   || '%'    /* 신청사번 */
+         </if>
+         
+         <if test='rqsOrzCd != null and rqsOrzCd != ""'>
+          AND T1.RQS_ORZ_CD  LIKE '%' || TRIM( NVL(#{rqsOrzCd},' ') )  || '%'    /* 신청조직코드 */
+         </if>
+         
+         <if test='rqsScd != null and rqsScd != ""'>
+		    /* 신청상태 */
+			AND T1.RQS_SCD IN
+				<foreach collection="arrRqsScd" item="itm" index="index" open="(" close=")" separator=",">
+				#{itm}
+				</foreach>
+		</if>
+         
+	</sql>
+	
+	<select id="selectListGA03N102" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0In00VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0Out00VO">
+		/* RQNR2000U0.selectListGA03N102 = 명함신청내역 목록조회 */
+		SELECT 
+		     T1.RCT_NO
+		   , T1.UNIF_RQS_TCD 
+		   , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM    
+		   , T1.RQS_ORZ_CD
+		   , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+		   , T1.RQS_EPNO
+		   , T2.EP_NM AS RQS_EP_NM
+		   , T1.RQS_DT
+		   , T1.APRV_WRRPT_MT_NO
+		   , T1.APRV_WRRPT_ORZ_CD
+		   , T1.RQS_SCD
+		   , (SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM
+		   , T1.RQS_TTL_NM AS ATCL_NM
+		   , T3.PCH_Q
+		   , T3.PCH_SMTL_A
+		FROM GA01N101 T1 
+		     LEFT OUTER JOIN CB01N310 T2 -- 직원
+		     ON T2.EPNO = T1.RQS_EPNO
+		     LEFT OUTER JOIN ( 
+                 SELECT RCT_NO
+                      , SUM(PCH_Q) AS PCH_Q
+                      , SUM(PCH_SMTL_A) AS PCH_SMTL_A
+                   FROM GA03N102
+                  WHERE RCT_NO IN ( SELECT T1.RCT_NO 
+                                      FROM GA01N101 T1 
+                                      <include refid="selectListGA03N102_Where" />
+                                   )
+                  GROUP BY RCT_NO
+		           ) T3
+		     ON T1.RCT_NO = T3.RCT_NO
+	         <include refid="selectListGA03N102_Where" />
+	       ORDER BY T1.RQS_DT DESC, T1.RCT_NO DESC
+		   OFFSET #{pageIndex} ROWS FETCH NEXT #{pageSize} ROWS ONLY 	 	
+	</select>	
+	
+	<select id="selectInfoGA03N102" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0In00VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0Out01VO">
+	   /* RQNR2000U0.selectInfoGA03N102 = 명함신청내역-상태상태 통계정보조회 */
+		SELECT NVL(MAX(RQS_SCD_00_CNT),0) AS RQS_SCD_00_CNT
+			     , NVL(MAX(RQS_SCD_05_CNT),0) AS RQS_SCD_05_CNT
+			     , NVL(MAX(RQS_SCD_10_CNT),0) AS RQS_SCD_10_CNT
+			     , NVL(MAX(RQS_SCD_15_CNT),0) AS RQS_SCD_15_CNT
+			     , NVL(MAX(RQS_SCD_30_CNT),0) AS RQS_SCD_30_CNT
+			     , NVL(MAX(RQS_SCD_35_CNT),0) AS RQS_SCD_35_CNT
+			     , NVL(MAX(RQS_SCD_99_CNT),0) AS RQS_SCD_99_CNT
+			FROM (
+			      SELECT CASE WHEN T1.RQS_SCD = '00' THEN COUNT(1) END AS RQS_SCD_00_CNT
+			           , CASE WHEN T1.RQS_SCD = '05' THEN COUNT(1) END AS RQS_SCD_05_CNT
+			           , CASE WHEN T1.RQS_SCD = '10' THEN COUNT(1) END AS RQS_SCD_10_CNT
+			           , CASE WHEN T1.RQS_SCD = '15' THEN COUNT(1) END AS RQS_SCD_15_CNT
+			           , CASE WHEN T1.RQS_SCD = '30' THEN COUNT(1) END AS RQS_SCD_30_CNT
+			           , CASE WHEN T1.RQS_SCD = '35' THEN COUNT(1) END AS RQS_SCD_35_CNT
+			           , CASE WHEN T1.RQS_SCD = '99' THEN COUNT(1) END AS RQS_SCD_99_CNT  
+			        FROM GA01N101 T1 -- 통합신청
+					<include refid="selectListGA03N102_Where" />
+			       GROUP BY T1.RQS_SCD
+			)  
+	</select>
+	
+	
+	<select id="selectDlInfo" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0In01VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0Out02VO">
+		/* RQNR2000U0.selectDlInfo = 명함 통합신청 상세정보 */
+			SELECT T1.RCT_NO
+			     , T1.RQS_DT
+			     , T1.UNIF_RQS_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_PCD' AND CMN_CD_VL = T1.UNIF_RQS_PCD AND ROWNUM = 1 ) AS UNIF_RQS_PCD_NM    
+			     , T1.UNIF_RQS_DL_PCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_DL_PCD' AND CMN_CD_VL = T1.UNIF_RQS_DL_PCD AND ROWNUM = 1 ) AS UNIF_RQS_DL_PCD_NM    
+			     , T1.UNIF_RQS_TCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'UNIF_RQS_TCD' AND CMN_CD_VL = T1.UNIF_RQS_TCD AND ROWNUM = 1 ) AS UNIF_RQS_TCD_NM    
+			     , T1.RQS_ORZ_CD
+			     , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T1.RQS_ORZ_CD AND ROWNUM = 1 ) AS RQS_ORZ_NM    
+			     , T1.RQS_EPNO
+			     , T2.EP_NM AS RQS_EP_NM   
+			     , T1.RQS_TTL_NM
+			     , T1.UNIF_RQS_RSN_CN AS RQS_RSN_CN
+			     , T1.HOPE_DT
+			     , T1.CMPN_DT
+			     , T1.APRV_WRRPT_MT_NO
+			     , T1.APRV_WRRPT_ORZ_CD
+			     , T1.RQS_SCD
+			     , ( SELECT CMN_CD_VL_DEF_CN FROM GA09C302 WHERE CD_KND_NO = 'RQS_SCD' AND CMN_CD_VL = T1.RQS_SCD AND ROWNUM = 1 ) AS RQS_SCD_NM   
+			 	 ,    CASE WHEN TRIM(T2.HNDP_BZPR_TLNO) IS NOT NULL THEN '(' || TRIM(T2.HNDP_BZPR_TLNO) || ') ' END
+		           || CASE WHEN TRIM(T2.HNDP_MTNO)      IS NOT NULL THEN TRIM(T2.HNDP_MTNO)                     END
+		           || CASE WHEN TRIM(T2.HNDP_ITNO)      IS NOT NULL THEN '-' || TRIM(T2.HNDP_ITNO)              END
+		           AS RQS_EP_HNDP_TLNO	
+		         , T5.INQ_ORZ_CD
+                 , ( SELECT ORZ_NM FROM CB01N210 WHERE ORZ_CD = T5.INQ_ORZ_CD AND ROWNUM = 1 ) AS INQ_ORZ_NM  
+			     , T5.INQ_LOC_NM
+			     , T5.INQ_DL_LOC_NM
+			     , T1.RQS_TTL_NM  AS ATCL_NM  /* 명함물품 */
+			  FROM GA01N101	T1 -- 통합신청_신청관리
+			     , CB01N310 T2 -- 직원
+			     , GA03N104 T5 -- 명함신청 
+			 WHERE 1=1
+			   AND T2.EPNO(+)= T1.RQS_EPNO 		
+			   AND T1.RCT_NO = #{rctNo}
+			   AND T1.RCT_NO = T5.RCT_NO(+)
+	</select>
+	
+	
+	<select id="selectListGA03N102Dtl" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0In01VO" resultType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0Out03VO">
+		/* RQNR2000U0.selectListGA03N102Dtl = 명함상세 신청내역 */
+			SELECT A.RCT_NO
+			     , A.PCH_RQS_ATCL_SEQ
+			     , A.ATCL_TCD
+			     , A.ATCL_CD
+			     , A.EPNO
+			     , C.EP_NM 
+			     , A.EPNO||'('|| C.EP_NM ||')' AS EP_NM_DL
+			     , (CASE WHEN B.NL_OSDT_NM IS NULL THEN B.NL_JRNK_NM 
+                         WHEN B.NL_JRNK_NM IS NULL THEN B.NL_OSDT_NM 
+                         WHEN B.NL_OSDT_NM IS NULL AND B.NL_JRNK_NM IS NULL THEN ''
+                         ELSE B.NL_OSDT_NM||'/'||B.NL_JRNK_NM 
+                    END) AS NL_JRNK_OSDT_NM
+			     , A.PCH_PR
+			     , A.PCH_Q
+			     , A.PCH_SMTL_A
+			  FROM GA03N102 A
+			     , GA03N105 B 
+			     , CB01N310 C 
+			 WHERE A.RCT_NO = #{rctNo}
+			   AND A.RCT_NO = B.RCT_NO
+			   AND A.PCH_RQS_ATCL_SEQ = B.PCH_RQS_ATCL_SEQ
+			   AND A.EPNO = C.EPNO 
+	</select>
+	
+	<select id="selectDtlGA03N105" parameterType="com.miraeasset.biz.rq.nr.vo.RQNR2000U0In01VO" resultType="com.miraeasset.biz.common.meta.vo.GA03N105VO">
+		/* RQNR2000U0.selectDtlGA03N105 = 명함상세 사용자별 미리보기 */
+			   SELECT A.RCT_NO
+			       , A.PCH_RQS_ATCL_SEQ
+			       , A.ATCL_TCD
+			       , A.ATCL_CD
+			       , A.EPNO
+			       , A.NMCRD_PCD
+			       , A.NMCRD_TCD
+			       , A.NL_BLNG_NM  AS ORZ_NM
+			       , A.ENG_BLNG_NM AS ENG_ORZ_NM
+			       , A.NL_JRNK_NM
+			       , A.ENG_JRNK_NM
+			       , A.NL_OSDT_NM
+			       , A.ENG_OSDT_NM
+			       , A.TITL_NM
+			       , A.NL_NM
+			       , A.ENG_NM
+			       , A.ZPCD
+			       , A.WKP_ADR_ECP_VL
+			       , A.ENG_WKP_ADR_ECP_VL
+                   , CASE WHEN A.RTN IS NOT NULL AND A.MTNO IS NOT NULL AND A.ITNO IS NOT NULL
+			              THEN A.RTN||'-'||A.MTNO||'-'||A.ITNO
+			              ELSE A.RTN||A.MTNO||A.ITNO 
+			        END  AS EMP_OFC_TLNO  
+			       , CASE WHEN A.HNDP_BZPR_TLNO IS NOT NULL AND A.HNDP_MTNO IS NOT NULL AND A.HNDP_ITNO IS NOT NULL
+			              THEN A.HNDP_BZPR_TLNO||'-'||A.HNDP_MTNO||'-'||A.HNDP_ITNO
+			              ELSE A.HNDP_BZPR_TLNO||A.HNDP_MTNO||A.HNDP_ITNO 
+			        END AS CELL_NO          /* 휴대폰번호      */
+			       , A.RV_FAX_TLNO
+			       , A.EMAIL_ADR   AS EMAL_ADR
+			       , A.HR_QLFC_LICNS_KCD
+			       , A.LCNS_NM
+			       , A.NTE_CN
+			    FROM GA03N105 A 
+			   WHERE A.RCT_NO = #{rctNo}
+			     AND A.PCH_RQS_ATCL_SEQ = #{pchRqsAtclSeq}
+	</select>
+	
+</mapper>
